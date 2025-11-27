@@ -1,79 +1,34 @@
-# 📘 Training Management System (TMS)
+PHP 8.4.1 (cli) (built: Nov 21 2024 08:58:25) (NTS)
+Copyright (c) The PHP Group
+Zend Engine v4.4.1, Copyright (c) Zend Technologies
+Composer version 2.8.12 2025-09-19 13:41:59
+PHP version 8.4.1 (/home/codejeng/.config/herd-lite/bin/php)
+Run the "diagnose" command to get more detailed diagnostics output.
+v20.19.6
+10.8.2
 
-A full-stack web application for managing training programs, sessions, attendance tracking, feedback collection, and automated online certificate generation.  
-Designed for scalability using **Laravel + Blade + Vue**, with deployment targets such as **Nginx, PHP-FPM, MySQL**, and **CI/CD pipelines**.
+DB_DATABASE=training_management
+DB_USERNAME=root
+DB_PASSWORD=      # ถ้าไม่มีรหัสให้เว้นว่าง
 
-This README summarizes the functional backlog, system architecture, man-day planning, and installation guidelines.
+CREATE DATABASE training_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
----
+#bash
+composer install
+php artisan key:generate
+npm install --legacy-peer-deps
 
-## 🚀 Features Overview
+optional-------------------------------------
+ถ้าใคร npm ชอบงอแงมาก ๆ ให้ลองลบของเก่าแล้วรันใหม่:
+rm -rf node_modules
+rm -f package-lock.json
+npm install --legacy-peer-deps
 
-### ✅ 1. Authentication & RBAC
-- Login, registration, password reset  
-- Role-based access (Admin, Trainer, Trainee)  
-- Laravel Policies for authorization  
-- Secure with CSRF, hashed passwords, and validation rules
+php artisan migrate
 
----
+---------------------------------------------
+run project
 
-### ✅ 2. Program & Session Management
-Admins can:
-- Create, edit, delete **Programs**  
-- Create, edit, delete **Sessions**  
-- Assign trainers, set schedule, manage capacity  
-- Program/session lists with search & filtering
-
----
-
-### ✅ 3. Registration & Attendance
-Trainee:
-- Register for sessions (capacity-checked)
-- Cancel registration before the start date
-
-Trainer/Admin:
-- Mark attendance
-- Completion calculation (e.g., ≥ 80% attendance)
-- Session closing workflow
-
----
-
-### ✅ 4. Feedback Module & Reporting
-- Post-session feedback (rating + comments)
-- Admin summary reports:
-  - Average score
-  - Common keywords
-- Export CSV for analytics
-
----
-
-### ✅ 5. Certificate System (PDF + QR + Email)
-Automatic certificate generation when trainee meets completion criteria.
-
-Includes:
-- PDF generation using DOMPDF or Snappy  
-- Unique certificate number + verification hash  
-- QR Code verification page  
-- Email queue that sends certificate PDF  
-- Downloadable from user profile
-
----
-
-### ✅ 6. Dashboard & Analytics
-- Charts for attendance, completion, feedback score  
-- Time-based filtering  
-- CSV export  
-- Admin summary view
-
----
-
-## 🗄️ Database Schema (Summary)
-
-### Main Tables:
-users
-programs
-sessions
-registrations
-attendance
-feedback
-certificates
+-Laravel backend-
+php artisan serve
+npm run dev
