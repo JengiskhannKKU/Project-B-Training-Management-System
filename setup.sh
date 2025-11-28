@@ -1,68 +1,74 @@
 #!/bin/bash
 
+set -euo pipefail
+
 echo "===================================="
-echo "   Training Management Setup Script  "
+echo " Training Management Setup Script"
 echo "===================================="
 
-# 1) Check working directory
-echo "[1/10] Checking directory..."
-PROJECT_DIR=$(pwd)
-echo "Directory: $PROJECT_DIR"
-
-# 2) Check PHP
-echo "[2/10] Checking PHP..."
-php -v || { echo "❌ PHP not installed. Exiting."; exit 1; }
-
-# 3) Check Composer
-echo "[3/10] Checking Composer..."
-composer -V || { echo "❌ Composer not installed. Exiting."; exit 1; }
-
-# 4) Check Node version (must be >= 20)
-echo "[4/10] Checking Node version..."
-node -v || { echo "❌ Node.js not installed. Exiting."; exit 1; }
-
-NODE_MAJOR=$(node -v | grep -oP '(?<=v)\d+(?=\.)')
-
-if [ "$NODE_MAJOR" -lt 20 ]; then
-    echo "❌ Node version is too low. Required Node >= 20."
-    echo "   If you use nvm:"
-    echo "   nvm install 20"
-    echo "   nvm use 20"
+if [ ! -f artisan ]; then
+    echo "❌ This script must be run from the project root (artisan not found)."
     exit 1
 fi
 
-echo "Node version OK."
+function require_cmd() {
+    local cmd=$1
+    local friendly=$2
 
-# 5) Install Laravel dependencies
-echo "[5/10] Installing PHP dependencies..."
-composer install || { echo "❌ Composer install failed"; exit 1; }
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "❌ $friendly ($cmd) is not installed or not in PATH."
+        exit 1
+    fi
+}
 
-# 6) Setup .env
-echo "[6/10] Setting up .env..."
-if [ ! -f .env ]; then
-    cp .env.example .env
-    echo ".env created."
-else
-    echo ".env already exists. Skipping."
+echo "[1/9] Checking required tools..."
+require_cmd php "PHP 8.2+"
+require_cmd composer "Composer"
+require_cmd node "Node.js >= 20"
+require_cmd npm "npm"
+
+NODE_MAJOR=$(node -v | sed 's/v\([0-9]*\).*/\1/')
+if [ "$NODE_MAJOR" -lt 20 ]; then
+    echo "❌ Node version $NODE_MAJOR detected. Please use Node 20 or newer (nvm install 20 && nvm use 20)."
+    exit 1
 fi
 
-# 7) Generate APP_KEY
-echo "[7/10] Generating App Key..."
-php artisan key:generate
+echo "[2/9] Installing PHP dependencies with Composer..."
+composer install --no-interaction --prefer-dist
 
-# 8) Install Node packages
-echo "[8/10] Installing Node dependencies..."
-rm -rf node_modules package-lock.json
-npm install --legacy-peer-deps || { echo "❌ npm install failed"; exit 1; }
+echo "[3/9] Ensuring .env exists..."
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "   Created .env from .env.example"
+else
+    echo "   .env already present."
+fi
 
-# 9) Run DB migrations
-echo "[9/10] Running migrations..."
-php artisan migrate
+echo "[4/9] Preparing SQLite database file..."
+DB_PATH="database/database.sqlite"
+if [ ! -f "$DB_PATH" ]; then
+    mkdir -p "$(dirname "$DB_PATH")"
+    touch "$DB_PATH"
+    echo "   Created $DB_PATH"
+else
+    echo "   $DB_PATH already exists."
+fi
 
-# 10) Complete
-echo "[10/10] Setup complete 🎉"
+echo "[5/9] Generating application key..."
+php artisan key:generate --force
+
+echo "[6/9] Running database migrations + seeders..."
+php artisan migrate --force --seed
+
+echo "[7/9] Installing Node dependencies..."
+npm install
+
+echo "[8/9] Building front-end assets (production build)..."
+npm run build
+
+echo "[9/9] Setup complete 🎉"
 echo "---------------------------------------"
-echo " Run dev servers with:"
-echo "   php artisan serve"
-echo "   npm run dev"
+echo "Start the dev servers in two terminals:"
+echo " 1) php artisan serve"
+echo " 2) npm run dev"
 echo "---------------------------------------"
