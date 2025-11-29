@@ -53,4 +53,5 @@ class User extends Authenticatable
     {
         return $this->role && $this->role->name === $role;
     }
+
 }
