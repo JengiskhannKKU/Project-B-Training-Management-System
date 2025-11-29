@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppLayout from '@/Layouts/AppLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 
 const enrollments = [
@@ -23,7 +23,7 @@ const resources = [
 <template>
     <Head title="Student Dashboard" />
 
-    <AppLayout>
+    <AuthenticatedLayout>
         <section class="rounded-2xl border border-emerald-100 bg-emerald-50 px-6 py-5">
             <h1 class="text-xl font-semibold text-emerald-900">
                 Ready to learn?
@@ -112,5 +112,5 @@ const resources = [
                 </li>
             </ul>
         </section>
-    </AppLayout>
+    </AuthenticatedLayout>
 </template>

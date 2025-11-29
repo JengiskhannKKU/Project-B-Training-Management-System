@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 
-defineProps({
+const props = defineProps({
     canLogin: {
         type: Boolean,
     },
@@ -17,6 +18,64 @@ defineProps({
         required: true,
     },
 });
+
+const page = usePage();
+const menuOpen = ref(false);
+
+const currentUser = computed(() => page.props.auth?.user ?? null);
+const roleName = computed(() => currentUser.value?.role?.name ?? null);
+const isAuthenticated = computed(() => Boolean(currentUser.value));
+const currentPath = computed(() => page.url.split('?')[0]);
+
+const roleLinkMap = {
+    admin: { label: 'Admin Portal', href: '/admin' },
+    trainer: { label: 'Trainer Portal', href: '/trainer' },
+    student: { label: 'Student Portal', href: '/student' },
+};
+
+const menuLinks = computed(() => {
+    if (!props.canLogin) {
+        return [];
+    }
+
+    if (isAuthenticated.value) {
+        const links = [
+            { label: 'Dashboard', href: route('dashboard') },
+        ];
+
+        if (roleName.value && roleLinkMap[roleName.value]) {
+            links.push(roleLinkMap[roleName.value]);
+        }
+
+        links.push({ label: 'Profile', href: route('profile.edit') });
+
+        return links;
+    }
+
+    const links = [
+        { label: 'Log in', href: route('login') },
+    ];
+
+    if (props.canRegister) {
+        links.push({ label: 'Register', href: route('register') });
+    }
+
+    return links;
+});
+
+const logoutLink = computed(() =>
+    isAuthenticated.value ? { label: 'Log Out', href: route('logout') } : null,
+);
+
+const toggleMenu = () => {
+    menuOpen.value = !menuOpen.value;
+};
+
+const closeMenu = () => {
+    menuOpen.value = false;
+};
+
+const isActive = (href) => currentPath.value === href;
 
 function handleImageError() {
     document.getElementById('screenshot-container')?.classList.add('!hidden');
@@ -54,32 +113,68 @@ function handleImageError() {
                             />
                         </svg>
                     </div>
-                    <nav v-if="canLogin" class="-mx-3 flex flex-1 justify-end">
-                        <Link
-                            v-if="$page.props.auth.user"
-                            :href="route('dashboard')"
-                            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                        >
-                            Dashboard
-                        </Link>
-
-                        <template v-else>
-                            <Link
-                                :href="route('login')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                    <div
+                        v-if="canLogin && menuLinks.length"
+                        class="flex flex-1 justify-end"
+                    >
+                        <div class="relative" @keydown.escape="menuOpen = false">
+                            <button
+                                type="button"
+                                class="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-black shadow ring-1 ring-black/10 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2D20] dark:bg-zinc-900 dark:text-white dark:ring-white/20"
+                                @click="toggleMenu"
                             >
-                                Log in
-                            </Link>
+                                Menu
+                                <svg
+                                    class="ms-2 h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
 
-                            <Link
-                                v-if="canRegister"
-                                :href="route('register')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                            <div
+                                v-if="menuOpen"
+                                class="absolute right-0 z-10 mt-2 w-44 rounded-lg bg-white p-2 shadow-lg ring-1 ring-black/10 dark:bg-zinc-900 dark:ring-white/10"
                             >
-                                Register
-                            </Link>
-                        </template>
-                    </nav>
+                                <Link
+                                    v-for="item in menuLinks"
+                                    :key="item.href"
+                                    :href="item.href"
+                                    class="block rounded-md px-3 py-2 text-sm font-medium transition"
+                                    :class="
+                                        isActive(item.href)
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-zinc-800'
+                                    "
+                                    @click="closeMenu"
+                                >
+                                    {{ item.label }}
+                                </Link>
+
+                                <div
+                                    v-if="logoutLink"
+                                    class="my-2 border-t border-gray-200 dark:border-white/10"
+                                ></div>
+
+                                <Link
+                                    v-if="logoutLink"
+                                    :href="logoutLink.href"
+                                    method="post"
+                                    as="button"
+                                    class="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-zinc-800"
+                                    @click="closeMenu"
+                                >
+                                    {{ logoutLink.label }}
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
                 </header>
 
                 <main class="mt-6">

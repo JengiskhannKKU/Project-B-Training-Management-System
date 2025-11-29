@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppLayout from '@/Layouts/AppLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 
 const stats = [
@@ -24,7 +24,7 @@ const announcements = [
 <template>
     <Head title="Admin Dashboard" />
 
-    <AppLayout>
+    <AuthenticatedLayout>
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <article
                 v-for="stat in stats"
@@ -97,5 +97,5 @@ const announcements = [
                 </ul>
             </article>
         </section>
-    </AppLayout>
+    </AuthenticatedLayout>
 </template>

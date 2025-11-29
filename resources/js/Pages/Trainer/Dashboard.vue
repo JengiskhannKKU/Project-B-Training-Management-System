@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppLayout from '@/Layouts/AppLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 
 const sessions = [
@@ -23,7 +23,7 @@ const feedback = [
 <template>
     <Head title="Trainer Dashboard" />
 
-    <AppLayout>
+    <AuthenticatedLayout>
         <section class="rounded-2xl border border-indigo-100 bg-indigo-50 px-6 py-5 text-indigo-900">
             <h1 class="text-xl font-semibold">Welcome back, Coach!</h1>
             <p class="mt-1 text-sm text-indigo-700">
@@ -112,5 +112,5 @@ const feedback = [
                 </li>
             </ul>
         </section>
-    </AppLayout>
+    </AuthenticatedLayout>
 </template>

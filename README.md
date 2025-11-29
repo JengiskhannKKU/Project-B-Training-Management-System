@@ -53,3 +53,25 @@ npm run build                # once for production assets, or skip for dev-only
 
 If you need to start over locally, delete `database/database.sqlite` and rerun
 the migrations (`php artisan migrate --seed`). Happy coding!
+
+## Email setup (Mailtrap)
+
+You can use Mailtrap to deliver email verification and reset links:
+
+1) Create a Mailtrap account and generate an **Email Sending** API token.
+2) Verify your sending domain in Mailtrap, and use a From address on that domain (e.g., `no-reply@yourdomain.com`).
+3) Update `.env` with the SDK transport:
+```
+MAIL_MAILER=mailtrap-sdk
+MAILTRAP_HOST=send.api.mailtrap.io
+MAILTRAP_API_KEY=<your_sending_api_token>
+MAILTRAP_USE_SANDBOX=false
+MAILTRAP_INBOX_ID=
+MAIL_FROM_ADDRESS=no-reply@yourdomain.com
+MAIL_FROM_NAME="Training Management"
+QUEUE_CONNECTION=sync
+```
+4) Clear config cache: `php artisan config:clear && php artisan cache:clear`
+5) Register and check the Mailtrap Sending inbox for the verification email.
+
+If your domain verification is pending, temporarily set `MAIL_MAILER=log` so mail is written to `storage/logs/laravel.log` until your sending domain is approved.
