@@ -13,7 +13,14 @@ class RoleMiddleware
             return redirect('/login');
         }
 
-        if (Auth::user()->role->name !== $role) {
+        $user = Auth::user();
+
+        // Check if user has a role assigned
+        if (!$user->role) {
+            abort(403, 'No role assigned');
+        }
+
+        if ($user->role->name !== $role) {
             abort(403, 'Unauthorized');
         }
 
