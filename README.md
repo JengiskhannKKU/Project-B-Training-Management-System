@@ -75,3 +75,18 @@ QUEUE_CONNECTION=sync
 5) Register and check the Mailtrap Sending inbox for the verification email.
 
 If your domain verification is pending, temporarily set `MAIL_MAILER=log` so mail is written to `storage/logs/laravel.log` until your sending domain is approved.
+
+## Google authentication (OAuth)
+
+Google sign-in is wired via Socialite and the `auth/google` + `auth/google/callback` routes.
+
+1) In Google Cloud Console, create a project (or reuse one) and open **APIs & Services** -> **OAuth consent screen**. Choose **External**, provide app details/support email, and save. Add test users if the app is not published.
+2) In **Credentials** -> **Create credentials** -> **OAuth client ID**, choose **Web application**. Add an authorized redirect URI that matches your local callback, e.g. `http://127.0.0.1:8000/auth/google/callback` (adjust if you run `php artisan serve` on another host/port).
+3) Place the credentials in `.env`:
+```
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URL=http://127.0.0.1:8000/auth/google/callback
+```
+4) Clear cached config: `php artisan config:clear && php artisan cache:clear`.
+5) Use **Continue with Google** on the login/register pages to test; successful sign-in lands on the student dashboard by default.
