@@ -31,7 +31,7 @@ class ProgramController extends Controller
             'category' => ['required', 'string', 'max:100'],
             'duration_hours' => ['required', 'integer', 'min:1'],
             'image_url' => ['nullable', 'url', 'max:2048'],
-            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
 
         $data['created_by'] = $request->user()?->id;
@@ -68,7 +68,7 @@ class ProgramController extends Controller
             'approved_by' => ['nullable', 'integer', 'exists:users,id'],
             'approved_at' => ['nullable', 'date'],
             'approval_note' => ['nullable', 'string'],
-            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+            'status' => ['sometimes', 'required', Rule::in(['active', 'inactive'])],
         ]);
 
         $program->update($data);

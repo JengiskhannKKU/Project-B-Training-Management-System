@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Carbon;
 
 class TrainingSessionController extends Controller
 {
@@ -33,8 +34,8 @@ class TrainingSessionController extends Controller
         $data = $request->validate([
             'program_id' => ['required', 'integer', 'exists:programs,id'],
             'title' => ['required', 'string', 'max:255'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['required', 'date', 'before:end_date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
             'start_time' => ['nullable', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i', 'after:start_time'],
             'capacity' => ['required', 'integer', 'min:1'],
@@ -71,8 +72,28 @@ class TrainingSessionController extends Controller
         $data = $request->validate([
             'program_id' => ['sometimes', 'required', 'integer', 'exists:programs,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'start_date' => ['sometimes', 'required_with:end_date', 'date'],
-            'end_date' => ['sometimes', 'required_with:start_date', 'date', 'after_or_equal:start_date'],
+            'start_date' => [
+                'sometimes',
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($request, $session) {
+                    $endDateInput = $request->input('end_date') ?? optional($session->end_date)->toDateString();
+                    if ($endDateInput && Carbon::parse($value)->gte(Carbon::parse($endDateInput))) {
+                        $fail('The start date must be before the end date.');
+                    }
+                },
+            ],
+            'end_date' => [
+                'sometimes',
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($request, $session) {
+                    $startDateInput = $request->input('start_date') ?? optional($session->start_date)->toDateString();
+                    if ($startDateInput && Carbon::parse($value)->lte(Carbon::parse($startDateInput))) {
+                        $fail('The end date must be after the start date.');
+                    }
+                },
+            ],
             'start_time' => ['nullable', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i', 'after:start_time'],
             'capacity' => ['sometimes', 'required', 'integer', 'min:1'],
