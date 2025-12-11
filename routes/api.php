@@ -14,5 +14,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:admin')->group(function () {
         Route::post('admin/users', [AdminUserController::class, 'store']);
+        Route::get('admin/users', [AdminUserController::class, 'index']);
+        Route::put('admin/users/{user}', [AdminUserController::class, 'update']);
+        Route::delete('admin/users/{user}', [AdminUserController::class, 'destroy']);
+        Route::put('admin/users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
     });
 });
