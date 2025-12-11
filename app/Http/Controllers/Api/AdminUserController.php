@@ -38,7 +38,7 @@ class AdminUserController extends Controller
         $perPage = $validated['per_page'] ?? 15;
         $users = $query->paginate($perPage);
 
-        return response()->json($users);
+        return $this->successResponse($users, 'Users retrieved successfully');
     }
 
     /**
@@ -65,10 +65,7 @@ class AdminUserController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        return response()->json([
-            'message' => 'User created successfully.',
-            'data' => $user,
-        ], 201);
+        return $this->createdResponse($user, 'User created successfully');
     }
 
     /**
@@ -99,10 +96,7 @@ class AdminUserController extends Controller
         $user->update($data);
         $user->load('role');
 
-        return response()->json([
-            'message' => 'User updated successfully.',
-            'data' => $user,
-        ]);
+        return $this->successResponse($user, 'User updated successfully');
     }
 
     /**
@@ -122,9 +116,6 @@ class AdminUserController extends Controller
             $user->update(['status' => 'inactive']);
         }
 
-        return response()->json([
-            'message' => 'User deactivated successfully.',
-            'data' => $user,
-        ]);
+        return $this->successResponse($user, 'User deactivated successfully');
     }
 }

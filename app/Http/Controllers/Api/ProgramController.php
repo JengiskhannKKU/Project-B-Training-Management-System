@@ -16,7 +16,7 @@ class ProgramController extends Controller
     {
         $programs = Program::latest()->get();
 
-        return response()->json($programs);
+        return $this->successResponse($programs, 'Programs retrieved successfully');
     }
 
     /**
@@ -38,10 +38,7 @@ class ProgramController extends Controller
 
         $program = Program::create($data);
 
-        return response()->json([
-            'message' => 'Program created successfully.',
-            'data' => $program,
-        ], 201);
+        return $this->createdResponse($program, 'Program created successfully');
     }
 
     /**
@@ -49,7 +46,7 @@ class ProgramController extends Controller
      */
     public function show(Program $program)
     {
-        return response()->json($program);
+        return $this->successResponse($program, 'Program retrieved successfully');
     }
 
     /**
@@ -73,10 +70,7 @@ class ProgramController extends Controller
 
         $program->update($data);
 
-        return response()->json([
-            'message' => 'Program updated successfully.',
-            'data' => $program->fresh(),
-        ]);
+        return $this->successResponse($program->fresh(), 'Program updated successfully');
     }
 
     /**
@@ -86,8 +80,6 @@ class ProgramController extends Controller
     {
         $program->delete();
 
-        return response()->json([
-            'message' => 'Program deleted successfully.',
-        ]);
+        return $this->successResponse(null, 'Program deleted successfully');
     }
 }
