@@ -521,6 +521,5 @@ curl -X DELETE http://localhost:8000/api/admin/users/5 \
 
 ---
 
-**สร้างโดย:** Development Team
 **วันที่:** 12 ธันวาคม 2025
 **Version:** 1.0

@@ -693,6 +693,4 @@ api.deleteProgram(id)
 
 ---
 
-**Happy Coding! 🚀**
-
 *Last Updated: 12 ธันวาคม 2025*
