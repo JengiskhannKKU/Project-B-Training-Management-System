@@ -16,27 +16,27 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin', function () {
         return Inertia::render('Admin/Dashboard');
     })->name('admin.dashboard');
 });
 
-Route::middleware(['auth', 'verified', 'role:trainer'])->group(function () {
+Route::middleware(['auth', 'role:trainer'])->group(function () {
     Route::get('/trainer', function () {
         return Inertia::render('Trainer/Dashboard');
     })->name('trainer.dashboard');
 });
 
-Route::middleware(['auth', 'verified', 'role:student'])->group(function () {
+Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/student', function () {
         return Inertia::render('Student/Dashboard');
     })->name('student.dashboard');
