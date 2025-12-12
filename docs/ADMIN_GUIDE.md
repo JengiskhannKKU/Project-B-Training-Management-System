@@ -1,64 +1,60 @@
-# คู่มือ Admin - Training Management System
+# Admin Guide
 
-> คู่มือการใช้งานสำหรับ Admin ในการจัดการหลักสูตรและรอบการสอน
+Administrator's Guide for Training Management System
 
-**Version:** 1.0
-**สำหรับ:** Admin และผู้จัดการระบบ
-**Last Updated:** 12 ธันวาคม 2025
-
----
-
-## 📋 สารบัญ
-
-- [บทบาทของ Admin](#บทบาทของ-admin)
-- [การจัดการหลักสูตร (Programs)](#การจัดการหลักสูตร-programs)
-- [การจัดการรอบการสอน (Sessions)](#การจัดการรอบการสอน-sessions)
-- [การจัดการผู้ใช้ (Users)](#การจัดการผู้ใช้-users)
-- [เคล็ดลับและข้อควรระวัง](#เคล็ดลับและข้อควรระวัง)
+**Version:** 1.0.0
+**Last Updated:** December 12, 2025
+**For:** System Administrators
 
 ---
 
-## 👤 บทบาทของ Admin
+## Table of Contents
 
-### หน้าที่หลัก
-1. 📚 **จัดการหลักสูตร** - สร้าง แก้ไข ลบหลักสูตร
-2. 🎓 **จัดการรอบการสอน** - กำหนดวัน เวลา สถานที่ อบรม
-3. 👥 **จัดการผู้ใช้** - เพิ่ม/ลบ/แก้ไข users และกำหนดบทบาท
-4. ✅ **อนุมัติการสมัคร** - อนุมัติหลักสูตรและรอบการสอน
-5. 📊 **ดูรายงาน** - ติดตามสถิติและผลการดำเนินงาน
-
-### สิทธิ์การเข้าถึง
-- ✅ เข้าถึง API ทั้งหมด
-- ✅ จัดการข้อมูลผู้อื่นได้
-- ✅ เปลี่ยน status และ role ของ users
-- ✅ ลบข้อมูลได้
+1. [Admin Responsibilities](#admin-responsibilities)
+2. [Managing Programs](#managing-programs)
+3. [Managing Training Sessions](#managing-training-sessions)
+4. [Managing Users](#managing-users)
+5. [Best Practices](#best-practices)
+6. [Common Workflows](#common-workflows)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
-## 📚 การจัดการหลักสูตร (Programs)
+## Admin Responsibilities
 
-### ขั้นตอนที่ 1: สร้างหลักสูตรใหม่
+### Key Responsibilities
 
-#### ข้อมูลที่ต้องเตรียม:
-1. **ชื่อหลักสูตร** (Program Name) - เช่น "Laravel Advanced Course"
-2. **รหัสหลักสูตร** (Code) - เช่น "LAR-ADV-001" (ห้ามซ้ำ!)
-3. **หมวดหมู่** (Category) - เช่น "Web Development"
-4. **ระยะเวลา** (Duration) - เป็นชั่วโมง เช่น 40 ชั่วโมง
-5. **คำอธิบาย** (Description) - อธิบายเนื้อหาหลักสูตร (optional)
-6. **รูปภาพ** (Image URL) - ลิงก์รูปหลักสูตร (optional)
-7. **สถานะ** (Status) - active (เปิดใช้งาน) หรือ inactive (ปิดใช้งาน)
+1. **Program Management** - Create, update, and manage training programs
+2. **Session Management** - Schedule and manage training sessions
+3. **User Management** - Create users, assign roles, manage access
+4. **System Oversight** - Monitor system usage and maintain data quality
 
-#### ตัวอย่าง:
-```
-ชื่อหลักสูตร: Laravel Advanced Development
-รหัส: LAR-ADV-001
-หมวดหมู่: Web Development
-ระยะเวลา: 40 ชั่วโมง
-คำอธิบาย: เรียนรู้ Laravel ในระดับขั้นสูง ครอบคลุม API, Testing, และ Deployment
-สถานะ: active
-```
+### Access Levels
 
-#### วิธีสร้างผ่าน API:
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full access to all operations |
+| **Trainer** | View programs/sessions, manage enrollments |
+| **Student** | View programs/sessions, self-enroll |
+
+---
+
+## Managing Programs
+
+### Creating a New Program
+
+**Required Information:**
+- Program Name (e.g., "Laravel Advanced Development")
+- Unique Code (e.g., "LAR-ADV-001")
+- Category (e.g., "Web Development")
+- Duration (hours, minimum 1)
+- Status (`active` or `inactive`)
+
+**Optional Information:**
+- Description
+- Image URL
+
+**API Request:**
 ```bash
 curl -X POST http://localhost:8000/api/programs \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -68,28 +64,24 @@ curl -X POST http://localhost:8000/api/programs \
     "code": "LAR-ADV-001",
     "category": "Web Development",
     "duration_hours": 40,
-    "description": "เรียนรู้ Laravel ในระดับขั้นสูง",
+    "description": "Advanced Laravel course covering APIs, testing, and deployment",
     "status": "active"
   }'
 ```
 
-#### ข้อควรระวัง:
-- ⚠️ **รหัสหลักสูตร (code) ห้ามซ้ำ** - ถ้าซ้ำจะ error
-- ⚠️ **ระยะเวลาต้อง >= 1 ชั่วโมง**
-- ⚠️ **สถานะต้องเป็น active หรือ inactive เท่านั้น**
+**Common Errors:**
 
----
+| Error | Cause | Solution |
+|-------|-------|----------|
+| "Code already taken" | Duplicate program code | Use a unique code |
+| "Duration must be at least 1" | Invalid duration | Set duration >= 1 |
+| "Status must be active or inactive" | Invalid status | Use 'active' or 'inactive' |
 
-### ขั้นตอนที่ 2: แก้ไขหลักสูตร
+### Updating a Program
 
-#### เมื่อไหร่ควรแก้ไข?
-- 📝 ต้องการเปลี่ยนชื่อหรือคำอธิบาย
-- ⏱️ ต้องการปรับระยะเวลา
-- 🔄 ต้องการเปลี่ยนสถานะ (เปิด/ปิด)
+Update specific fields without affecting others:
 
-#### วิธีแก้ไข:
 ```bash
-# แก้ไขบางส่วน (ส่งเฉพาะที่ต้องการเปลี่ยน)
 curl -X PUT http://localhost:8000/api/programs/1 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
@@ -99,76 +91,60 @@ curl -X PUT http://localhost:8000/api/programs/1 \
   }'
 ```
 
-#### สิ่งที่แก้ไขได้:
-- ✅ ชื่อหลักสูตร
-- ✅ คำอธิบาย
-- ✅ หมวดหมู่
-- ✅ ระยะเวลา
-- ✅ รูปภาพ
-- ✅ สถานะ
-- ⚠️ รหัส (แก้ได้ แต่ต้องไม่ซ้ำกับของเดิม)
+**What You Can Update:**
+- Name
+- Description
+- Category
+- Duration
+- Image URL
+- Status
+- Code (must remain unique)
 
----
+### Deactivating vs Deleting
 
-### ขั้นตอนที่ 3: ปิดใช้งาน/ลบหลักสูตร
-
-#### ปิดใช้งาน (แนะนำ)
+**Deactivate (Recommended):**
 ```bash
-# เปลี่ยนสถานะเป็น inactive
+# Set status to inactive
 curl -X PUT http://localhost:8000/api/programs/1 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "inactive"}'
 ```
 
-**ข้อดี:**
-- ✅ เก็บข้อมูลไว้
-- ✅ สามารถเปิดใช้งานใหม่ได้
-- ✅ ประวัติยังอยู่
+**Benefits:**
+- Data is preserved
+- Can be reactivated later
+- Historical records remain intact
 
-#### ลบถาวร (ระวัง!)
+**Delete (Permanent):**
 ```bash
 curl -X DELETE http://localhost:8000/api/programs/1 \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-**คำเตือน:**
-- ⚠️ **ลบแล้วกู้คืนไม่ได้!**
-- ⚠️ อาจมี sessions ที่เชื่อมโยงอยู่
-- ⚠️ ควรปิดใช้งานแทนการลบ
+**Warning:** Deletion is permanent and cannot be undone.
 
 ---
 
-## 🎓 การจัดการรอบการสอน (Sessions)
+## Managing Training Sessions
 
-### ขั้นตอนที่ 1: สร้างรอบการสอนใหม่
+### Creating a Training Session
 
-#### ข้อมูลที่ต้องเตรียม:
-1. **หลักสูตร** (Program ID) - เลือกหลักสูตรที่จะเปิดสอน
-2. **ชื่อรอบ** (Title) - เช่น "Laravel Advanced - Batch 1"
-3. **วันเริ่ม** (Start Date) - รูปแบบ YYYY-MM-DD
-4. **วันสิ้นสุด** (End Date) - ต้องมาหลัง start_date
-5. **เวลาเริ่ม** (Start Time) - รูปแบบ HH:MM (optional)
-6. **เวลาสิ้นสุด** (End Time) - ต้องมาหลัง start_time (optional)
-7. **จำนวนที่รับ** (Capacity) - จำนวนนักเรียนสูงสุด
-8. **ผู้สอน** (Trainer ID) - เลือก user ที่เป็น trainer
-9. **สถานที่** (Location) - เช่น "Room A101" (optional)
-10. **สถานะ** (Status) - upcoming, open, closed, completed, cancelled
+**Required Information:**
+- Program ID (must exist)
+- Session Title (e.g., "Laravel Advanced - Batch 1")
+- Start Date (YYYY-MM-DD format)
+- End Date (must be after start date)
+- Capacity (minimum 1)
+- Trainer ID (must exist, user with trainer role)
 
-#### ตัวอย่าง:
-```
-หลักสูตร: Laravel Advanced (ID: 1)
-ชื่อรอบ: Laravel Advanced - Batch 1
-วันเริ่ม: 2025-02-01
-วันสิ้นสุด: 2025-02-28
-เวลา: 09:00 - 17:00
-จำนวนที่รับ: 30 คน
-ผู้สอน: John Smith (ID: 2)
-สถานที่: Room A101
-สถานะ: open (เปิดรับสมัคร)
-```
+**Optional Information:**
+- Start Time (HH:MM format)
+- End Time (must be after start time)
+- Location
+- Status (`upcoming`, `open`, `closed`, `completed`, `cancelled`)
 
-#### วิธีสร้างผ่าน API:
+**API Request:**
 ```bash
 curl -X POST http://localhost:8000/api/sessions \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -187,93 +163,93 @@ curl -X POST http://localhost:8000/api/sessions \
   }'
 ```
 
-#### ข้อควรระวัง:
-- ⚠️ **start_date ต้องมาก่อน end_date** - ถ้าสลับจะ error
-- ⚠️ **end_time ต้องมาหลัง start_time**
-- ⚠️ **capacity ต้อง >= 1**
-- ⚠️ **program_id และ trainer_id ต้องมีในระบบ**
+**Common Errors:**
 
----
+| Error | Cause | Solution |
+|-------|-------|----------|
+| "Start date must be before end date" | Dates in wrong order | Ensure start_date < end_date |
+| "Program not found" | Invalid program_id | Verify program exists |
+| "Trainer not found" | Invalid trainer_id | Verify user exists and is trainer |
+| "End time must be after start time" | Times in wrong order | Ensure start_time < end_time |
 
-### ขั้นตอนที่ 2: แก้ไขรอบการสอน
+### Session Status Management
 
-#### กรณีที่ต้องแก้ไข:
-1. **เปลี่ยนวันเวลา** - เลื่อนตาราง
-2. **เพิ่ม/ลดที่นั่ง** - ปรับ capacity
-3. **เปลี่ยนสถานที่** - ย้ายห้องเรียน
-4. **เปลี่ยนสถานะ** - เปิด/ปิดรับสมัคร/จบหลักสูตร
+**Status Workflow:**
 
-#### ตัวอย่างการเปลี่ยนสถานะ:
+1. **upcoming** → Session created, not yet open for enrollment
+2. **open** → Accepting enrollments
+3. **closed** → No longer accepting enrollments (full or approaching start date)
+4. **completed** → Session finished
+5. **cancelled** → Session canceled
 
-**Open (เปิดรับสมัคร)**
+**Changing Status:**
+
 ```bash
+# Open for enrollment
 curl -X PUT http://localhost:8000/api/sessions/1 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "open"}'
-```
 
-**Closed (ปิดรับสมัคร)**
-```bash
+# Close enrollment
 curl -X PUT http://localhost:8000/api/sessions/1 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "closed"}'
+
+# Mark as completed
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type": application/json" \
+  -d '{"status": "completed"}'
 ```
 
-**Completed (จบหลักสูตรแล้ว)**
+### Modifying Sessions
+
+**Common Modifications:**
+
+**Increase Capacity:**
 ```bash
 curl -X PUT http://localhost:8000/api/sessions/1 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"status": "completed"}'
+  -d '{"capacity": 40}'
 ```
 
-#### สถานะต่างๆ:
-| Status | ความหมาย | เมื่อไหร่ใช้ |
-|--------|----------|-------------|
-| `upcoming` | กำลังจะเริ่ม | สร้างใหม่ ยังไม่เปิดรับสมัคร |
-| `open` | เปิดรับสมัคร | พร้อมให้นักเรียนลงทะเบียน |
-| `closed` | ปิดรับสมัคร | เต็มแล้ว หรือใกล้เริ่มเรียน |
-| `completed` | จบหลักสูตร | สอนเสร็จแล้ว |
-| `cancelled` | ยกเลิก | ยกเลิกรอบนี้ |
-
----
-
-### ขั้นตอนที่ 3: ดูรายการนักเรียนในรอบ
-
+**Change Location:**
 ```bash
-# ดูรายชื่อนักเรียนที่ลงทะเบียน (ถ้ามี endpoint)
-curl -X GET http://localhost:8000/api/sessions/1/enrollments \
-  -H "Authorization: Bearer YOUR_TOKEN"
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"location": "Room B202"}'
 ```
 
----
-
-### ขั้นตอนที่ 4: ลบรอบการสอน
-
+**Reschedule:**
 ```bash
-curl -X DELETE http://localhost:8000/api/sessions/1 \
-  -H "Authorization: Bearer YOUR_TOKEN"
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "start_date": "2025-03-01",
+    "end_date": "2025-03-31"
+  }'
 ```
 
-**คำเตือน:**
-- ⚠️ **ลบแล้วกู้คืนไม่ได้!**
-- ⚠️ ตรวจสอบว่าไม่มีนักเรียนลงทะเบียนแล้ว
-- ⚠️ ควรยกเลิก (cancelled) แทนการลบ
+**Best Practice:** Notify enrolled students before making significant changes.
 
 ---
 
-## 👥 การจัดการผู้ใช้ (Users)
+## Managing Users
 
-### ขั้นตอนที่ 1: สร้าง User ใหม่
+### Creating Users
 
-#### บทบาท (Roles):
-- **admin** - ผู้ดูแลระบบ (สิทธิ์เต็ม)
-- **trainer** - ผู้สอน
-- **student** - นักเรียน
+**Default Registration:**
+- Regular users self-register via `/auth/register`
+- Automatically assigned `student` role
 
-#### วิธีสร้าง:
+**Admin Creating Users:**
+- Can assign any role: `admin`, `trainer`, or `student`
+
 ```bash
 curl -X POST http://localhost:8000/api/admin/users \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -286,240 +262,386 @@ curl -X POST http://localhost:8000/api/admin/users \
   }'
 ```
 
-#### ข้อควรระวัง:
-- ⚠️ **Email ห้ามซ้ำ**
-- ⚠️ **Password อย่างน้อย 8 ตัวอักษร**
-- ⚠️ **Role ต้องเป็น admin, trainer, หรือ student เท่านั้น**
+**Requirements:**
+- Unique email address
+- Password minimum 8 characters
+- Valid role: `admin`, `trainer`, or `student`
 
----
+### Viewing Users
 
-### ขั้นตอนที่ 2: แก้ไข User
-
-#### เปลี่ยนบทบาท:
+**List All Users:**
 ```bash
-# เปลี่ยนจาก student เป็น trainer
+curl -X GET http://localhost:8000/api/admin/users \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Filter by Role:**
+```bash
+# View all trainers
+curl -X GET "http://localhost:8000/api/admin/users?role=trainer" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# View all students
+curl -X GET "http://localhost:8000/api/admin/users?role=student" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Filter by Status:**
+```bash
+# View active users
+curl -X GET "http://localhost:8000/api/admin/users?status=active" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# View inactive users
+curl -X GET "http://localhost:8000/api/admin/users?status=inactive" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Pagination:**
+```bash
+# 20 users per page
+curl -X GET "http://localhost:8000/api/admin/users?per_page=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Updating Users
+
+**Change Role:**
+```bash
+# Promote student to trainer
 curl -X PUT http://localhost:8000/api/admin/users/5 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"role": "trainer"}'
 ```
 
-#### เปลี่ยนสถานะ:
+**Change Status:**
 ```bash
-# ปิดการใช้งาน
+# Deactivate user
 curl -X PUT http://localhost:8000/api/admin/users/5 \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "inactive"}'
+
+# Reactivate user
+curl -X PUT http://localhost:8000/api/admin/users/5 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "active"}'
 ```
 
----
-
-### ขั้นตอนที่ 3: ดูรายการ Users (พร้อม Filter)
-
-#### ดูทั้งหมด:
+**Update Multiple Fields:**
 ```bash
-curl -X GET http://localhost:8000/api/admin/users \
-  -H "Authorization: Bearer YOUR_TOKEN"
+curl -X PUT http://localhost:8000/api/admin/users/5 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith (Updated)",
+    "role": "admin",
+    "status": "active"
+  }'
 ```
 
-#### Filter ตาม Role:
-```bash
-# เฉพาะ trainers
-curl -X GET "http://localhost:8000/api/admin/users?role=trainer" \
-  -H "Authorization: Bearer YOUR_TOKEN"
+### Deactivating Users
 
-# เฉพาะ students
-curl -X GET "http://localhost:8000/api/admin/users?role=student" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-#### Filter ตาม Status:
-```bash
-# เฉพาะ active users
-curl -X GET "http://localhost:8000/api/admin/users?status=active" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-#### Pagination:
-```bash
-# แสดง 20 รายการต่อหน้า
-curl -X GET "http://localhost:8000/api/admin/users?per_page=20" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
----
-
-### ขั้นตอนที่ 4: ปิดการใช้งาน/ลบ User
-
-#### ปิดการใช้งาน (Deactivate):
 ```bash
 curl -X DELETE http://localhost:8000/api/admin/users/5 \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-**Note:** DELETE จะเปลี่ยน status เป็น inactive (ไม่ได้ลบจริง)
+**Note:** DELETE sets status to `inactive` (soft delete). User data is preserved.
 
 ---
 
-## 💡 เคล็ดลับและข้อควรระวัง
+## Best Practices
 
-### เคล็ดลับการใช้งาน
+### Program Management
 
-#### 1. ตั้งชื่อ/รหัสให้เป็นระบบ
+**1. Use Systematic Naming:**
 ```
-✅ ดี:
-- Code: LAR-ADV-001, LAR-FUND-001
-- Title: Laravel Advanced - Batch 1, Batch 2
+Good Examples:
+- Code: LAR-ADV-001, LAR-FUND-001, VUE-FUND-001
+- Name: Framework Name + Level + "Development/Course"
 
-❌ ไม่ดี:
-- Code: ABC, XYZ
-- Title: Course 1, Course 2
-```
-
-#### 2. ตรวจสอบวันที่ให้ดี
-```
-✅ ดี:
-- Start: 2025-02-01
-- End: 2025-02-28
-
-❌ ผิด (จะ error):
-- Start: 2025-02-28
-- End: 2025-02-01  (สลับกัน!)
+Bad Examples:
+- Code: ABC, XYZ, 001
+- Name: Course 1, Training A
 ```
 
-#### 3. กำหนด Capacity ให้เหมาะสม
+**2. Keep Codes Unique:**
+- Use a prefix for each category (LAR-, VUE-, REACT-)
+- Include level indicator (FUND, INT, ADV)
+- Add sequential number (-001, -002)
+
+**3. Set Appropriate Status:**
+- Use `inactive` for programs under development
+- Use `active` only for programs ready to offer
+- Deactivate instead of delete to preserve history
+
+### Session Management
+
+**1. Verify Dates:**
 ```
-✅ ดี: 20-30 คน (ห้องเรียนทั่วไป)
-✅ ดี: 50-100 คน (ห้องบรรยาย)
-❌ ไม่ดี: 0 คน (จะ error)
+Correct:
+- start_date: 2025-02-01
+- end_date: 2025-02-28
+
+Incorrect (will fail):
+- start_date: 2025-02-28
+- end_date: 2025-02-01
 ```
 
-#### 4. ใช้ Status อย่างถูกต้อง
+**2. Set Appropriate Capacity:**
+```
+Room Types:
+- Small classroom: 15-25 students
+- Standard classroom: 25-35 students
+- Lecture hall: 50-100 students
+- Online: 50-100+ students
+```
 
-**Programs:**
-- `active` - เปิดใช้งาน สามารถสร้าง sessions ได้
-- `inactive` - ปิดชั่วคราว ไม่แสดงให้ผู้ใช้เห็น
+**3. Use Status Correctly:**
+- **upcoming**: Created but not yet announced
+- **open**: Ready for enrollment
+- **closed**: Full or enrollment period ended
+- **completed**: Session finished
+- **cancelled**: Will not occur
 
-**Sessions:**
-- `upcoming` - ยังไม่เปิดรับสมัคร
-- `open` - เปิดรับสมัคร
-- `closed` - ปิดรับสมัคร (เต็มแล้ว)
-- `completed` - จบหลักสูตรแล้ว
-- `cancelled` - ยกเลิก
+**4. Communicate Changes:**
+- Notify enrolled students before rescheduling
+- Update location with sufficient notice
+- Announce capacity increases
+
+### User Management
+
+**1. Role Assignment:**
+```
+Choose Carefully:
+- admin: Full system access (limited to necessary personnel)
+- trainer: Can manage sessions and enrollments
+- student: Can view and enroll
+```
+
+**2. Avoid Unnecessary Role Changes:**
+- Don't change trainer to student if they have active sessions
+- Don't change admin to student (creates access issues)
+- Create new accounts instead when in doubt
+
+**3. Deactivate Instead of Delete:**
+- Preserves enrollment history
+- Allows reactivation if needed
+- Maintains data integrity
 
 ---
 
-### ข้อควรระวัง
+## Common Workflows
 
-#### ⚠️ อย่าลบข้อมูลที่มีการใช้งาน
-```
-❌ อย่าลบ:
-- Program ที่มี sessions อยู่
-- Session ที่มีนักเรียนลงทะเบียนแล้ว
-- User ที่เป็น trainer ของ session ที่กำลังดำเนินการ
+### Launching a New Training Program
 
-✅ ควรทำ:
-- เปลี่ยนสถานะเป็น inactive แทน
-- หรือยกเลิก (cancelled)
-```
-
-#### ⚠️ ตรวจสอบก่อนแก้ไขวันเวลา
-```
-❌ อย่าทำ:
-- เปลี่ยนวันเรียนเมื่อใกล้เริ่มหลักสูตร
-- ลดที่นั่งเมื่อมีคนลงทะเบียนแล้ว
-
-✅ ควรทำ:
-- แจ้งนักเรียนก่อนเปลี่ยน
-- เช็คว่ามีคนลงทะเบียนกี่คนแล้ว
+**Step 1: Create Program**
+```bash
+curl -X POST http://localhost:8000/api/programs \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "React Fundamentals",
+    "code": "REACT-FUND-001",
+    "category": "Frontend Development",
+    "duration_hours": 30,
+    "description": "Learn React from scratch",
+    "status": "active"
+  }'
 ```
 
-#### ⚠️ ระมัดระวังการเปลี่ยน Role
+**Step 2: Create First Session**
+```bash
+curl -X POST http://localhost:8000/api/sessions \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "program_id": 1,
+    "title": "React Fundamentals - Batch 1",
+    "start_date": "2025-03-01",
+    "end_date": "2025-03-30",
+    "start_time": "09:00",
+    "end_time": "16:00",
+    "capacity": 30,
+    "trainer_id": 2,
+    "location": "Room A101",
+    "status": "upcoming"
+  }'
 ```
-❌ อย่าทำ:
-- เปลี่ยน admin เป็น student (อาจสูญเสียสิทธิ์)
-- เปลี่ยน trainer ที่กำลังสอนอยู่เป็น student
 
-✅ ควรทำ:
-- ตรวจสอบว่า user มีหน้าที่อะไรอยู่
-- สร้าง user ใหม่แทนการเปลี่ยน role
+**Step 3: Open for Enrollment**
+```bash
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "open"}'
 ```
+
+**Step 4: Monitor Enrollment**
+- Check enrollment count regularly
+- Close when at capacity or near start date
+
+**Step 5: Close Enrollment**
+```bash
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "closed"}'
+```
+
+**Step 6: Mark as Completed**
+```bash
+curl -X PUT http://localhost:8000/api/sessions/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed"}'
+```
+
+### Adding a New Trainer
+
+**Step 1: Create Trainer Account**
+```bash
+curl -X POST http://localhost:8000/api/admin/users \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Trainer",
+    "email": "john.trainer@example.com",
+    "password": "tempPassword123",
+    "role": "trainer"
+  }'
+```
+
+**Step 2: Inform Trainer**
+- Send login credentials
+- Provide system access instructions
+- Share training materials
+
+**Step 3: Assign to Sessions**
+- Use trainer's ID when creating sessions
+- Ensure they have appropriate access
 
 ---
 
-## 📊 Workflow แนะนำ
+## Troubleshooting
 
-### การเปิดหลักสูตรใหม่
+### Problem: "Code already taken"
 
+**Cause:** Program code is not unique
+
+**Solution:**
+1. Check existing programs:
+```bash
+curl -X GET http://localhost:8000/api/programs \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
-1. สร้าง Program
-   ↓
-2. ตรวจสอบข้อมูลถูกต้อง
-   ↓
-3. เปลี่ยนสถานะเป็น active
-   ↓
-4. สร้าง Session (รอบการสอน)
-   ↓
-5. กำหนด Trainer
-   ↓
-6. ตั้งวันเวลาและสถานที่
-   ↓
-7. เปลี่ยนสถานะเป็น open (เปิดรับสมัคร)
-   ↓
-8. รอนักเรียนลงทะเบียน
-   ↓
-9. เมื่อเต็ม หรือใกล้วันเรียน → เปลี่ยนเป็น closed
-   ↓
-10. หลังจบหลักสูตร → เปลี่ยนเป็น completed
+2. Use a different, unique code
+
+### Problem: "Start date must be before end date"
+
+**Cause:** Dates are in wrong order
+
+**Solution:**
+```bash
+# Correct
+{
+  "start_date": "2025-02-01",
+  "end_date": "2025-02-28"
+}
+
+# Incorrect
+{
+  "start_date": "2025-02-28",
+  "end_date": "2025-02-01"
+}
 ```
 
-### การจัดการผู้ใช้
+### Problem: Session not visible to students
 
+**Cause:** Program or session status not set correctly
+
+**Checklist:**
+1. Program status must be `active`
+2. Session status must be `open`
+3. Dates must be valid (start in future or present)
+
+### Problem: Cannot delete program
+
+**Cause:** Program may have associated sessions
+
+**Solution:**
+1. Delete or cancel associated sessions first
+2. Or set program status to `inactive` instead
+
+### Problem: User cannot login
+
+**Possible Causes:**
+1. User status is `inactive`
+2. Incorrect credentials
+3. Token expired
+
+**Solutions:**
+1. Check user status:
+```bash
+curl -X GET "http://localhost:8000/api/admin/users?email=user@example.com" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
-1. สร้าง User ใหม่ (ระบุ role)
-   ↓
-2. User ได้รับ email แจ้ง
-   ↓
-3. User login ครั้งแรก
-   ↓
-4. ถ้าต้องการเปลี่ยน role → แก้ไขผ่าน Admin
-   ↓
-5. ถ้าต้องการปิดบัญชี → Deactivate (ไม่ลบ)
+2. Reactivate if needed:
+```bash
+curl -X PUT http://localhost:8000/api/admin/users/5 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "active"}'
 ```
+3. User should request new token by logging in again
 
 ---
 
-## ❓ คำถามที่พบบ่อย (FAQ)
+## Quick Reference
 
-### Q: ทำไม error "The code has already been taken"?
-**A:** รหัสหลักสูตร (code) ซ้ำกับของเดิม ต้องใช้รหัสใหม่ที่ไม่ซ้ำ
+### Program Status
 
-### Q: ทำไม error "The start date must be before the end date"?
-**A:** วันเริ่มต้นมาหลังวันสิ้นสุด ต้องสลับวันให้ถูกต้อง
+| Status | When to Use |
+|--------|-------------|
+| `active` | Program ready to offer |
+| `inactive` | Program not currently offered |
 
-### Q: สร้าง Session แล้ว ทำไมไม่แสดงให้นักเรียนเห็น?
-**A:** ตรวจสอบว่า:
-- Program status = active
-- Session status = open
-- วันเริ่มต้นยังไม่ผ่านมา
+### Session Status
 
-### Q: ลบ Program แล้วจะกระทบ Sessions ไหม?
-**A:** ขึ้นอยู่กับ database constraints แต่แนะนำให้ลบ sessions ก่อน หรือเปลี่ยนสถานะเป็น inactive แทน
+| Status | When to Use |
+|--------|-------------|
+| `upcoming` | Created, not yet open for enrollment |
+| `open` | Accepting enrollments |
+| `closed` | Enrollment closed (full or starting soon) |
+| `completed` | Session finished |
+| `cancelled` | Session canceled |
 
-### Q: จะเพิ่มผู้สอน (Trainer) ยังไง?
-**A:** สร้าง user ใหม่แล้วระบุ role = "trainer"
+### User Roles
 
----
-
-## 📞 ติดต่อ Support
-
-หากมีปัญหาหรือข้อสงสัย:
-- **Email:** admin@example.com
-- **เอกสาร:** [API Specification](./API_SPECIFICATION.md)
-- **Testing:** [Testing Summary](../TESTING_SUMMARY.md)
+| Role | Permissions |
+|------|-------------|
+| `admin` | Full system access |
+| `trainer` | Manage sessions and enrollments |
+| `student` | View programs and enroll |
 
 ---
 
-**วันที่:** 12 ธันวาคม 2025
-**Version:** 1.0
+## Support
+
+**For technical issues:**
+- Check API Specification: `API_SPECIFICATION.md`
+- Review test results: `../TESTING_SUMMARY.md`
+- Contact development team
+
+**For system questions:**
+- Consult this guide
+- Review API documentation
+- Check error messages for specific guidance
+
+---
+
+**Last Updated:** December 12, 2025
+**Version:** 1.0.0

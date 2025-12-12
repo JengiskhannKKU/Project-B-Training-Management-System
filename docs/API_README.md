@@ -1,92 +1,125 @@
-# Training Management System - API Guide
+# API Usage Guide
 
-> คู่มือการใช้งาน API สำหรับ Frontend Developers
+Frontend Developer Guide for Training Management System API
 
-**Version:** 1.0
-**Last Updated:** 12 ธันวาคม 2025
-
----
-
-## 📋 สารบัญ
-
-- [เกี่ยวกับ API](#เกี่ยวกับ-api)
-- [เริ่มต้นใช้งาน](#เริ่มต้นใช้งาน)
-- [Authentication](#authentication)
-- [ตัวอย่างการใช้งาน](#ตัวอย่างการใช้งาน)
-- [Error Handling](#error-handling)
-- [Best Practices](#best-practices)
+**Version:** 1.0.0
+**Last Updated:** December 12, 2025
 
 ---
 
-## 🎯 เกี่ยวกับ API
+## Table of Contents
+
+1. [Quick Start](#quick-start)
+2. [Authentication](#authentication)
+3. [Making API Calls](#making-api-calls)
+4. [Code Examples](#code-examples)
+5. [Error Handling](#error-handling)
+6. [Best Practices](#best-practices)
+
+---
+
+## Quick Start
 
 ### Base URL
+
 ```
 Development: http://localhost:8000/api
 Production: https://your-domain.com/api
 ```
 
-### Response Format
-ทุก API response เป็น JSON รูปแบบเดียวกัน:
+### Setup in 3 Steps
 
-**Success:**
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": { ... }
+**1. Register/Login to get token:**
+```javascript
+const response = await fetch('http://localhost:8000/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'John Doe',
+    email: 'john@example.com',
+    password: 'password123'
+  })
+});
+
+const data = await response.json();
+const token = data.data.token; // Save this
+```
+
+**2. Store token:**
+```javascript
+localStorage.setItem('token', token);
+```
+
+**3. Use token in requests:**
+```javascript
+const response = await fetch('http://localhost:8000/api/programs', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/json'
+  }
+});
+```
+
+---
+
+## Authentication
+
+### Token Storage
+
+**Recommended approach:**
+```javascript
+// Save token after login
+localStorage.setItem('token', token);
+
+// Retrieve token for API calls
+const token = localStorage.getItem('token');
+```
+
+**With state management:**
+```javascript
+// Redux / Zustand / Pinia
+store.setToken(token);
+const token = store.getToken();
+```
+
+### Token Usage
+
+Always include in headers for protected endpoints:
+```javascript
+headers: {
+  'Authorization': `Bearer ${token}`,
+  'Accept': 'application/json',
+  'Content-Type': 'application/json'
 }
 ```
 
-**Error:**
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "errors": { ... }
+### Handle Token Expiration
+
+```javascript
+if (response.status === 401) {
+  // Token expired or invalid
+  localStorage.removeItem('token');
+  window.location.href = '/login';
 }
 ```
 
 ---
 
-## 🚀 เริ่มต้นใช้งาน
+## Making API Calls
 
-### ขั้นตอนที่ 1: ลงทะเบียน/Login
+### Create an API Helper
 
+**api.js:**
 ```javascript
-// ลงทะเบียนผู้ใช้ใหม่
-const register = async () => {
-  const response = await fetch('http://localhost:8000/api/auth/register', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      name: 'John Doe',
-      email: 'john@example.com',
-      password: 'password123'
-    })
-  });
+const API_BASE = 'http://localhost:8000/api';
 
-  const result = await response.json();
-
-  if (result.success) {
-    // เก็บ token
-    localStorage.setItem('token', result.data.token);
-    localStorage.setItem('user', JSON.stringify(result.data.user));
-  }
-};
-```
-
-### ขั้นตอนที่ 2: ใช้ Token เรียก API
-
-```javascript
-// สร้าง helper function
-const apiCall = async (endpoint, options = {}) => {
+async function apiCall(endpoint, options = {}) {
   const token = localStorage.getItem('token');
 
-  const response = await fetch(`http://localhost:8000/api${endpoint}`, {
+  const config = {
     ...options,
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -94,95 +127,88 @@ const apiCall = async (endpoint, options = {}) => {
       'Content-Type': 'application/json',
       ...options.headers
     }
-  });
+  };
 
-  return response.json();
-};
+  const response = await fetch(`${API_BASE}${endpoint}`, config);
 
-// ใช้งาน
-const programs = await apiCall('/programs');
-```
-
----
-
-## 🔐 Authentication
-
-### การเก็บ Token
-
-**DO:**
-```javascript
-// ✅ เก็บใน localStorage
-localStorage.setItem('token', token);
-
-// ✅ หรือใช้ state management (Redux, Zustand, etc.)
-store.setToken(token);
-```
-
-**DON'T:**
-```javascript
-// ❌ ห้ามเก็บใน cookie ที่ไม่ secure
-// ❌ ห้ามเก็บใน global variable
-```
-
-### ส่ง Token ทุกครั้ง
-
-```javascript
-headers: {
-  'Authorization': `Bearer ${token}`,
-  'Accept': 'application/json'
-}
-```
-
-### ตรวจสอบ Token หมดอายุ
-
-```javascript
-const apiCall = async (endpoint, options = {}) => {
-  const response = await fetch(url, options);
-
+  // Handle 401 Unauthorized
   if (response.status === 401) {
-    // Token หมดอายุ - redirect ไป login
     localStorage.removeItem('token');
     window.location.href = '/login';
     return;
   }
 
   return response.json();
-};
+}
+
+export default apiCall;
+```
+
+### Usage
+
+```javascript
+import apiCall from './api';
+
+// GET request
+const programs = await apiCall('/programs');
+
+// POST request
+const newProgram = await apiCall('/programs', {
+  method: 'POST',
+  body: JSON.stringify({
+    name: 'Vue.js Course',
+    code: 'VUE-001',
+    category: 'Frontend',
+    duration_hours: 40,
+    status: 'active'
+  })
+});
+
+// PUT request
+const updated = await apiCall('/programs/1', {
+  method: 'PUT',
+  body: JSON.stringify({ name: 'Updated Name' })
+});
+
+// DELETE request
+const deleted = await apiCall('/programs/1', {
+  method: 'DELETE'
+});
 ```
 
 ---
 
-## 💡 ตัวอย่างการใช้งาน
+## Code Examples
 
-### 1. ดูรายการ Programs
+### React - Fetch Programs
 
 ```javascript
-// React Example
 import { useState, useEffect } from 'react';
+import apiCall from './api';
 
 function ProgramList() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchPrograms = async () => {
+    async function fetchPrograms() {
       try {
         const result = await apiCall('/programs');
-
         if (result.success) {
           setPrograms(result.data);
         }
-      } catch (error) {
-        console.error('Error:', error);
+      } catch (err) {
+        setError(err.message);
       } finally {
         setLoading(false);
       }
-    };
-
+    }
     fetchPrograms();
   }, []);
 
   if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div>
@@ -190,7 +216,7 @@ function ProgramList() {
         <div key={program.id}>
           <h3>{program.name}</h3>
           <p>{program.description}</p>
-          <p>Duration: {program.duration_hours} hours</p>
+          <p>Duration: {program.duration_hours}h</p>
         </div>
       ))}
     </div>
@@ -198,11 +224,11 @@ function ProgramList() {
 }
 ```
 
-### 2. สร้าง Program (Form)
+### React - Create Program Form
 
 ```javascript
-// React Example with Form
 import { useState } from 'react';
+import apiCall from './api';
 
 function CreateProgramForm() {
   const [formData, setFormData] = useState({
@@ -213,11 +239,18 @@ function CreateProgramForm() {
     status: 'active'
   });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setErrors({});
 
     try {
@@ -228,22 +261,15 @@ function CreateProgramForm() {
 
       if (result.success) {
         alert('Program created successfully!');
-        // Reset form
-        setFormData({
-          name: '',
-          code: '',
-          category: '',
-          duration_hours: '',
-          status: 'active'
-        });
-      } else {
-        // Validation errors
-        setErrors(result.errors || {});
+        // Reset form or redirect
+        setFormData({ name: '', code: '', category: '', duration_hours: '', status: 'active' });
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      if (err.errors) {
+        setErrors(err.errors);
+      }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -252,9 +278,10 @@ function CreateProgramForm() {
       <div>
         <input
           type="text"
+          name="name"
           placeholder="Program Name"
           value={formData.name}
-          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          onChange={handleChange}
         />
         {errors.name && <span className="error">{errors.name[0]}</span>}
       </div>
@@ -262,27 +289,47 @@ function CreateProgramForm() {
       <div>
         <input
           type="text"
-          placeholder="Program Code"
+          name="code"
+          placeholder="Code (e.g., LAR-001)"
           value={formData.code}
-          onChange={(e) => setFormData({...formData, code: e.target.value})}
+          onChange={handleChange}
         />
         {errors.code && <span className="error">{errors.code[0]}</span>}
       </div>
 
-      {/* More fields... */}
+      <div>
+        <input
+          type="text"
+          name="category"
+          placeholder="Category"
+          value={formData.category}
+          onChange={handleChange}
+        />
+        {errors.category && <span className="error">{errors.category[0]}</span>}
+      </div>
 
-      <button type="submit" disabled={loading}>
-        {loading ? 'Creating...' : 'Create Program'}
+      <div>
+        <input
+          type="number"
+          name="duration_hours"
+          placeholder="Duration (hours)"
+          value={formData.duration_hours}
+          onChange={handleChange}
+        />
+        {errors.duration_hours && <span className="error">{errors.duration_hours[0]}</span>}
+      </div>
+
+      <button type="submit" disabled={submitting}>
+        {submitting ? 'Creating...' : 'Create Program'}
       </button>
     </form>
   );
 }
 ```
 
-### 3. Filter Sessions by Program
+### Vue 3 - Fetch Sessions by Program
 
-```javascript
-// Vue Example
+```vue
 <template>
   <div>
     <select v-model="selectedProgramId" @change="fetchSessions">
@@ -292,29 +339,36 @@ function CreateProgramForm() {
       </option>
     </select>
 
-    <div v-for="session in sessions" :key="session.id">
-      <h4>{{ session.title }}</h4>
-      <p>{{ session.start_date }} - {{ session.end_date }}</p>
-      <p>Capacity: {{ session.capacity }}</p>
+    <div v-if="loading">Loading...</div>
+    <div v-else>
+      <div v-for="session in sessions" :key="session.id" class="session-card">
+        <h4>{{ session.title }}</h4>
+        <p>{{ session.start_date }} - {{ session.end_date }}</p>
+        <p>Capacity: {{ session.capacity }}</p>
+        <p>Location: {{ session.location }}</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import apiCall from './api';
 
 const programs = ref([]);
 const sessions = ref([]);
 const selectedProgramId = ref('');
+const loading = ref(false);
 
-const fetchPrograms = async () => {
+async function fetchPrograms() {
   const result = await apiCall('/programs');
   if (result.success) {
     programs.value = result.data;
   }
-};
+}
 
-const fetchSessions = async () => {
+async function fetchSessions() {
+  loading.value = true;
   const endpoint = selectedProgramId.value
     ? `/sessions?program_id=${selectedProgramId.value}`
     : '/sessions';
@@ -323,7 +377,8 @@ const fetchSessions = async () => {
   if (result.success) {
     sessions.value = result.data;
   }
-};
+  loading.value = false;
+}
 
 onMounted(() => {
   fetchPrograms();
@@ -332,181 +387,195 @@ onMounted(() => {
 </script>
 ```
 
-### 4. Update Program
+### React Query - Advanced Usage
 
 ```javascript
-// React Example
-const updateProgram = async (programId, updates) => {
-  try {
-    const result = await apiCall(`/programs/${programId}`, {
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import apiCall from './api';
+
+function ProgramManager() {
+  const queryClient = useQueryClient();
+
+  // Fetch programs
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['programs'],
+    queryFn: () => apiCall('/programs')
+  });
+
+  // Create program mutation
+  const createMutation = useMutation({
+    mutationFn: (newProgram) => apiCall('/programs', {
+      method: 'POST',
+      body: JSON.stringify(newProgram)
+    }),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries(['programs']);
+    }
+  });
+
+  // Update program mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => apiCall(`/programs/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(updates)
-    });
-
-    if (result.success) {
-      console.log('Updated:', result.data);
-      return result.data;
+      body: JSON.stringify(data)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['programs']);
     }
-  } catch (error) {
-    console.error('Error:', error);
-  }
-};
+  });
 
-// ใช้งาน
-updateProgram(1, {
-  name: 'Laravel Advanced (Updated)',
-  status: 'inactive'
-});
-```
-
-### 5. Delete Program
-
-```javascript
-// React Example with Confirmation
-const deleteProgram = async (programId) => {
-  if (!confirm('Are you sure you want to delete this program?')) {
-    return;
-  }
-
-  try {
-    const result = await apiCall(`/programs/${programId}`, {
+  // Delete program mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id) => apiCall(`/programs/${id}`, {
       method: 'DELETE'
-    });
-
-    if (result.success) {
-      alert('Program deleted successfully!');
-      // Refresh list
-      fetchPrograms();
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['programs']);
     }
-  } catch (error) {
-    console.error('Error:', error);
-  }
-};
-```
+  });
 
----
-
-## ❌ Error Handling
-
-### ตัวอย่าง Error Handler ที่ดี
-
-```javascript
-const handleAPIError = (error, response) => {
-  // 401 - Unauthorized
-  if (response.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-    return;
-  }
-
-  // 403 - Forbidden
-  if (response.status === 403) {
-    alert('You don\'t have permission to perform this action');
-    return;
-  }
-
-  // 404 - Not Found
-  if (response.status === 404) {
-    alert('Resource not found');
-    return;
-  }
-
-  // 422 - Validation Error
-  if (response.status === 422) {
-    return error.errors; // Return validation errors to show in form
-  }
-
-  // 500 - Server Error
-  if (response.status === 500) {
-    alert('Server error. Please try again later.');
-    return;
-  }
-
-  // Other errors
-  alert('An error occurred: ' + error.message);
-};
-
-// ใช้งาน
-try {
-  const response = await fetch(url, options);
-  const result = await response.json();
-
-  if (!response.ok) {
-    handleAPIError(result, response);
-    return;
-  }
-
-  // Success
-  console.log(result.data);
-} catch (error) {
-  console.error('Network error:', error);
-}
-```
-
-### แสดง Validation Errors
-
-```javascript
-// React Example
-function FormWithValidation() {
-  const [errors, setErrors] = useState({});
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-
-    try {
-      const response = await fetch(url, options);
-      const result = await response.json();
-
-      if (response.status === 422) {
-        // Set validation errors
-        setErrors(result.errors);
-        return;
-      }
-
-      if (result.success) {
-        // Success
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input type="text" name="name" />
-      {errors.name && (
-        <div className="error">
-          {errors.name.map((error, i) => (
-            <p key={i}>{error}</p>
-          ))}
+    <div>
+      {data?.data?.map(program => (
+        <div key={program.id}>
+          <h3>{program.name}</h3>
+          <button onClick={() => updateMutation.mutate({
+            id: program.id,
+            data: { status: 'inactive' }
+          })}>
+            Deactivate
+          </button>
+          <button onClick={() => deleteMutation.mutate(program.id)}>
+            Delete
+          </button>
         </div>
-      )}
-    </form>
+      ))}
+    </div>
   );
 }
 ```
 
 ---
 
-## ⭐ Best Practices
+## Error Handling
 
-### 1. สร้าง API Service
+### Comprehensive Error Handler
 
 ```javascript
-// api/service.js
+async function apiCallWithErrorHandling(endpoint, options = {}) {
+  try {
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    const data = await response.json();
+
+    // Handle different status codes
+    if (!response.ok) {
+      switch (response.status) {
+        case 401:
+          // Unauthorized - redirect to login
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          throw new Error('Please login again');
+
+        case 403:
+          // Forbidden
+          throw new Error('You do not have permission to perform this action');
+
+        case 404:
+          // Not found
+          throw new Error('Resource not found');
+
+        case 422:
+          // Validation errors
+          return { success: false, errors: data.errors };
+
+        case 500:
+          // Server error
+          throw new Error('Server error. Please try again later.');
+
+        default:
+          throw new Error(data.message || 'An error occurred');
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+}
+```
+
+### Display Validation Errors
+
+```javascript
+function FormWithValidation() {
+  const [errors, setErrors] = useState({});
+
+  const handleSubmit = async (formData) => {
+    setErrors({});
+
+    const result = await apiCallWithErrorHandling('/programs', {
+      method: 'POST',
+      body: JSON.stringify(formData)
+    });
+
+    if (!result.success && result.errors) {
+      setErrors(result.errors);
+      return;
+    }
+
+    // Success
+    alert('Created successfully!');
+  };
+
+  return (
+    <div>
+      <input name="name" />
+      {errors.name && errors.name.map((error, i) => (
+        <p key={i} className="error">{error}</p>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## Best Practices
+
+### 1. Create an API Service Class
+
+**api-service.js:**
+```javascript
 class APIService {
   constructor(baseURL) {
     this.baseURL = baseURL;
   }
 
-  async call(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
+  getToken() {
+    return localStorage.getItem('token');
+  }
 
+  async request(endpoint, options = {}) {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${this.getToken()}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         ...options.headers
@@ -524,29 +593,29 @@ class APIService {
 
   // Programs
   async getPrograms() {
-    return this.call('/programs');
+    return this.request('/programs');
   }
 
   async getProgram(id) {
-    return this.call(`/programs/${id}`);
+    return this.request(`/programs/${id}`);
   }
 
   async createProgram(data) {
-    return this.call('/programs', {
+    return this.request('/programs', {
       method: 'POST',
       body: JSON.stringify(data)
     });
   }
 
   async updateProgram(id, data) {
-    return this.call(`/programs/${id}`, {
+    return this.request(`/programs/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
   }
 
   async deleteProgram(id) {
-    return this.call(`/programs/${id}`, {
+    return this.request(`/programs/${id}`, {
       method: 'DELETE'
     });
   }
@@ -556,141 +625,224 @@ class APIService {
     const endpoint = programId
       ? `/sessions?program_id=${programId}`
       : '/sessions';
-    return this.call(endpoint);
+    return this.request(endpoint);
+  }
+
+  async getSession(id) {
+    return this.request(`/sessions/${id}`);
+  }
+
+  async createSession(data) {
+    return this.request('/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateSession(id, data) {
+    return this.request(`/sessions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSession(id) {
+    return this.request(`/sessions/${id}`, {
+      method: 'DELETE'
+    });
   }
 }
 
 export default new APIService('http://localhost:8000/api');
 ```
 
-### 2. ใช้ React Query / SWR
-
+**Usage:**
 ```javascript
-// With React Query
-import { useQuery, useMutation } from '@tanstack/react-query';
-import api from './api/service';
+import api from './api-service';
 
-function ProgramList() {
-  // Fetch programs
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['programs'],
-    queryFn: () => api.getPrograms()
-  });
+// Fetch programs
+const result = await api.getPrograms();
 
-  // Create program mutation
-  const createMutation = useMutation({
-    mutationFn: (newProgram) => api.createProgram(newProgram),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['programs']);
-    }
-  });
+// Create program
+const newProgram = await api.createProgram({
+  name: 'Vue.js Course',
+  code: 'VUE-001',
+  category: 'Frontend',
+  duration_hours: 40,
+  status: 'active'
+});
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-
-  return (
-    <div>
-      {data?.data?.map(program => (
-        <div key={program.id}>{program.name}</div>
-      ))}
-    </div>
-  );
-}
+// Get sessions for a program
+const sessions = await api.getSessions(1);
 ```
 
-### 3. Loading States
+### 2. Handle Loading States
 
 ```javascript
-function ComponentWithLoading() {
+function Component() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true);
     try {
       const result = await api.getPrograms();
       setData(result.data);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div>
-      {loading && <LoadingSpinner />}
-      {!loading && data && <ProgramList programs={data} />}
+      {loading && <Spinner />}
+      {!loading && data && <DataList items={data} />}
     </div>
   );
 }
 ```
 
-### 4. Optimistic Updates
+### 3. Use Environment Variables
+
+**.env:**
+```
+VITE_API_URL=http://localhost:8000/api
+```
+
+**config.js:**
+```javascript
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+```
+
+### 4. Implement Request Interceptors
+
+For axios users:
+```javascript
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api'
+});
+
+// Request interceptor
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+### 5. Debounce Search Requests
 
 ```javascript
-// React Query Example
-const updateMutation = useMutation({
-  mutationFn: (updated) => api.updateProgram(updated.id, updated),
-  onMutate: async (newData) => {
-    // Cancel outgoing refetches
-    await queryClient.cancelQueries(['programs']);
+import { useState, useEffect } from 'react';
+import { debounce } from 'lodash';
 
-    // Snapshot previous value
-    const previous = queryClient.getQueryData(['programs']);
+function SearchPrograms() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
 
-    // Optimistically update
-    queryClient.setQueryData(['programs'], (old) =>
-      old.map(p => p.id === newData.id ? newData : p)
-    );
+  useEffect(() => {
+    const debouncedSearch = debounce(async (searchQuery) => {
+      if (searchQuery.length > 2) {
+        const result = await api.getPrograms(); // Add search param
+        setResults(result.data);
+      }
+    }, 300);
 
-    return { previous };
-  },
-  onError: (err, newData, context) => {
-    // Rollback on error
-    queryClient.setQueryData(['programs'], context.previous);
-  },
-  onSettled: () => {
-    queryClient.invalidateQueries(['programs']);
-  }
-});
+    debouncedSearch(query);
+  }, [query]);
+
+  return (
+    <input
+      type="text"
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search programs..."
+    />
+  );
+}
 ```
 
 ---
 
-## 📚 เอกสารเพิ่มเติม
+## Quick Reference
 
-- [API Specification](./API_SPECIFICATION.md) - รายละเอียด API ทั้งหมด
-- [Admin Guide](./ADMIN_GUIDE.md) - คู่มือ Admin
-- [Testing Summary](../TESTING_SUMMARY.md) - การทดสอบ API
-
----
-
-## 🎯 Quick Reference
-
-### ส่วนที่ใช้บ่อย
+### Common Operations
 
 ```javascript
 // Get all programs
-api.getPrograms()
+const programs = await api.getPrograms();
 
-// Get sessions by program
-api.getSessions(programId)
+// Get programs by filter (sessions only)
+const sessions = await api.getSessions(programId);
 
 // Create program
-api.createProgram({
+const newProgram = await api.createProgram({
   name: 'Program Name',
   code: 'CODE-001',
   category: 'Category',
   duration_hours: 40,
   status: 'active'
-})
+});
 
 // Update program
-api.updateProgram(id, { name: 'New Name' })
+const updated = await api.updateProgram(id, {
+  name: 'New Name'
+});
 
 // Delete program
-api.deleteProgram(id)
+await api.deleteProgram(id);
+```
+
+### Response Structure
+
+All successful responses:
+```javascript
+{
+  success: true,
+  message: "Operation successful",
+  data: { ... }
+}
+```
+
+Validation errors:
+```javascript
+{
+  message: "Validation failed",
+  errors: {
+    field_name: ["Error message 1", "Error message 2"]
+  }
+}
 ```
 
 ---
 
-*Last Updated: 12 ธันวาคม 2025*
+## Additional Resources
+
+- **API Specification:** See `API_SPECIFICATION.md` for complete endpoint documentation
+- **Admin Guide:** See `ADMIN_GUIDE.md` for admin operations
+- **Testing:** See `../TESTING_SUMMARY.md` for test coverage
+
+---
+
+**Last Updated:** December 12, 2025
+**Version:** 1.0.0
