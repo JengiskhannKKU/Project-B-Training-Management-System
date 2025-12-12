@@ -23,7 +23,7 @@ class TrainingSessionController extends Controller
 
         $sessions = $query->get();
 
-        return response()->json($sessions);
+        return $this->successResponse($sessions, 'Sessions retrieved successfully');
     }
 
     /**
@@ -50,10 +50,7 @@ class TrainingSessionController extends Controller
 
         $session = TrainingSession::create($data);
 
-        return response()->json([
-            'message' => 'Session created successfully.',
-            'data' => $session,
-        ], 201);
+        return $this->createdResponse($session, 'Session created successfully');
     }
 
     /**
@@ -61,7 +58,7 @@ class TrainingSessionController extends Controller
      */
     public function show(TrainingSession $session)
     {
-        return response()->json($session);
+        return $this->successResponse($session, 'Session retrieved successfully');
     }
 
     /**
@@ -108,10 +105,7 @@ class TrainingSessionController extends Controller
 
         $session->update($data);
 
-        return response()->json([
-            'message' => 'Session updated successfully.',
-            'data' => $session->fresh(),
-        ]);
+        return $this->successResponse($session->fresh(), 'Session updated successfully');
     }
 
     /**
@@ -121,8 +115,6 @@ class TrainingSessionController extends Controller
     {
         $session->delete();
 
-        return response()->json([
-            'message' => 'Session deleted successfully.',
-        ]);
+        return $this->successResponse(null, 'Session deleted successfully');
     }
 }
