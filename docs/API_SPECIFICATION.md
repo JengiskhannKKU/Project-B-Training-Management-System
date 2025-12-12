@@ -1,74 +1,88 @@
-# API Specification - Training Management System
+# API Specification
 
-> เอกสารอธิบาย API ทั้งหมดในระบบ พร้อม input, output และ error responses
+Complete API Reference for Training Management System
 
-**Version:** 1.0
-**Last Updated:** 12 ธันวาคม 2025
-
----
-
-## 📋 Table of Contents
-
-- [ข้อมูลทั่วไป](#ข้อมูลทั่วไป)
-- [Authentication API](#authentication-api)
-- [Program API](#program-api)
-- [Training Session API](#training-session-api)
-- [Admin User API](#admin-user-api)
-- [Error Responses](#error-responses)
+**Version:** 1.0.0
+**Last Updated:** December 12, 2025
+**Base URL:** `/api`
 
 ---
 
-## 🌐 ข้อมูลทั่วไป
+## Table of Contents
 
-### Base URL
-```
-Development: http://localhost:8000/api
-Production: https://your-domain.com/api
-```
+1. [Overview](#overview)
+2. [Authentication](#authentication)
+3. [Programs](#programs)
+4. [Training Sessions](#training-sessions)
+5. [Admin - User Management](#admin---user-management)
+6. [Error Responses](#error-responses)
+
+---
+
+## Overview
+
+### Environments
+
+| Environment | Base URL |
+|-------------|----------|
+| Development | `http://localhost:8000/api` |
+| Production  | `https://your-domain.com/api` |
 
 ### Response Format
-ทุก API จะ return JSON ในรูปแบบมาตรฐานเดียวกัน:
 
-**Success Response:**
+All endpoints return JSON with this structure:
+
+**Success:**
 ```json
 {
   "success": true,
-  "message": "ข้อความอธิบาย",
+  "message": "Operation completed successfully",
   "data": { ... }
 }
 ```
 
-**Error Response:**
+**Error:**
 ```json
 {
   "success": false,
-  "message": "ข้อความแจ้ง error",
-  "errors": { ... }
+  "message": "Error description",
+  "errors": { "field": ["Error message"] }
 }
 ```
 
 ### Authentication
-ส่วนใหญ่ของ API ต้องการ Authentication Token
 
-**Header:**
-```
-Authorization: Bearer {your_token}
+Protected endpoints require a Bearer token in the header:
+
+```http
+Authorization: Bearer {token}
 Accept: application/json
+Content-Type: application/json
 ```
+
+### HTTP Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Success (GET, PUT, DELETE) |
+| 201 | Created (POST) |
+| 401 | Unauthorized - Invalid or missing token |
+| 403 | Forbidden - Insufficient permissions |
+| 404 | Not Found - Resource doesn't exist |
+| 422 | Validation Error - Invalid input |
+| 500 | Server Error |
 
 ---
 
-## 🔐 Authentication API
+## Authentication
 
-### 1. ลงทะเบียนผู้ใช้ใหม่
+### POST /auth/register
 
-**Endpoint:** `POST /auth/register`
+Register a new user. New users are automatically assigned the `student` role.
 
-**Description:** สร้าง user ใหม่ในระบบ (role = student โดยอัตโนมัติ)
+**Authentication:** Not required
 
-**Authentication:** ❌ ไม่ต้องการ
-
-**Request Body:**
+**Request:**
 ```json
 {
   "name": "John Doe",
@@ -77,33 +91,33 @@ Accept: application/json
 }
 ```
 
-**Input Validation:**
+**Validation:**
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| name | String | ✅ Yes | Max 255 ตัวอักษร |
-| email | String | ✅ Yes | รูปแบบ email ถูกต้อง, ห้ามซ้ำ |
-| password | String | ✅ Yes | อย่างน้อย 8 ตัวอักษร |
+| name | string | Yes | Max 255 chars |
+| email | string | Yes | Valid email, unique |
+| password | string | Yes | Min 8 chars |
 
-**Success Response (201 Created):**
+**Response (201):**
 ```json
 {
   "success": true,
   "message": "Registered successfully",
   "data": {
-    "token": "1|xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "token": "1|AbC123...",
     "user": {
       "id": 1,
       "name": "John Doe",
       "email": "john@example.com",
       "role_id": 3,
       "status": "active",
-      "created_at": "2025-01-01T00:00:00.000000Z"
+      "created_at": "2025-01-01T00:00:00Z"
     }
   }
 }
 ```
 
-**Error Response (422 Validation Error):**
+**Error (422) - Validation:**
 ```json
 {
   "message": "The email has already been taken.",
@@ -115,19 +129,15 @@ Accept: application/json
 
 ---
 
-## 📚 Program API
+## Programs
 
-### 1. ดึงรายการ Programs ทั้งหมด
+### GET /programs
 
-**Endpoint:** `GET /programs`
+Retrieve all programs.
 
-**Description:** แสดง programs ทั้งหมดในระบบ
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**Query Parameters:** ไม่มี
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -137,15 +147,13 @@ Accept: application/json
       "id": 1,
       "name": "Laravel Advanced Course",
       "code": "LAR-ADV-001",
-      "description": "เรียนรู้ Laravel ขั้นสูง",
+      "description": "Learn advanced Laravel concepts",
       "category": "Web Development",
       "duration_hours": 40,
       "image_url": "https://example.com/image.jpg",
       "status": "active",
-      "approval_status": "approved",
-      "created_by": 1,
-      "created_at": "2025-01-01T00:00:00.000000Z",
-      "updated_at": "2025-01-01T00:00:00.000000Z"
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
     }
   ]
 }
@@ -153,20 +161,18 @@ Accept: application/json
 
 ---
 
-### 2. ดึงข้อมูล Program เดียว
+### GET /programs/{id}
 
-**Endpoint:** `GET /programs/{id}`
+Retrieve a single program by ID.
 
-**Description:** แสดงข้อมูล program ตาม ID
-
-**Authentication:** ✅ Required
+**Authentication:** Required
 
 **URL Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| id | Integer | Program ID |
+| id | integer | Program ID |
 
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -175,17 +181,15 @@ Accept: application/json
     "id": 1,
     "name": "Laravel Advanced Course",
     "code": "LAR-ADV-001",
-    "description": "เรียนรู้ Laravel ขั้นสูง",
+    "description": "Learn advanced Laravel concepts",
     "category": "Web Development",
     "duration_hours": 40,
-    "image_url": "https://example.com/image.jpg",
-    "status": "active",
-    "created_at": "2025-01-01T00:00:00.000000Z"
+    "status": "active"
   }
 }
 ```
 
-**Error Response (404 Not Found):**
+**Error (404):**
 ```json
 {
   "message": "No query results for model [App\\Models\\Program] 999"
@@ -194,20 +198,18 @@ Accept: application/json
 
 ---
 
-### 3. สร้าง Program ใหม่
+### POST /programs
 
-**Endpoint:** `POST /programs`
+Create a new program.
 
-**Description:** สร้างหลักสูตรใหม่
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**Request Body:**
+**Request:**
 ```json
 {
   "name": "Vue.js Fundamentals",
   "code": "VUE-FUND-001",
-  "description": "เรียน Vue.js เบื้องต้น",
+  "description": "Learn Vue.js from scratch",
   "category": "Frontend Development",
   "duration_hours": 30,
   "image_url": "https://example.com/vue.jpg",
@@ -215,18 +217,18 @@ Accept: application/json
 }
 ```
 
-**Input Validation:**
+**Validation:**
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| name | String | ✅ Yes | Max 255 ตัวอักษร |
-| code | String | ✅ Yes | Max 50 ตัวอักษร, ห้ามซ้ำ |
-| description | String | ❌ No | - |
-| category | String | ✅ Yes | Max 100 ตัวอักษร |
-| duration_hours | Integer | ✅ Yes | อย่างน้อย 1 ชั่วโมง |
-| image_url | String | ❌ No | ต้องเป็น URL, Max 2048 |
-| status | String | ✅ Yes | `active` หรือ `inactive` |
+| name | string | Yes | Max 255 chars |
+| code | string | Yes | Max 50 chars, unique |
+| description | text | No | - |
+| category | string | Yes | Max 100 chars |
+| duration_hours | integer | Yes | Min 1 |
+| image_url | string | No | Valid URL, max 2048 chars |
+| status | string | Yes | `active` or `inactive` |
 
-**Success Response (201 Created):**
+**Response (201):**
 ```json
 {
   "success": true,
@@ -235,17 +237,16 @@ Accept: application/json
     "id": 2,
     "name": "Vue.js Fundamentals",
     "code": "VUE-FUND-001",
-    "description": "เรียน Vue.js เบื้องต้น",
     "category": "Frontend Development",
     "duration_hours": 30,
     "status": "active",
     "created_by": 1,
-    "created_at": "2025-01-02T00:00:00.000000Z"
+    "created_at": "2025-01-02T00:00:00Z"
   }
 }
 ```
 
-**Error Response (422 Validation Error):**
+**Error (422):**
 ```json
 {
   "message": "The code has already been taken.",
@@ -257,31 +258,21 @@ Accept: application/json
 
 ---
 
-### 4. แก้ไข Program
+### PUT /programs/{id}
 
-**Endpoint:** `PUT /programs/{id}` หรือ `PATCH /programs/{id}`
+Update an existing program. All fields are optional.
 
-**Description:** แก้ไขข้อมูล program
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| id | Integer | Program ID ที่ต้องการแก้ไข |
-
-**Request Body (ส่งแค่ field ที่ต้องการแก้ไข):**
+**Request (partial update):**
 ```json
 {
   "name": "Vue.js Advanced",
-  "duration_hours": 50,
-  "status": "inactive"
+  "duration_hours": 50
 }
 ```
 
-**Input Validation:** เหมือนการสร้าง แต่ทุก field เป็น optional
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -289,30 +280,21 @@ Accept: application/json
   "data": {
     "id": 2,
     "name": "Vue.js Advanced",
-    "code": "VUE-FUND-001",
     "duration_hours": 50,
-    "status": "inactive",
-    "updated_at": "2025-01-02T10:00:00.000000Z"
+    "updated_at": "2025-01-02T10:00:00Z"
   }
 }
 ```
 
 ---
 
-### 5. ลบ Program
+### DELETE /programs/{id}
 
-**Endpoint:** `DELETE /programs/{id}`
+Delete a program (hard delete).
 
-**Description:** ลบ program ออกจากระบบ
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| id | Integer | Program ID ที่ต้องการลบ |
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -321,30 +303,35 @@ Accept: application/json
 }
 ```
 
+**Error (404):**
+```json
+{
+  "message": "No query results for model [App\\Models\\Program] 999"
+}
+```
+
 ---
 
-## 🎓 Training Session API
+## Training Sessions
 
-### 1. ดึงรายการ Sessions ทั้งหมด
+### GET /sessions
 
-**Endpoint:** `GET /sessions`
+Retrieve all training sessions with optional filtering.
 
-**Description:** แสดง training sessions ทั้งหมด (สามารถ filter ได้)
-
-**Authentication:** ✅ Required
+**Authentication:** Required
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| program_id | Integer | ❌ No | กรองตาม program ID |
+| program_id | integer | No | Filter by program ID |
 
-**ตัวอย่าง:**
+**Examples:**
 ```
 GET /sessions
 GET /sessions?program_id=1
 ```
 
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -362,8 +349,7 @@ GET /sessions?program_id=1
       "trainer_id": 2,
       "location": "Room A101",
       "status": "open",
-      "approval_status": "approved",
-      "created_at": "2025-01-01T00:00:00.000000Z"
+      "created_at": "2025-01-01T00:00:00Z"
     }
   ]
 }
@@ -371,20 +357,13 @@ GET /sessions?program_id=1
 
 ---
 
-### 2. ดึงข้อมูล Session เดียว
+### GET /sessions/{id}
 
-**Endpoint:** `GET /sessions/{id}`
+Retrieve a single session by ID.
 
-**Description:** แสดงข้อมูล training session ตาม ID
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| id | Integer | Session ID |
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -405,15 +384,13 @@ GET /sessions?program_id=1
 
 ---
 
-### 3. สร้าง Session ใหม่
+### POST /sessions
 
-**Endpoint:** `POST /sessions`
+Create a new training session.
 
-**Description:** สร้าง training session ใหม่
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**Request Body:**
+**Request:**
 ```json
 {
   "program_id": 1,
@@ -429,21 +406,21 @@ GET /sessions?program_id=1
 }
 ```
 
-**Input Validation:**
+**Validation:**
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| program_id | Integer | ✅ Yes | ต้องมีใน programs table |
-| title | String | ✅ Yes | Max 255 ตัวอักษร |
-| start_date | Date | ✅ Yes | รูปแบบ YYYY-MM-DD, ต้องมาก่อน end_date |
-| end_date | Date | ✅ Yes | รูปแบบ YYYY-MM-DD, ต้องมาหลัง start_date |
-| start_time | Time | ❌ No | รูปแบบ HH:MM (เช่น 09:00) |
-| end_time | Time | ❌ No | รูปแบบ HH:MM, ต้องมาหลัง start_time |
-| capacity | Integer | ✅ Yes | อย่างน้อย 1 คน |
-| trainer_id | Integer | ✅ Yes | ต้องมีใน users table |
-| location | String | ❌ No | Max 255 ตัวอักษร |
-| status | String | ❌ No | `upcoming`, `open`, `closed`, `completed`, `cancelled` |
+| program_id | integer | Yes | Must exist in programs table |
+| title | string | Yes | Max 255 chars |
+| start_date | date | Yes | Format: YYYY-MM-DD, before end_date |
+| end_date | date | Yes | Format: YYYY-MM-DD, after start_date |
+| start_time | time | No | Format: HH:MM |
+| end_time | time | No | Format: HH:MM, after start_time |
+| capacity | integer | Yes | Min 1 |
+| trainer_id | integer | Yes | Must exist in users table |
+| location | string | No | Max 255 chars |
+| status | string | No | `upcoming`, `open`, `closed`, `completed`, `cancelled` |
 
-**Success Response (201 Created):**
+**Response (201):**
 ```json
 {
   "success": true,
@@ -455,13 +432,12 @@ GET /sessions?program_id=1
     "start_date": "2025-03-01",
     "end_date": "2025-03-31",
     "capacity": 25,
-    "trainer_id": 2,
-    "created_at": "2025-01-02T00:00:00.000000Z"
+    "created_at": "2025-01-02T00:00:00Z"
   }
 }
 ```
 
-**Error Response (422 - Invalid Dates):**
+**Error (422) - Invalid Dates:**
 ```json
 {
   "message": "The start date must be before the end date.",
@@ -473,49 +449,43 @@ GET /sessions?program_id=1
 
 ---
 
-### 4. แก้ไข Session
+### PUT /sessions/{id}
 
-**Endpoint:** `PUT /sessions/{id}` หรือ `PATCH /sessions/{id}`
+Update an existing session. All fields are optional.
 
-**Description:** แก้ไขข้อมูล training session
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**Request Body (ส่งแค่ field ที่ต้องการแก้ไข):**
+**Request (partial update):**
 ```json
 {
-  "title": "Laravel Advanced - Batch 2 (Updated)",
   "capacity": 30,
   "status": "closed"
 }
 ```
 
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
   "message": "Session updated successfully",
   "data": {
     "id": 2,
-    "title": "Laravel Advanced - Batch 2 (Updated)",
     "capacity": 30,
     "status": "closed",
-    "updated_at": "2025-01-02T10:00:00.000000Z"
+    "updated_at": "2025-01-02T10:00:00Z"
   }
 }
 ```
 
 ---
 
-### 5. ลบ Session
+### DELETE /sessions/{id}
 
-**Endpoint:** `DELETE /sessions/{id}`
+Delete a session (hard delete).
 
-**Description:** ลบ training session ออกจากระบบ
+**Authentication:** Required
 
-**Authentication:** ✅ Required
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -526,31 +496,29 @@ GET /sessions?program_id=1
 
 ---
 
-## 👥 Admin User API
+## Admin - User Management
 
-### 1. ดึงรายการ Users (พร้อม Filter + Pagination)
+### GET /admin/users
 
-**Endpoint:** `GET /admin/users`
+Retrieve all users with filtering and pagination. Admin only.
 
-**Description:** แสดง users ทั้งหมดในระบบ (Admin เท่านั้น)
-
-**Authentication:** ✅ Required (Admin only)
+**Authentication:** Required (Admin role)
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| role | String | ❌ No | กรองตาม role (`admin`, `trainer`, `student`) |
-| status | String | ❌ No | กรองตาม status (`active`, `inactive`) |
-| per_page | Integer | ❌ No | จำนวนต่อหน้า (default: 15, max: 100) |
+| role | string | No | Filter by role: `admin`, `trainer`, `student` |
+| status | string | No | Filter by status: `active`, `inactive` |
+| per_page | integer | No | Items per page (default: 15, max: 100) |
 
-**ตัวอย่าง:**
+**Examples:**
 ```
 GET /admin/users
 GET /admin/users?role=trainer
 GET /admin/users?status=active&per_page=20
 ```
 
-**Success Response (200 OK - Paginated):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -568,7 +536,7 @@ GET /admin/users?status=active&per_page=20
           "name": "admin",
           "label": "Admin"
         },
-        "created_at": "2025-01-01T00:00:00.000000Z"
+        "created_at": "2025-01-01T00:00:00Z"
       }
     ],
     "total": 50,
@@ -580,15 +548,13 @@ GET /admin/users?status=active&per_page=20
 
 ---
 
-### 2. สร้าง User ใหม่ (Admin)
+### POST /admin/users
 
-**Endpoint:** `POST /admin/users`
+Create a new user with specified role. Admin only.
 
-**Description:** Admin สร้าง user ใหม่ (เลือก role ได้)
+**Authentication:** Required (Admin role)
 
-**Authentication:** ✅ Required (Admin only)
-
-**Request Body:**
+**Request:**
 ```json
 {
   "name": "Jane Smith",
@@ -598,15 +564,15 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**Input Validation:**
+**Validation:**
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| name | String | ✅ Yes | Max 255 ตัวอักษร |
-| email | String | ✅ Yes | รูปแบบ email ถูกต้อง, ห้ามซ้ำ |
-| password | String | ✅ Yes | อย่างน้อย 8 ตัวอักษร |
-| role | String | ✅ Yes | `admin`, `trainer`, `student` |
+| name | string | Yes | Max 255 chars |
+| email | string | Yes | Valid email, unique |
+| password | string | Yes | Min 8 chars |
+| role | string | Yes | `admin`, `trainer`, or `student` |
 
-**Success Response (201 Created):**
+**Response (201):**
 ```json
 {
   "success": true,
@@ -617,22 +583,20 @@ GET /admin/users?status=active&per_page=20
     "email": "jane@example.com",
     "status": "active",
     "role_id": 2,
-    "created_at": "2025-01-02T00:00:00.000000Z"
+    "created_at": "2025-01-02T00:00:00Z"
   }
 }
 ```
 
 ---
 
-### 3. แก้ไข User
+### PUT /admin/users/{id}
 
-**Endpoint:** `PUT /admin/users/{id}`
+Update user information. Admin only.
 
-**Description:** Admin แก้ไขข้อมูล user (เปลี่ยน role, status ได้)
+**Authentication:** Required (Admin role)
 
-**Authentication:** ✅ Required (Admin only)
-
-**Request Body (ส่งแค่ field ที่ต้องการแก้ไข):**
+**Request (partial update):**
 ```json
 {
   "name": "Jane Smith (Updated)",
@@ -641,15 +605,15 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**Input Validation:**
+**Validation:**
 | Field | Type | Required | Rules |
 |-------|------|----------|-------|
-| name | String | ❌ No | Max 255 ตัวอักษร |
-| email | String | ❌ No | รูปแบบ email ถูกต้อง, ห้ามซ้ำ |
-| role | String | ❌ No | `admin`, `trainer`, `student` |
-| status | String | ❌ No | `active`, `inactive` |
+| name | string | No | Max 255 chars |
+| email | string | No | Valid email, unique |
+| role | string | No | `admin`, `trainer`, `student` |
+| status | string | No | `active`, `inactive` |
 
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -670,15 +634,13 @@ GET /admin/users?status=active&per_page=20
 
 ---
 
-### 4. ลบ / Deactivate User
+### DELETE /admin/users/{id}
 
-**Endpoint:** `DELETE /admin/users/{id}`
+Deactivate a user (soft delete - sets status to inactive). Admin only.
 
-**Description:** ปิดการใช้งาน user (soft delete - เปลี่ยน status เป็น inactive)
+**Authentication:** Required (Admin role)
 
-**Authentication:** ✅ Required (Admin only)
-
-**Success Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
@@ -692,10 +654,11 @@ GET /admin/users?status=active&per_page=20
 
 ---
 
-## ❌ Error Responses
+## Error Responses
 
-### 1. Unauthorized (401)
-**เมื่อไหร่:** ไม่มี token หรือ token หมดอายุ
+### 401 Unauthorized
+
+Missing or invalid authentication token.
 
 ```json
 {
@@ -703,12 +666,13 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**แก้ไข:** เข้าสู่ระบบใหม่ และใช้ token ใหม่
+**Solution:** Login and include valid token in Authorization header.
 
 ---
 
-### 2. Forbidden (403)
-**เมื่อไหร่:** มี token แต่ไม่มีสิทธิ์เข้าถึง (เช่น ไม่ใช่ Admin)
+### 403 Forbidden
+
+Valid token but insufficient permissions.
 
 ```json
 {
@@ -717,12 +681,13 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**แก้ไข:** ใช้ user ที่มีสิทธิ์เหมาะสม
+**Solution:** Use an account with appropriate permissions (e.g., admin).
 
 ---
 
-### 3. Not Found (404)
-**เมื่อไหร่:** หา resource ตาม ID ไม่เจอ
+### 404 Not Found
+
+Requested resource doesn't exist.
 
 ```json
 {
@@ -730,12 +695,13 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**แก้ไข:** ตรวจสอบ ID ว่ามีอยู่ในระบบ
+**Solution:** Verify the resource ID exists.
 
 ---
 
-### 4. Validation Error (422)
-**เมื่อไหร่:** ข้อมูลที่ส่งมาไม่ผ่าน validation
+### 422 Validation Error
+
+Invalid request data.
 
 ```json
 {
@@ -748,12 +714,13 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**แก้ไข:** แก้ไขข้อมูลตาม errors ที่ระบุ
+**Solution:** Fix validation errors listed in the `errors` object.
 
 ---
 
-### 5. Server Error (500)
-**เมื่อไหร่:** มีปัญหาที่ server
+### 500 Server Error
+
+Internal server error.
 
 ```json
 {
@@ -762,32 +729,33 @@ GET /admin/users?status=active&per_page=20
 }
 ```
 
-**แก้ไข:** ติดต่อ developer หรือตรวจสอบ server logs
+**Solution:** Check server logs, contact system administrator.
 
 ---
 
-## 📊 Status Codes สรุป
+## Quick Reference
 
-| Code | Meaning | Description |
-|------|---------|-------------|
-| 200 | OK | สำเร็จ (GET, PUT, DELETE) |
-| 201 | Created | สร้างสำเร็จ (POST) |
-| 204 | No Content | ลบสำเร็จ (บาง endpoints) |
-| 400 | Bad Request | Request ผิดพลาด |
-| 401 | Unauthorized | ไม่มี token หรือ token ไม่ถูกต้อง |
-| 403 | Forbidden | ไม่มีสิทธิ์เข้าถึง |
-| 404 | Not Found | ไม่พบข้อมูล |
-| 422 | Validation Error | ข้อมูล validation ไม่ผ่าน |
-| 500 | Server Error | เกิดข้อผิดพลาดที่ server |
+### Endpoints Summary
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /auth/register | Register user | No |
+| GET | /programs | List programs | Yes |
+| GET | /programs/{id} | Get program | Yes |
+| POST | /programs | Create program | Yes |
+| PUT | /programs/{id} | Update program | Yes |
+| DELETE | /programs/{id} | Delete program | Yes |
+| GET | /sessions | List sessions | Yes |
+| GET | /sessions/{id} | Get session | Yes |
+| POST | /sessions | Create session | Yes |
+| PUT | /sessions/{id} | Update session | Yes |
+| DELETE | /sessions/{id} | Delete session | Yes |
+| GET | /admin/users | List users | Admin |
+| POST | /admin/users | Create user | Admin |
+| PUT | /admin/users/{id} | Update user | Admin |
+| DELETE | /admin/users/{id} | Deactivate user | Admin |
 
 ---
 
-## 🔗 Related Documents
-
-- [README.md](../README.md) - วิธีใช้งาน API
-- [ADMIN_GUIDE.md](./ADMIN_GUIDE.md) - คู่มือ Admin
-- [TESTING_SUMMARY.md](../TESTING_SUMMARY.md) - สรุปการทดสอบ
-
----
-
-**วันที่:** 12 ธันวาคม 2025
+**Last Updated:** December 12, 2025
+**Version:** 1.0.0
