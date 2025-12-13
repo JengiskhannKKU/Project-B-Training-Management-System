@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Enrollment extends Model
@@ -12,7 +13,7 @@ class Enrollment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'student_id',
+        'user_id',
         'session_id',
         'status',
         'enrolled_at',
@@ -24,9 +25,15 @@ class Enrollment extends Model
         'completed_at' => 'datetime',
     ];
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Backward-compatible alias
     public function student(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'student_id');
+        return $this->user();
     }
 
     public function session(): BelongsTo
@@ -37,5 +44,10 @@ class Enrollment extends Model
     public function certificate(): HasOne
     {
         return $this->hasOne(Certificate::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
     }
 }

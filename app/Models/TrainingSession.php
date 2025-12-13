@@ -65,4 +65,9 @@ class TrainingSession extends Model
     {
         return $this->hasMany(Certificate::class, 'session_id');
     }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class, 'session_id');
+    }
 }

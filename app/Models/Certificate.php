@@ -12,7 +12,7 @@ class Certificate extends Model
 
     protected $fillable = [
         'enrollment_id',
-        'student_id',
+        'user_id',
         'program_id',
         'session_id',
         'issued_by',
@@ -31,9 +31,15 @@ class Certificate extends Model
         return $this->belongsTo(Enrollment::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Backward-compatible alias
     public function student(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'student_id');
+        return $this->user();
     }
 
     public function program(): BelongsTo

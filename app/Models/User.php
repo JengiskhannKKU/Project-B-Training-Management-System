@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -47,6 +48,11 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    public function profile(): HasOne
+    {
+        return $this->hasOne(Profile::class);
+    }
+
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
@@ -79,7 +85,7 @@ class User extends Authenticatable
 
     public function enrollments(): HasMany
     {
-        return $this->hasMany(Enrollment::class, 'student_id');
+        return $this->hasMany(Enrollment::class, 'user_id');
     }
 
     public function certificateRequests(): HasMany
@@ -94,7 +100,7 @@ class User extends Authenticatable
 
     public function certificates(): HasMany
     {
-        return $this->hasMany(Certificate::class, 'student_id');
+        return $this->hasMany(Certificate::class, 'user_id');
     }
 
     public function issuedCertificates(): HasMany
