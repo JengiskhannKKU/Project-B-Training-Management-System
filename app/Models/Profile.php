@@ -19,6 +19,11 @@ class Profile extends Model
         'department',
         'bio',
         'avatar_image',
+        'avatar_mime_type',
+    ];
+
+    protected $hidden = [
+        'avatar_image',
     ];
 
     protected $casts = [
