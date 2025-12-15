@@ -44,9 +44,36 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/MyCourses');
     })->name('admin.my-courses');
 
+    Route::get('/admin/my-courses/{id}', function ($id) {
+        return Inertia::render('Trainer/Programs/Show', [
+            'program' => [
+                'id' => $id,
+                'name' => 'Advanced UX Design Principles',
+                'code' => 'PRG-001',
+                'category' => 'Design',
+                'level' => 'Advanced',
+                'period' => 'May 1 - MAY 2',
+                'time' => '09:00 - 12:00 AM',
+                'location' => 'Smart Classrom',
+                'trainer' => 'Natthiya Chakaew',
+                'certificated' => 'Standard',
+                'status' => 'OPEN',
+                'description' => 'A comprehensive course on creating intuitive and beautiful user experience.',
+                'image_url' => null,
+            ]
+        ]);
+    })->name('admin.my-courses.show');
+
     Route::get('/admin/attendance', function () {
         return Inertia::render('Admin/Attendance');
     })->name('admin.attendance');
+
+    Route::get('/admin/attendance/{courseId}/{sessionId}', function ($courseId, $sessionId) {
+        return Inertia::render('Admin/SessionAttendance', [
+            'courseId' => $courseId,
+            'sessionId' => $sessionId
+        ]);
+    })->name('admin.attendance.session');
 
     Route::get('/admin/feedback', function () {
         return Inertia::render('Admin/Feedback');
@@ -88,6 +115,18 @@ Route::middleware(['auth', 'role:trainer'])->group(function () {
             ]
         ]);
     })->name('trainer.programs.show');
+
+    Route::get('/trainer/attendance', function () {
+        return Inertia::render('Trainer/Attendance');
+    })->name('trainer.attendance');
+
+    Route::get('/trainer/feedback', function () {
+        return Inertia::render('Trainer/Feedback');
+    })->name('trainer.feedback');
+
+    Route::get('/trainer/settings', function () {
+        return Inertia::render('Trainer/Settings');
+    })->name('trainer.settings');
 });
 
 Route::middleware(['auth', 'role:student'])->group(function () {

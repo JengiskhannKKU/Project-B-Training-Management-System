@@ -6,6 +6,10 @@ const props = defineProps({
         type: Boolean,
         required: true,
     },
+    title: {
+        type: String,
+        default: "Filter Users",
+    },
     selectedDepartment: {
         type: String,
         required: true,
@@ -17,6 +21,14 @@ const props = defineProps({
     departments: {
         type: Array,
         required: true,
+    },
+    statusOptions: {
+        type: Array,
+        default: () => ["Active", "Inactive"],
+    },
+    departmentLabel: {
+        type: String,
+        default: "Department",
     },
 });
 
@@ -66,7 +78,7 @@ const handleReset = () => {
                             <ListFilterIcon class="h-5 w-5 text-white" />
                         </div>
                         <h3 class="text-xl font-bold text-gray-900">
-                            Filter Users
+                            {{ title }}
                         </h3>
                     </div>
                     <button
@@ -84,7 +96,7 @@ const handleReset = () => {
                         <label
                             class="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            Department
+                            {{ departmentLabel }}
                         </label>
                         <select
                             :value="selectedDepartment"
@@ -96,7 +108,7 @@ const handleReset = () => {
                             "
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         >
-                            <option value="all">All Departments</option>
+                            <option value="all">All {{ departmentLabel }}s</option>
                             <option
                                 v-for="dept in departments"
                                 :key="dept"
@@ -125,8 +137,13 @@ const handleReset = () => {
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         >
                             <option value="all">All Status</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
+                            <option
+                                v-for="status in statusOptions"
+                                :key="status"
+                                :value="status"
+                            >
+                                {{ status }}
+                            </option>
                         </select>
                     </div>
                 </div>

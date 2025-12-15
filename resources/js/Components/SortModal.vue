@@ -6,6 +6,10 @@ const props = defineProps({
         type: Boolean,
         required: true,
     },
+    title: {
+        type: String,
+        default: "Sort Users",
+    },
     sortColumn: {
         type: String,
         default: "",
@@ -13,6 +17,15 @@ const props = defineProps({
     sortDirection: {
         type: String,
         default: "asc",
+    },
+    sortOptions: {
+        type: Array,
+        default: () => [
+            { value: "name", label: "Name", directionLabels: { asc: "A-Z", desc: "Z-A" } },
+            { value: "email", label: "Email", directionLabels: { asc: "A-Z", desc: "Z-A" } },
+            { value: "department", label: "Department", directionLabels: { asc: "A-Z", desc: "Z-A" } },
+            { value: "status", label: "Status", directionLabels: { asc: "Active First", desc: "Inactive First" } },
+        ],
     },
 });
 
@@ -61,7 +74,7 @@ const handleReset = () => {
                             <ArrowDownNarrowWide class="h-5 w-5 text-white" />
                         </div>
                         <h3 class="text-xl font-bold text-gray-900">
-                            Sort Users
+                            {{ title }}
                         </h3>
                     </div>
                     <button
@@ -80,69 +93,19 @@ const handleReset = () => {
                 <!-- Sort Options -->
                 <div class="space-y-2">
                     <button
-                        @click="handleSort('name')"
+                        v-for="option in sortOptions"
+                        :key="option.value"
+                        @click="handleSort(option.value)"
                         :class="[
                             'w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between',
-                            sortColumn === 'name'
+                            sortColumn === option.value
                                 ? 'bg-[#2f837d] text-white'
                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-900',
                         ]"
                     >
-                        <span class="font-medium">Name</span>
-                        <span v-if="sortColumn === 'name'" class="text-xs">
-                            {{ sortDirection === "asc" ? "A-Z" : "Z-A" }}
-                        </span>
-                    </button>
-
-                    <button
-                        @click="handleSort('email')"
-                        :class="[
-                            'w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between',
-                            sortColumn === 'email'
-                                ? 'bg-[#2f837d] text-white'
-                                : 'bg-gray-50 hover:bg-gray-100 text-gray-900',
-                        ]"
-                    >
-                        <span class="font-medium">Email</span>
-                        <span v-if="sortColumn === 'email'" class="text-xs">
-                            {{ sortDirection === "asc" ? "A-Z" : "Z-A" }}
-                        </span>
-                    </button>
-
-                    <button
-                        @click="handleSort('department')"
-                        :class="[
-                            'w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between',
-                            sortColumn === 'department'
-                                ? 'bg-[#2f837d] text-white'
-                                : 'bg-gray-50 hover:bg-gray-100 text-gray-900',
-                        ]"
-                    >
-                        <span class="font-medium">Department</span>
-                        <span
-                            v-if="sortColumn === 'department'"
-                            class="text-xs"
-                        >
-                            {{ sortDirection === "asc" ? "A-Z" : "Z-A" }}
-                        </span>
-                    </button>
-
-                    <button
-                        @click="handleSort('status')"
-                        :class="[
-                            'w-full px-4 py-3 rounded-lg text-left transition-all flex items-center justify-between',
-                            sortColumn === 'status'
-                                ? 'bg-[#2f837d] text-white'
-                                : 'bg-gray-50 hover:bg-gray-100 text-gray-900',
-                        ]"
-                    >
-                        <span class="font-medium">Status</span>
-                        <span v-if="sortColumn === 'status'" class="text-xs">
-                            {{
-                                sortDirection === "asc"
-                                    ? "Active First"
-                                    : "Inactive First"
-                            }}
+                        <span class="font-medium">{{ option.label }}</span>
+                        <span v-if="sortColumn === option.value" class="text-xs">
+                            {{ sortDirection === "asc" ? option.directionLabels.asc : option.directionLabels.desc }}
                         </span>
                     </button>
                 </div>

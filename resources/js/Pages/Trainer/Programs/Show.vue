@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
+import CourseModal from '@/Components/CourseModal.vue';
 
 const props = defineProps<{
     program: {
@@ -45,6 +46,24 @@ const sessionForm = useForm({
 });
 
 const toast = useToast();
+const page = usePage();
+
+// Determine back link based on current URL
+const backLink = computed(() => {
+    const currentUrl = page.url;
+    if (currentUrl.startsWith('/admin/')) {
+        return '/admin/my-courses';
+    }
+    return '/trainer/programs';
+});
+
+const backLinkText = computed(() => {
+    const currentUrl = page.url;
+    if (currentUrl.startsWith('/admin/')) {
+        return 'Back to My Courses';
+    }
+    return 'Back to My Courses';
+});
 
 const availableCourses = [
     'UX/UI Design Fundamentals',
@@ -185,8 +204,35 @@ const trainees = ref([
     },
 ]);
 
-const submitEdit = () => {
+// Create course data for the modal
+const courseDataForModal = computed(() => ({
+    id: props.program.id,
+    title: editForm.title,
+    short_description: editForm.short_description,
+    full_description: editForm.full_description,
+    category: editForm.category,
+    level: editForm.level,
+    date: editForm.date,
+    start_time: editForm.start_time,
+    end_time: editForm.end_time,
+    location: editForm.location,
+    registration_start: editForm.registration_start,
+    registration_end: editForm.registration_end,
+    require_approval: editForm.require_approval,
+    send_confirmation_email: editForm.send_confirmation_email,
+    allow_waitlist: editForm.allow_waitlist,
+    allow_cancel_enrollment: editForm.allow_cancel_enrollment,
+    certificate_template: editForm.certificate_template,
+    certificate_type: editForm.certificate_type,
+}));
+
+const handleEditModalClose = () => {
     showEditModal.value = false;
+};
+
+const handleEditModalSuccess = () => {
+    // Refresh course data or perform any action after successful edit
+    console.log('Course edited successfully');
 };
 
 const validateSessionForm = () => {
@@ -361,11 +407,11 @@ const getCertificateStatusColor = (status: string) => {
 
         <div class="mx-auto max-w-7xl px-8 py-6">
             <!-- Back Link -->
-            <Link href="/trainer/programs" class="mb-6 flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700">
+            <Link :href="backLink" class="mb-6 flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                 </svg>
-                Back to My Courses
+                {{ backLinkText }}
             </Link>
 
             <!-- Hero Banner -->
@@ -816,201 +862,12 @@ const getCertificateStatusColor = (status: string) => {
     </div>
 
     <!-- Edit Course Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditModal = false">
-        <div class="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
-            <div class="sticky top-0 z-10 border-b bg-white px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1 text-center">
-                        <h2 class="text-xl font-bold text-gray-900">Edit Courses</h2>
-                        <p class="mt-1 text-sm text-gray-500">To edit a training course, start by identifying the need and define clear learning objectives.</p>
-                    </div>
-                    <button @click="showEditModal = false" class="rounded-lg p-2 hover:bg-gray-100">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <form @submit.prevent="submitEdit" class="space-y-6 p-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Course Title</label>
-                    <input v-model="editForm.title" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between">
-                        <label class="block text-sm font-medium text-gray-700">Short Description</label>
-                        <span class="text-xs text-gray-500">{{ editForm.short_description.length }}/300</span>
-                    </div>
-                    <textarea v-model="editForm.short_description" rows="2" maxlength="300" class="mt-1 block w-full rounded-md border-gray-300"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Full Description / Objectives</label>
-                    <div class="mt-1 rounded-md border border-gray-300">
-                        <div class="flex items-center gap-1 border-b border-gray-200 bg-gray-50 p-2">
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4v12h4.5a3.5 3.5 0 001.317-6.729A3.5 3.5 0 0010.5 4H6zm3 5.5H8v-3h1a1.5 1.5 0 110 3zm-1 2h1.5a2 2 0 110 4H8v-4z"/></svg></button>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M8 2h8v2h-3l-3 12h3v2H5v-2h3l3-12H8V2z"/></svg></button>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v4a5 5 0 0010 0V7a5 5 0 00-5-5zM4 17h12v2H4v-2z"/></svg></button>
-                            <div class="mx-2 h-4 w-px bg-gray-300"></div>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg></button>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg></button>
-                            <div class="mx-2 h-4 w-px bg-gray-300"></div>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg></button>
-                            <button type="button" class="rounded p-1 hover:bg-gray-200"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg></button>
-                        </div>
-                        <textarea v-model="editForm.full_description" rows="4" class="block w-full border-0 p-3 focus:ring-0"></textarea>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Course Category</label>
-                    <select v-model="editForm.category" class="mt-1 block w-full rounded-md border-gray-300">
-                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">Course Level</label>
-                    <div class="grid grid-cols-3 gap-3">
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="editForm.level === 'beginner' ? 'border-teal-500 bg-teal-50' : 'border-gray-200'">
-                            <input type="radio" v-model="editForm.level" value="beginner" class="sr-only" />
-                            <div class="text-center">
-                                <div class="text-sm font-medium" :class="editForm.level === 'beginner' ? 'text-teal-700' : 'text-gray-900'">Beginner</div>
-                                <div class="text-xs text-gray-500">No prior experience required</div>
-                            </div>
-                        </label>
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="editForm.level === 'intermediate' ? 'border-teal-500 bg-teal-50' : 'border-gray-200'">
-                            <input type="radio" v-model="editForm.level" value="intermediate" class="sr-only" />
-                            <div class="text-center">
-                                <div class="text-sm font-medium" :class="editForm.level === 'intermediate' ? 'text-teal-700' : 'text-gray-900'">Intermediate</div>
-                                <div class="text-xs text-gray-500">Some experience required</div>
-                            </div>
-                        </label>
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="editForm.level === 'advanced' ? 'border-teal-500 bg-teal-50' : 'border-gray-200'">
-                            <input type="radio" v-model="editForm.level" value="advanced" class="sr-only" />
-                            <div class="text-center">
-                                <div class="text-sm font-medium" :class="editForm.level === 'advanced' ? 'text-teal-700' : 'text-gray-900'">Advanced</div>
-                                <div class="text-xs text-gray-500">Extensive experience required</div>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Date</label>
-                        <input v-model="editForm.date" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Time</label>
-                        <input v-model="editForm.start_time" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">&nbsp;</label>
-                        <input v-model="editForm.end_time" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Location</label>
-                    <div class="relative mt-1">
-                        <input v-model="editForm.location" type="text" class="block w-full rounded-md border-gray-300 pr-10" />
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Course Thumbnail</label>
-                    <div class="mt-1 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10">
-                        <div class="text-center">
-                            <svg class="mx-auto h-12 w-12 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 48 48">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"/>
-                            </svg>
-                            <div class="mt-4 flex text-sm text-gray-600">
-                                <button type="button" class="font-medium text-teal-600 hover:text-teal-500">Click to upload</button>
-                                <p class="pl-1">or drag and drop</p>
-                            </div>
-                            <p class="text-xs text-gray-500">JPG, JPEG, PNG less than 1MB (max 1280*720 px)</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Registration Period</label>
-                        <input v-model="editForm.registration_start" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">&nbsp;</label>
-                        <input v-model="editForm.registration_end" type="text" class="mt-1 block w-full rounded-md border-gray-300" />
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">Enrollment Options</label>
-                    <div class="space-y-2">
-                        <label class="flex items-center">
-                            <input type="checkbox" v-model="editForm.require_approval" class="rounded border-gray-300 text-teal-600" />
-                            <span class="ml-2 text-sm text-gray-700">Require approval</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" v-model="editForm.send_confirmation_email" class="rounded border-gray-300 text-teal-600" />
-                            <span class="ml-2 text-sm text-gray-700">Send confirmation email</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" v-model="editForm.allow_waitlist" class="rounded border-gray-300 text-teal-600" />
-                            <span class="ml-2 text-sm text-gray-700">Allow waitlist</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" v-model="editForm.allow_cancel_enrollment" class="rounded border-gray-300 text-teal-600" />
-                            <span class="ml-2 text-sm text-gray-700">Allow participants to cancel enrollment</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Certificate Template</label>
-                        <select v-model="editForm.certificate_template" class="mt-1 block w-full rounded-md border-gray-300">
-                            <option value="standard">Standard</option>
-                            <option value="premium">Premium</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Certificate Type</label>
-                        <div class="mt-1 flex gap-4">
-                            <label class="flex items-center">
-                                <input type="radio" v-model="editForm.certificate_type" value="free" class="border-gray-300 text-teal-600" />
-                                <span class="ml-2 text-sm">Free</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" v-model="editForm.certificate_type" value="paid" class="border-gray-300 text-teal-600" />
-                                <span class="ml-2 text-sm">Paid</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between border-t pt-6">
-                    <button type="button" class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Save draft</button>
-                    <button type="submit" class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                        <svg class="mr-2 inline-block h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                        </svg>
-                        Save
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <CourseModal
+        :show="showEditModal"
+        :course="courseDataForModal"
+        @close="handleEditModalClose"
+        @success="handleEditModalSuccess"
+    />
 
     <!-- Course Rejected Modal -->
     <div v-if="showRejectedModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">

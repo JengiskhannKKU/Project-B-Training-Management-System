@@ -3,8 +3,6 @@ import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
-    Users,
-    Tags,
     BookOpen,
     BookCheck,
     MessageSquare,
@@ -33,37 +31,27 @@ const currentPath = computed(() => page.url);
 const navigationItems = [
     {
         name: "Dashboard",
-        path: "/admin/dashboard",
+        path: "/trainer",
         icon: LayoutDashboard,
     },
     {
-        name: "Users",
-        path: "/admin/users",
-        icon: Users,
-    },
-    {
-        name: "Categories",
-        path: "/admin/categories",
-        icon: Tags,
-    },
-    {
         name: "My Courses",
-        path: "/admin/my-courses",
+        path: "/trainer/programs",
         icon: BookOpen,
     },
     {
         name: "Attendance",
-        path: "/admin/attendance",
+        path: "/trainer/attendance",
         icon: BookCheck,
     },
     {
         name: "Feedback",
-        path: "/admin/feedback",
+        path: "/trainer/feedback",
         icon: MessageSquare,
     },
     {
         name: "Settings",
-        path: "/admin/settings",
+        path: "/trainer/settings",
         icon: Settings,
     },
 ];
@@ -77,7 +65,7 @@ const isActive = (path) => {
 <template>
     <div class="min-h-screen bg-gray-100">
 
-        <!-- Admin Profile Section -->
+        <!-- Trainer Profile Section -->
         <div class="fixed top-6 right-14 z-50 flex items-center gap-3">
             <!-- Avatar with online indicator -->
             <div class="relative">
@@ -108,7 +96,7 @@ const isActive = (path) => {
         >
             <div class="h-full px-6 pb-4 overflow-y-auto bg-white flex flex-col">
                 <div class="flex-1">
-                    <Link href="/admin/dashboard" class="flex pt-4 pb-14">
+                    <Link href="/trainer" class="flex pt-4 pb-14">
                         <img
                             src="/images/project_logo.png"
                             class="h-12 w-auto object-contain max-w-full"

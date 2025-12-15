@@ -1,40 +1,44 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import {
     Search,
     Archive,
-    Users,
+    Calendar,
+    Clock,
+    MapPin,
+    ChevronUp,
     ListFilterIcon,
     ArrowDownNarrowWide,
     Share,
-    ChevronUp,
-    ChevronDown,
-    Pencil,
-    Trash2,
+    CheckCircle,
+    XCircle,
+    ArrowLeft,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
-import EditUserModal from "@/Components/EditUserModal.vue";
 
-const props = defineProps({
-    editUserId: {
-        type: [String, Number],
-        default: null,
-    },
+// Mock data - replace with actual data from backend
+const sessionInfo = ref({
+    id: 1,
+    name: "Session 1: Introduction to Laravel",
+    courseName: "Advanced Laravel Development",
+    date: "Dec 15, 2025",
+    time: "10:00 AM - 12:00 PM",
+    location: "Room A101",
 });
 
-const users = ref([
+const trainees = ref([
     {
         id: 1,
         name: "John Doe",
         email: "john@example.com",
         contact: "0123456789",
         department: "IT",
-        role: "Admin",
-        status: "Active",
+        status: "present",
+        checked: true,
     },
     {
         id: 2,
@@ -42,8 +46,8 @@ const users = ref([
         email: "jane@example.com",
         contact: "0123456791",
         department: "HR",
-        role: "Trainer",
-        status: "Active",
+        status: "present",
+        checked: true,
     },
     {
         id: 3,
@@ -51,8 +55,8 @@ const users = ref([
         email: "bob@example.com",
         contact: "0123456792",
         department: "Engineering",
-        role: "Trainee",
-        status: "Active",
+        status: "absent",
+        checked: false,
     },
     {
         id: 4,
@@ -60,8 +64,8 @@ const users = ref([
         email: "alice@example.com",
         contact: "0123456793",
         department: "Marketing",
-        role: "Trainee",
-        status: "Inactive",
+        status: "present",
+        checked: true,
     },
     {
         id: 5,
@@ -69,15 +73,41 @@ const users = ref([
         email: "charlie@example.com",
         contact: "0123456794",
         department: "IT",
-        role: "Trainer",
-        status: "Active",
+        status: "absent",
+        checked: false,
+    },
+    {
+        id: 6,
+        name: "Diana Prince",
+        email: "diana@example.com",
+        contact: "0123456795",
+        department: "Design",
+        status: "present",
+        checked: true,
+    },
+    {
+        id: 7,
+        name: "Edward Norton",
+        email: "edward@example.com",
+        contact: "0123456796",
+        department: "IT",
+        status: "present",
+        checked: true,
+    },
+    {
+        id: 8,
+        name: "Fiona Green",
+        email: "fiona@example.com",
+        contact: "0123456797",
+        department: "Marketing",
+        status: "absent",
+        checked: false,
     },
 ]);
 
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
 const selectedStatus = ref("all");
-const activeTab = ref("trainees");
 const sortColumn = ref("");
 const sortDirection = ref("asc");
 const showExportModal = ref(false);
@@ -85,86 +115,59 @@ const showFilterModal = ref(false);
 const showSortModal = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
-const openStatusDropdown = ref(null);
-const dropdownPosition = ref({ top: 0, left: 0 });
-const showEditModal = ref(false);
-const editingUser = ref(null);
-const editForm = ref({
-    name: "",
-    email: "",
-    phone: "",
-    role: "",
-    status: "",
-    department: "",
-});
-
-// Available options for dropdowns
-const roleOptions = ["Admin", "Trainer", "Trainee"];
-const statusOptions = ["Active", "Inactive"];
-const departmentOptions = computed(() => {
-    return [...new Set(users.value.map((user) => user.department))];
-});
 
 // Format phone number to 012-345-6789
 const formatPhoneNumber = (phone) => {
     if (!phone) return "";
     const cleaned = phone.replace(/\D/g, "");
     if (cleaned.length === 10) {
-        return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(
-            6
-        )}`;
+        return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phone;
 };
 
 // Get unique departments for filter
 const departments = computed(() => {
-    const depts = [...new Set(users.value.map((user) => user.department))];
-    return depts;
+    return [...new Set(trainees.value.map((trainee) => trainee.department))];
 });
 
-// Count users by role
-const traineesCount = computed(() => {
-    return users.value.filter((user) => user.role === "Trainee").length;
+// Count attendance
+const presentCount = computed(() => {
+    return trainees.value.filter((trainee) => trainee.status === "present").length;
 });
 
-const trainersCount = computed(() => {
-    return users.value.filter((user) => user.role === "Trainer").length;
+const absentCount = computed(() => {
+    return trainees.value.filter((trainee) => trainee.status === "absent").length;
 });
 
-// Filtered and sorted users
-const filteredUsers = computed(() => {
-    let result = users.value;
-
-    // Filter by active tab
-    if (activeTab.value === "trainees") {
-        result = result.filter((user) => user.role === "Trainee");
-    } else if (activeTab.value === "trainers") {
-        result = result.filter((user) => user.role === "Trainer");
-    }
+// Filtered and sorted trainees
+const filteredTrainees = computed(() => {
+    let result = trainees.value;
 
     // Filter by search query
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         result = result.filter(
-            (user) =>
-                user.name.toLowerCase().includes(query) ||
-                user.email.toLowerCase().includes(query) ||
-                user.contact.toLowerCase().includes(query) ||
-                user.department.toLowerCase().includes(query)
+            (trainee) =>
+                trainee.name.toLowerCase().includes(query) ||
+                trainee.email.toLowerCase().includes(query) ||
+                trainee.department.toLowerCase().includes(query) ||
+                trainee.contact.includes(query)
         );
     }
 
     // Filter by department
     if (selectedDepartment.value !== "all") {
         result = result.filter(
-            (user) => user.department === selectedDepartment.value
+            (trainee) => trainee.department === selectedDepartment.value
         );
     }
 
     // Filter by status
     if (selectedStatus.value !== "all") {
-        result = result.filter((user) => user.status === selectedStatus.value);
+        result = result.filter(
+            (trainee) => trainee.status === selectedStatus.value
+        );
     }
 
     // Sort
@@ -190,15 +193,15 @@ const filteredUsers = computed(() => {
 });
 
 // Pagination
-const totalResults = computed(() => filteredUsers.value.length);
+const totalResults = computed(() => filteredTrainees.value.length);
 const totalPages = computed(() =>
     Math.ceil(totalResults.value / itemsPerPage.value)
 );
 
-const paginatedUsers = computed(() => {
+const paginatedTrainees = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage.value;
     const end = start + itemsPerPage.value;
-    return filteredUsers.value.slice(start, end);
+    return filteredTrainees.value.slice(start, end);
 });
 
 const startResult = computed(() => {
@@ -218,26 +221,20 @@ const goToPage = (page) => {
 };
 
 // Reset to first page when filters change
-watch([searchQuery, selectedDepartment, selectedStatus, activeTab], () => {
+watch([searchQuery, selectedDepartment, selectedStatus], () => {
     currentPage.value = 1;
 });
 
-// Close dropdown when clicking outside
-watch(openStatusDropdown, (newVal) => {
-    if (newVal) {
-        const handleClickOutside = (e) => {
-            if (!e.target.closest('.status-dropdown-trigger') && !e.target.closest('.status-dropdown-menu')) {
-                openStatusDropdown.value = null;
-                document.removeEventListener('click', handleClickOutside);
-            }
-        };
-        setTimeout(() => {
-            document.addEventListener('click', handleClickOutside);
-        }, 0);
+// Toggle attendance
+const toggleAttendance = (traineeId) => {
+    const trainee = trainees.value.find((t) => t.id === traineeId);
+    if (trainee) {
+        trainee.checked = !trainee.checked;
+        trainee.status = trainee.checked ? "present" : "absent";
     }
-});
+};
 
-// Sort function
+// Sort table column
 const sort = (column) => {
     if (sortColumn.value === column) {
         sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
@@ -250,13 +247,13 @@ const sort = (column) => {
 // Export to CSV
 const exportToCSV = () => {
     const headers = ["ID", "Name", "Email", "Contact", "Department", "Status"];
-    const csvData = filteredUsers.value.map((user) => [
-        user.id,
-        user.name,
-        user.email,
-        user.contact,
-        user.department,
-        user.status,
+    const csvData = filteredTrainees.value.map((trainee) => [
+        trainee.id,
+        trainee.name,
+        trainee.email,
+        trainee.contact,
+        trainee.department,
+        trainee.status,
     ]);
 
     const csvContent = [
@@ -268,7 +265,7 @@ const exportToCSV = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "users.csv";
+    a.download = "session-attendance.csv";
     a.click();
     window.URL.revokeObjectURL(url);
     showExportModal.value = false;
@@ -311,162 +308,96 @@ const resetSort = () => {
     sortDirection.value = "asc";
     showSortModal.value = false;
 };
-
-// Toggle status dropdown
-const toggleStatusDropdown = (userId, event) => {
-    if (openStatusDropdown.value === userId) {
-        openStatusDropdown.value = null;
-    } else {
-        openStatusDropdown.value = userId;
-        const rect = event.target.getBoundingClientRect();
-        dropdownPosition.value = {
-            top: rect.bottom + window.scrollY,
-            left: rect.left + window.scrollX,
-        };
-    }
-};
-
-// Change user status
-const changeUserStatus = (userId, newStatus) => {
-    const user = users.value.find((u) => u.id === userId);
-    if (user) {
-        user.status = newStatus;
-    }
-    openStatusDropdown.value = null;
-};
-
-// Open edit modal
-const openEditModal = (user) => {
-    editingUser.value = user;
-    editForm.value = {
-        name: user.name,
-        email: user.email,
-        phone: user.contact,
-        role: user.role,
-        status: user.status,
-        department: user.department,
-    };
-    showEditModal.value = true;
-    // Update URL without reloading
-    router.visit(`/admin/users/${user.id}/edit`, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
-};
-
-// Close edit modal
-const closeEditModal = () => {
-    showEditModal.value = false;
-    editingUser.value = null;
-    editForm.value = {
-        name: "",
-        email: "",
-        phone: "",
-        role: "",
-        status: "",
-        department: "",
-    };
-    // Update URL back to users page
-    router.visit("/admin/users", {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true,
-    });
-};
-
-// Save edited user
-const saveUser = () => {
-    if (editingUser.value) {
-        const user = users.value.find((u) => u.id === editingUser.value.id);
-        if (user) {
-            user.name = editForm.value.name;
-            user.email = editForm.value.email;
-            user.contact = editForm.value.phone;
-            user.role = editForm.value.role;
-            user.status = editForm.value.status;
-            user.department = editForm.value.department;
-        }
-    }
-    closeEditModal();
-};
-
-// Watch for editUserId prop to open modal when navigating directly to edit URL
-watch(
-    () => props.editUserId,
-    (newId) => {
-        if (newId) {
-            const user = users.value.find((u) => u.id === parseInt(newId));
-            if (user) {
-                editingUser.value = user;
-                editForm.value = {
-                    name: user.name,
-                    email: user.email,
-                    phone: user.contact,
-                    role: user.role,
-                    status: user.status,
-                    department: user.department,
-                };
-                showEditModal.value = true;
-            }
-        }
-    },
-    { immediate: true }
-);
 </script>
 
 <template>
-    <Head title="Users" />
+    <Head title="Session Attendance" />
     <AdminLayout>
         <div class="space-y-6">
+            <!-- Go Back Button -->
+            <Link
+                href="/admin/attendance"
+                class="inline-flex items-center gap-2 text-[#2f837d] hover:text-[#26685f] font-medium transition-colors"
+            >
+                <ArrowLeft :size="20" />
+                <span>Go back to courses</span>
+            </Link>
+
+            <!-- Page Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">
+                        Session Attendance
+                    </h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage all users in the system
+                        Track attendance for this training session
                     </p>
                 </div>
             </div>
 
-            <!-- Switch -->
+            <!-- Session Info Card -->
             <div
-                class="bg-white rounded-[25px] shadow-sm p-4 border border-[#dfe5ef]"
+                class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
             >
-                <div
-                    class="inline-flex bg-[#f1f5f9] rounded-[10px] p-1 relative"
-                >
-                    <!-- Sliding background -->
-                    <div
-                        class="absolute top-1 bottom-1 bg-white rounded-[10px] shadow-sm transition-all duration-300 ease-in-out"
-                        :style="{
-                            left: activeTab === 'trainees' ? '4px' : '50%',
-                            right: activeTab === 'trainees' ? '50%' : '4px',
-                        }"
-                    ></div>
+                <div class="flex items-center gap-3 mb-4">
+                    <Calendar class="h-6 w-6 text-[#2f837d]" />
+                    <h2 class="text-xl font-semibold text-gray-900">
+                        {{ sessionInfo.name }}
+                    </h2>
+                </div>
 
-                    <!-- Buttons -->
-                    <button
-                        :class="[
-                            'px-6 py-2 rounded-md font-medium transition-colors duration-300 relative z-10 flex-1',
-                            activeTab === 'trainees'
-                                ? 'text-[#2f837d]'
-                                : 'text-[#64748b] hover:text-gray-900',
-                        ]"
-                        @click="activeTab = 'trainees'"
-                    >
-                        Trainees
-                    </button>
-                    <button
-                        :class="[
-                            'px-6 py-2 rounded-md font-medium transition-colors duration-300 relative z-10 flex-1',
-                            activeTab === 'trainers'
-                                ? 'text-[#2f837d]'
-                                : 'text-[#64748b] hover:text-gray-900',
-                        ]"
-                        @click="activeTab = 'trainers'"
-                    >
-                        Trainers
-                    </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Course</p>
+                        <p class="text-base font-medium text-gray-900">
+                            {{ sessionInfo.courseName }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Date</p>
+                        <p class="text-base font-medium text-gray-900 flex items-center gap-2">
+                            <Calendar :size="16" class="text-[#2f837d]" />
+                            {{ sessionInfo.date }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Time</p>
+                        <p class="text-base font-medium text-gray-900 flex items-center gap-2">
+                            <Clock :size="16" class="text-[#2f837d]" />
+                            {{ sessionInfo.time }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Location</p>
+                        <p class="text-base font-medium text-gray-900 flex items-center gap-2">
+                            <MapPin :size="16" class="text-[#2f837d]" />
+                            {{ sessionInfo.location }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Attendance Summary -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ trainees.length }}
+                            </p>
+                            <p class="text-sm text-gray-500">Total Trainees</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-green-600">
+                                {{ presentCount }}
+                            </p>
+                            <p class="text-sm text-gray-500">Present</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-red-600">
+                                {{ absentCount }}
+                            </p>
+                            <p class="text-sm text-gray-500">Absent</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -474,18 +405,6 @@ watch(
             <div
                 class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
             >
-                <div class="flex items-center gap-3 mb-6">
-                    <Users class="h-6 w-6 text-[#2f837d]" />
-                    <h2 class="text-xl font-semibold text-gray-900">
-                        <template v-if="activeTab === 'trainees'">
-                            Trainees ({{ traineesCount }})
-                        </template>
-                        <template v-else>
-                            Trainers ({{ trainersCount }})
-                        </template>
-                    </h2>
-                </div>
-
                 <div
                     class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6"
                 >
@@ -498,7 +417,7 @@ watch(
                             <input
                                 v-model="searchQuery"
                                 type="text"
-                                placeholder="Search users..."
+                                placeholder="Search trainees..."
                                 class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                             />
                             <Search
@@ -534,7 +453,8 @@ watch(
                         </button>
                     </div>
                 </div>
-                <!-- Users Table -->
+
+                <!-- Trainees Table -->
                 <div
                     class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden"
                 >
@@ -553,8 +473,7 @@ watch(
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
-                                                        sortDirection ===
-                                                        'desc',
+                                                        sortDirection === 'desc',
                                                 }"
                                             />
                                         </div>
@@ -570,8 +489,7 @@ watch(
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
-                                                        sortDirection ===
-                                                        'desc',
+                                                        sortDirection === 'desc',
                                                 }"
                                             />
                                         </div>
@@ -587,8 +505,7 @@ watch(
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
-                                                        sortDirection ===
-                                                        'desc',
+                                                        sortDirection === 'desc',
                                                 }"
                                             />
                                         </div>
@@ -600,14 +517,11 @@ watch(
                                         <div class="flex items-center gap-2">
                                             Department
                                             <ChevronUp
-                                                v-if="
-                                                    sortColumn === 'department'
-                                                "
+                                                v-if="sortColumn === 'department'"
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
-                                                        sortDirection ===
-                                                        'desc',
+                                                        sortDirection === 'desc',
                                                 }"
                                             />
                                         </div>
@@ -623,8 +537,7 @@ watch(
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
-                                                        sortDirection ===
-                                                        'desc',
+                                                        sortDirection === 'desc',
                                                 }"
                                             />
                                         </div>
@@ -632,14 +545,14 @@ watch(
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
-                                        Actions
+                                        Check
                                     </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 <tr
-                                    v-for="(user, index) in paginatedUsers"
-                                    :key="user.id"
+                                    v-for="(trainee, index) in paginatedTrainees"
+                                    :key="trainee.id"
                                     :class="[
                                         'transition-colors',
                                         index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
@@ -649,25 +562,23 @@ watch(
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
-                                        {{ user.id }}
+                                        {{ trainee.id }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div
                                                 class="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold"
                                             >
-                                                {{ user.name.charAt(0) }}
+                                                {{ trainee.name.charAt(0) }}
                                             </div>
                                             <div class="ml-4">
                                                 <div
                                                     class="text-sm font-medium text-gray-900"
                                                 >
-                                                    {{ user.name }}
+                                                    {{ trainee.name }}
                                                 </div>
-                                                <div
-                                                    class="text-sm text-gray-500"
-                                                >
-                                                    {{ user.role }}
+                                                <div class="text-sm text-gray-500">
+                                                    {{ trainee.email }}
                                                 </div>
                                             </div>
                                         </div>
@@ -675,110 +586,39 @@ watch(
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
-                                        <div>
-                                            <div class="font-medium">
-                                                {{ user.email }}
-                                            </div>
-                                            <div class="text-gray-500">
-                                                {{
-                                                    formatPhoneNumber(
-                                                        user.contact
-                                                    )
-                                                }}
-                                            </div>
-                                        </div>
+                                        {{ formatPhoneNumber(trainee.contact) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span>
-                                            {{ user.department }}
+                                            {{ trainee.department }}
                                         </span>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap"
-                                    >
-                                        <button
-                                            @click="
-                                                toggleStatusDropdown(user.id, $event)
-                                            "
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
                                             :class="[
-                                                'status-dropdown-trigger px-3 py-2 inline-flex items-center justify-center gap-1 leading-5 rounded-md cursor-pointer hover:opacity-80 transition-opacity w-[100px]',
-                                                user.status === 'Active'
+                                                'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                                trainee.status === 'present'
                                                     ? 'bg-green-100 text-green-800'
-                                                    : 'bg-gray-100 text-gray-800',
+                                                    : 'bg-red-100 text-red-800'
                                             ]"
                                         >
-                                            {{ user.status }}
-                                            <ChevronDown class="h-3 w-3" />
-                                        </button>
-
-                                        <!-- Dropdown Menu (Teleported to body) -->
-                                        <Teleport to="body">
-                                            <div
-                                                v-if="
-                                                    openStatusDropdown === user.id
-                                                "
-                                                class="status-dropdown-menu fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]"
-                                                :style="{
-                                                    top: dropdownPosition.top + 'px',
-                                                    left: dropdownPosition.left + 'px',
-                                                }"
-                                            >
-                                                <button
-                                                    @click="
-                                                        changeUserStatus(
-                                                            user.id,
-                                                            'Active'
-                                                        )
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                                                    :class="
-                                                        user.status === 'Active'
-                                                            ? 'bg-green-50 text-green-800'
-                                                            : 'text-gray-700'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="h-2 w-2 rounded-full bg-green-500"
-                                                    ></span>
-                                                    Active
-                                                </button>
-                                                <button
-                                                    @click="
-                                                        changeUserStatus(
-                                                            user.id,
-                                                            'Inactive'
-                                                        )
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                                                    :class="
-                                                        user.status === 'Inactive'
-                                                            ? 'bg-gray-50 text-gray-800'
-                                                            : 'text-gray-700'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="h-2 w-2 rounded-full bg-gray-500"
-                                                    ></span>
-                                                    Inactive
-                                                </button>
-                                            </div>
-                                        </Teleport>
+                                            <component
+                                                :is="trainee.status === 'present' ? CheckCircle : XCircle"
+                                                :size="14"
+                                            />
+                                            {{ trainee.status === 'present' ? 'Present' : 'Absent' }}
+                                        </span>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-6"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <button
-                                            class="text-gray-600 hover:text-red-800 transition-colors inline-flex items-center gap-1"
-                                            title="Delete"
+                                            @click="toggleAttendance(trainee.id)"
+                                            class="relative inline-flex items-center justify-center"
                                         >
-                                            <Trash2 class="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            @click="openEditModal(user)"
-                                            class="text-gray-600 hover:text-[#257067] transition-colors inline-flex items-center gap-1"
-                                            title="Edit"
-                                        >
-                                            <Pencil class="h-4 w-4" />
+                                            <input
+                                                type="checkbox"
+                                                :checked="trainee.checked"
+                                                class="w-5 h-5 rounded border-gray-300 text-[#2f837d] focus:ring-[#2f837d] cursor-pointer"
+                                            />
                                         </button>
                                     </td>
                                 </tr>
@@ -788,12 +628,12 @@ watch(
 
                     <!-- Empty State -->
                     <div
-                        v-if="filteredUsers.length === 0"
+                        v-if="filteredTrainees.length === 0"
                         class="text-center py-12"
                     >
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            No users found
+                            No trainees found
                         </h3>
                         <p class="mt-1 text-sm text-gray-500">
                             Try adjusting your search or filter criteria.
@@ -802,16 +642,18 @@ watch(
 
                     <!-- Pagination and Result Counter -->
                     <div
-                        v-if="filteredUsers.length > 0"
-                        class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200"
+                        v-if="filteredTrainees.length > 0"
+                        class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200"
                     >
                         <!-- Pagination (Left) -->
-                        <div class="flex items-center gap-2">
+                        <div
+                            class="flex items-center gap-2 flex-wrap justify-center"
+                        >
                             <button
                                 @click="goToPage(currentPage - 1)"
                                 :disabled="currentPage === 1"
                                 :class="[
-                                    'px-3 py-1 rounded border transition-colors',
+                                    'px-3 py-1 rounded border transition-colors text-sm',
                                     currentPage === 1
                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
@@ -821,10 +663,7 @@ watch(
                             </button>
 
                             <div class="flex items-center gap-1">
-                                <template
-                                    v-for="page in totalPages"
-                                    :key="page"
-                                >
+                                <template v-for="page in totalPages" :key="page">
                                     <button
                                         v-if="
                                             page === 1 ||
@@ -834,7 +673,7 @@ watch(
                                         "
                                         @click="goToPage(page)"
                                         :class="[
-                                            'px-3 py-1 rounded border transition-colors',
+                                            'px-3 py-1 rounded border transition-colors text-sm',
                                             currentPage === page
                                                 ? 'bg-[#2f837d] text-white border-[#2f837d]'
                                                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
@@ -847,7 +686,7 @@ watch(
                                             page === currentPage - 2 ||
                                             page === currentPage + 2
                                         "
-                                        class="px-2 text-gray-500"
+                                        class="px-2 text-gray-500 text-sm"
                                     >
                                         ...
                                     </span>
@@ -858,7 +697,7 @@ watch(
                                 @click="goToPage(currentPage + 1)"
                                 :disabled="currentPage === totalPages"
                                 :class="[
-                                    'px-3 py-1 rounded border transition-colors',
+                                    'px-3 py-1 rounded border transition-colors text-sm',
                                     currentPage === totalPages
                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
@@ -869,7 +708,7 @@ watch(
                         </div>
 
                         <!-- Result Counter (Right) -->
-                        <div class="text-sm text-gray-600">
+                        <div class="text-sm text-gray-600 text-center sm:text-right">
                             Showing {{ startResult }}-{{ endResult }} of
                             {{ totalResults }} results
                         </div>
@@ -880,8 +719,8 @@ watch(
             <!-- Modals -->
             <ExportModal
                 :show="showExportModal"
-                :activeTab="activeTab"
-                :dataType="activeTab"
+                activeTab="trainees"
+                dataType="attendance"
                 @close="showExportModal = false"
                 @exportCSV="exportToCSV"
                 @exportPDF="exportToPDF"
@@ -889,11 +728,11 @@ watch(
 
             <FilterModal
                 :show="showFilterModal"
-                title="Filter Users"
+                title="Filter Trainees"
                 v-model:selectedDepartment="selectedDepartment"
                 v-model:selectedStatus="selectedStatus"
                 :departments="departments"
-                :statusOptions="['Active', 'Inactive']"
+                :statusOptions="['present', 'absent']"
                 departmentLabel="Department"
                 @close="showFilterModal = false"
                 @reset="resetFilters"
@@ -901,30 +740,40 @@ watch(
 
             <SortModal
                 :show="showSortModal"
-                title="Sort Users"
+                title="Sort Trainees"
                 :sortColumn="sortColumn"
                 :sortDirection="sortDirection"
                 :sortOptions="[
-                    { value: 'name', label: 'Name', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'email', label: 'Email', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'department', label: 'Department', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'status', label: 'Status', directionLabels: { asc: 'Active First', desc: 'Inactive First' } },
+                    {
+                        value: 'name',
+                        label: 'Name',
+                        directionLabels: { asc: 'A-Z', desc: 'Z-A' },
+                    },
+                    {
+                        value: 'id',
+                        label: 'ID',
+                        directionLabels: {
+                            asc: 'Low to High',
+                            desc: 'High to Low',
+                        },
+                    },
+                    {
+                        value: 'department',
+                        label: 'Department',
+                        directionLabels: { asc: 'A-Z', desc: 'Z-A' },
+                    },
+                    {
+                        value: 'status',
+                        label: 'Status',
+                        directionLabels: {
+                            asc: 'Present First',
+                            desc: 'Absent First',
+                        },
+                    },
                 ]"
                 @close="showSortModal = false"
                 @sort="applySort"
                 @reset="resetSort"
-            />
-
-            <!-- Edit User Modal -->
-            <EditUserModal
-                :show="showEditModal"
-                :editing-user="editingUser"
-                v-model:edit-form="editForm"
-                :role-options="roleOptions"
-                :status-options="statusOptions"
-                :department-options="departmentOptions"
-                @close="closeEditModal"
-                @save="saveUser"
             />
         </div>
     </AdminLayout>

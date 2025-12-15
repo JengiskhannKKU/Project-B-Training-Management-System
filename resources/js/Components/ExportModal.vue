@@ -8,7 +8,11 @@ const props = defineProps({
     },
     activeTab: {
         type: String,
-        required: true,
+        default: "data",
+    },
+    dataType: {
+        type: String,
+        default: null,
     },
 });
 
@@ -71,7 +75,7 @@ const handleExportPDF = () => {
                 <!-- Modal Content -->
                 <p class="text-sm text-gray-600 mb-6">
                     Choose your preferred export format to download the
-                    {{ activeTab }} data.
+                    {{ dataType || activeTab }} data.
                 </p>
 
                 <!-- Export Options -->
