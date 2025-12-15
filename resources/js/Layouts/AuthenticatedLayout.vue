@@ -22,7 +22,7 @@ const roleLinks: Record<RoleName, { label: string; href: string }> = {
 };
 
 const menuLinks = computed(() => {
-    const links = [{ label: 'Dashboard', href: '/dashboard' }];
+    const links = [];
 
     if (roleName.value) {
         links.push(roleLinks[roleName.value]);
