@@ -31,11 +31,11 @@ const submit = () => {
 <template>
     <Head title="Log in" />
 
-    <div class="fixed top-0 left-0 z-50 overflow-hidden h-20 w-auto lg:h-24">
+    <div class="pt-4 pl-6 z-50 w-auto">
         <img
             src="/images/project_logo.png"
             alt="Project Logo"
-            class="h-40 w-auto -mt-[40px] -ml-[10px] lg:h-48 lg:-mt-[48px]"
+            class="h-16 w-auto"
         />
     </div>
 
