@@ -47,11 +47,21 @@ class AuthenticatedSessionController extends Controller
 
         $role = Auth::user()->role->name;
 
-        return match ($role) {
+        \Log::info('User logged in', [
+            'user_id' => Auth::id(),
+            'email' => Auth::user()->email,
+            'role' => $role,
+        ]);
+
+        $redirect = match ($role) {
             'admin'   => redirect()->route('admin.dashboard'),
             'trainer' => redirect()->route('trainer.dashboard'),
             default   => redirect()->route('student.dashboard'),
         };
+
+        \Log::info('Redirecting to', ['url' => $redirect->getTargetUrl()]);
+
+        return $redirect;
     }
 
 

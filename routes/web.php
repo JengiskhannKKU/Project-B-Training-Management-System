@@ -19,6 +19,48 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return Inertia::render('Admin/AdminDashboard');
+    })->name('admin.dashboard');
+
+    Route::get('/admin/users', function () {
+        return Inertia::render('Admin/Users');
+    })->name('admin.users');
+
+    Route::get('/admin/users/{id}/edit', function ($id) {
+        return Inertia::render('Admin/Users', ['editUserId' => $id]);
+    })->name('admin.users.edit');
+
+    Route::get('/admin/categories', function () {
+        return Inertia::render('Admin/Categories');
+    })->name('admin.categories');
+
+    Route::get('/admin/categories/create', function () {
+        return Inertia::render('Admin/Categories');
+    })->name('admin.categories.create');
+
+    Route::get('/admin/categories/{id}/edit', function ($id) {
+        return Inertia::render('Admin/Categories');
+    })->name('admin.categories.edit');
+
+    Route::get('/admin/my-courses', function () {
+        return Inertia::render('Admin/MyCourses');
+    })->name('admin.my-courses');
+
+    Route::get('/admin/attendance', function () {
+        return Inertia::render('Admin/Attendance');
+    })->name('admin.attendance');
+
+    Route::get('/admin/feedback', function () {
+        return Inertia::render('Admin/Feedback');
+    })->name('admin.feedback');
+
+    Route::get('/admin/settings', function () {
+        return Inertia::render('Admin/Settings');
+    })->name('admin.settings');
+});
+
 Route::middleware(['auth', 'role:trainer'])->group(function () {
     Route::get('/trainer', function () {
         return Inertia::render('Trainer/Dashboard');

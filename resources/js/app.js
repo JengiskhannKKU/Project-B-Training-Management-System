@@ -18,7 +18,7 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .use(Toast, {
@@ -34,8 +34,9 @@ createInertiaApp({
                 closeButton: 'button',
                 icon: true,
                 rtl: false,
-            })
-            .mount(el);
+            });
+
+        return app.mount(el);
     },
     progress: {
         color: '#4B5563',

@@ -76,8 +76,14 @@ class GoogleAuthController extends Controller
             // Regenerate session to prevent fixation
             $request->session()->regenerate();
 
-            \Log::info('Redirecting to /student');
-            return redirect()->route('student.dashboard');
+            // Redirect based on user role
+            $role = Auth::user()->role->name;
+
+            return match ($role) {
+                'admin'   => redirect()->route('admin.dashboard'),
+                'trainer' => redirect()->route('trainer.dashboard'),
+                default   => redirect()->route('student.dashboard'),
+            };
 
         } catch (Throwable $e) {
             \Log::error('Error in callback: ' . $e->getMessage());

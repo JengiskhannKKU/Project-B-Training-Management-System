@@ -16,7 +16,7 @@ const roleName = computed<RoleName | null>(() => {
 const currentPath = computed(() => page.url.split('?')[0]);
 
 const roleLinks: Record<RoleName, { label: string; href: string }> = {
-    admin: { label: 'Admin Portal', href: '/admin' },
+    admin: { label: 'Admin Portal', href: '/admin/dashboard' },
     trainer: { label: 'Trainer Portal', href: '/trainer' },
     student: { label: 'Student Portal', href: '/student' },
 };
