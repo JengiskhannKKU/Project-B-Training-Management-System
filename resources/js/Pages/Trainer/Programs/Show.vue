@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { useToast } from 'vue-toastification';
 
 const props = defineProps<{
     program: {
@@ -25,7 +26,33 @@ const showEditModal = ref(false);
 const showRejectedModal = ref(false);
 const showAddTraineeModal = ref(false);
 const showRemoveTraineeModal = ref(false);
+const showAddSessionModal = ref(false);
+const showEditSessionModal = ref(false);
+const showDeleteSessionModal = ref(false);
 const selectedTrainee = ref<any>(null);
+const selectedSession = ref<any>(null);
+const sessionErrors = ref<Record<string, string>>({});
+
+const sessionForm = useForm({
+    course: 'UX/UI Design Fundamentals',
+    date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    trainer: '',
+    capacity: '',
+    status: 'Open',
+});
+
+const toast = useToast();
+
+const availableCourses = [
+    'UX/UI Design Fundamentals',
+    'Leadership Fundamentals',
+    'Data Analysis',
+    'Advanced Computer Programming',
+    'Design Thinking Workshop'
+];
 
 const editForm = useForm({
     title: 'Advanced UX Design for Enterprise Application',
@@ -60,6 +87,55 @@ const traineeForm = useForm({
 });
 
 const categories = ['Design', 'Development', 'Marketing', 'Business'];
+
+// Mock sessions data
+const sessions = ref([
+    {
+        id: 'Se-001',
+        date: '2024-03-15',
+        time: '08:00 - 16:00',
+        session: 'Session 101',
+        location: 'Room 101',
+        capacity: '45/50',
+        status: 'Open'
+    },
+    {
+        id: 'Se-002',
+        date: '2024-04-15',
+        time: '08:00 - 16:00',
+        session: 'Session 102',
+        location: 'EN18303',
+        capacity: '20/30',
+        status: 'Open'
+    },
+    {
+        id: 'Se-003',
+        date: '2024-03-15',
+        time: '09:00 - 16:00',
+        session: 'Session 103',
+        location: 'Room3032',
+        capacity: '32/45',
+        status: 'Open'
+    },
+    {
+        id: 'Se-004',
+        date: '2024-03-15',
+        time: '08:00 - 16:00',
+        session: 'Data Analysis',
+        location: 'Room3032',
+        capacity: '20/20',
+        status: 'Close'
+    },
+    {
+        id: 'Se-005',
+        date: '2024-03-15',
+        time: '08:00 - 16:00',
+        session: 'UX/UI design',
+        location: 'Room3032',
+        capacity: '45/50',
+        status: 'Close'
+    },
+]);
 
 // Mock trainees data
 const trainees = ref([
@@ -113,6 +189,114 @@ const submitEdit = () => {
     showEditModal.value = false;
 };
 
+const validateSessionForm = () => {
+    sessionErrors.value = {};
+
+    if (!sessionForm.course) {
+        sessionErrors.value.course = 'Please select a course';
+    }
+    if (!sessionForm.date) {
+        sessionErrors.value.date = 'Date is required';
+    }
+    if (!sessionForm.start_time) {
+        sessionErrors.value.start_time = 'Start time is required';
+    }
+    if (!sessionForm.end_time) {
+        sessionErrors.value.end_time = 'End time is required';
+    }
+    if (!sessionForm.location.trim()) {
+        sessionErrors.value.location = 'Location is required';
+    }
+    if (!sessionForm.capacity) {
+        sessionErrors.value.capacity = 'Capacity is required';
+    }
+
+    return Object.keys(sessionErrors.value).length === 0;
+};
+
+const submitAddSession = () => {
+    if (validateSessionForm()) {
+        // Generate new session ID
+        const newId = `Se-${String(sessions.value.length + 1).padStart(3, '0')}`;
+
+        // Add new session to the list
+        sessions.value.push({
+            id: newId,
+            date: sessionForm.date,
+            time: `${sessionForm.start_time} - ${sessionForm.end_time}`,
+            session: sessionForm.course,
+            location: sessionForm.location,
+            capacity: `0/${sessionForm.capacity}`,
+            status: sessionForm.status,
+        });
+
+        showAddSessionModal.value = false;
+        sessionForm.reset();
+        sessionErrors.value = {};
+
+        // Show success toast
+        toast.success('Session added successfully!');
+    }
+};
+
+const editSession = (session: any) => {
+    selectedSession.value = session;
+    sessionForm.course = session.session;
+    sessionForm.date = session.date;
+    const times = session.time.split(' - ');
+    sessionForm.start_time = times[0];
+    sessionForm.end_time = times[1];
+    sessionForm.location = session.location;
+    sessionForm.capacity = session.capacity.split('/')[1];
+    sessionForm.status = session.status;
+    showEditSessionModal.value = true;
+};
+
+const submitEditSession = () => {
+    if (validateSessionForm()) {
+        if (selectedSession.value) {
+            const index = sessions.value.findIndex(s => s.id === selectedSession.value.id);
+            if (index > -1) {
+                sessions.value[index] = {
+                    ...sessions.value[index],
+                    date: sessionForm.date,
+                    time: `${sessionForm.start_time} - ${sessionForm.end_time}`,
+                    session: sessionForm.course,
+                    location: sessionForm.location,
+                    capacity: `${sessions.value[index].capacity.split('/')[0]}/${sessionForm.capacity}`,
+                    status: sessionForm.status,
+                };
+            }
+        }
+        showEditSessionModal.value = false;
+        sessionForm.reset();
+        sessionErrors.value = {};
+        selectedSession.value = null;
+
+        // Show success toast
+        toast.success('Session updated successfully!');
+    }
+};
+
+const confirmDeleteSession = (session: any) => {
+    selectedSession.value = session;
+    showDeleteSessionModal.value = true;
+};
+
+const deleteSession = () => {
+    if (selectedSession.value) {
+        const index = sessions.value.findIndex(s => s.id === selectedSession.value.id);
+        if (index > -1) {
+            sessions.value.splice(index, 1);
+
+            // Show success toast
+            toast.success('Session deleted successfully!');
+        }
+    }
+    showDeleteSessionModal.value = false;
+    selectedSession.value = null;
+};
+
 const submitAddTrainee = () => {
     showAddTraineeModal.value = false;
 };
@@ -131,6 +315,20 @@ const removeTrainee = () => {
     }
     showRemoveTraineeModal.value = false;
     selectedTrainee.value = null;
+};
+
+const getCertificateSelectColor = (status: string) => {
+    const colors: Record<string, string> = {
+        'Approved': 'bg-teal-50 text-teal-700 border-teal-300',
+        'Pending': 'bg-gray-50 text-gray-700 border-gray-300',
+        'Not Eligible': 'bg-red-50 text-red-700 border-red-300',
+    };
+    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-300';
+};
+
+const updateCertificateStatus = (trainee: any) => {
+    // Show success toast
+    toast.success(`Certificate status updated to ${trainee.certificate_status}!`);
 };
 
 const getCertificateStatusColor = (status: string) => {
@@ -219,7 +417,7 @@ const getCertificateStatusColor = (status: string) => {
                     </div>
                 </div>
 
-                <button @click="showEditModal = true" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button v-if="activeTab === 'overview'" @click="showEditModal = true" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
@@ -232,6 +430,9 @@ const getCertificateStatusColor = (status: string) => {
                 <nav class="flex gap-8">
                     <button @click="activeTab = 'overview'" :class="['border-b-2 px-1 py-4 text-sm font-medium transition', activeTab === 'overview' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700']">
                         Overview
+                    </button>
+                    <button @click="activeTab = 'sessions'" :class="['border-b-2 px-1 py-4 text-sm font-medium transition', activeTab === 'sessions' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700']">
+                        Sessions
                     </button>
                     <button @click="activeTab = 'trainees'" :class="['border-b-2 px-1 py-4 text-sm font-medium transition', activeTab === 'trainees' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700']">
                         Trainees
@@ -309,74 +510,190 @@ const getCertificateStatusColor = (status: string) => {
                         </div>
                     </div>
 
+                    <!-- Sessions Tab -->
+                    <div v-if="activeTab === 'sessions'" class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <h2 class="text-lg font-semibold text-gray-900">Sessions (5)</h2>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="Search sessions..." class="rounded-lg border-gray-300 px-3 py-1 text-sm focus:border-teal-500 focus:ring-teal-500" />
+                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 011-1h2a1 1 0 011 1v8a1 1 0 01-1 1h-2a1 1 0 01-1-1V9z"/>
+                                    </svg>
+                                </button>
+                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">Sort</button>
+                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </button>
+                                <button @click="showAddSessionModal = true; sessionErrors = {}; sessionForm.reset();" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-1 text-sm font-medium text-white hover:bg-teal-700">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Add Sessions
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sessions Table -->
+                        <div class="rounded-lg bg-white shadow-sm">
+                            <table class="w-full">
+                                <thead class="border-b border-gray-200 bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Time</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Session</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Location</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Capacity</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr v-for="session in sessions" :key="session.id" class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-sm text-gray-900">{{ session.id }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.date }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.time }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-900">{{ session.session }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.location }}</td>
+                                        <td class="px-4 py-3 text-sm">
+                                            <span :class="[
+                                                'rounded-full px-2 py-1 text-xs font-medium',
+                                                session.capacity.split('/')[0] === session.capacity.split('/')[1] ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                            ]">
+                                                {{ session.capacity }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm">
+                                            <span :class="[
+                                                'rounded-full px-3 py-1 text-xs font-medium',
+                                                session.status === 'Open' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700'
+                                            ]">
+                                                {{ session.status }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex gap-2">
+                                                <button @click="confirmDeleteSession(session)" class="text-gray-400 hover:text-red-600">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                                <button @click="editSession(session)" class="text-gray-400 hover:text-teal-600">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="flex items-center justify-between">
+                            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</button>
+                            <span class="text-sm text-gray-600">Page 1 of 10</span>
+                            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Next</button>
+                        </div>
+                    </div>
+
                     <!-- Trainees Tab -->
                     <div v-if="activeTab === 'trainees'" class="space-y-4">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
                                 <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                 </svg>
                                 <h2 class="text-lg font-semibold text-gray-900">ENROLLED TRAINEES (24)</h2>
                             </div>
-                            <div class="flex gap-2">
-                                <input type="text" placeholder="Search trainees..." class="rounded-lg border-gray-300 px-3 py-1 text-sm focus:border-teal-500 focus:ring-teal-500" />
-                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">Filter</button>
-                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">Sort</button>
-                                <button class="rounded-lg border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">Export</button>
-                                <button @click="showAddTraineeModal = true" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-1 text-sm font-medium text-white hover:bg-teal-700">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                    </svg>
-                                    Add Manually
-                                </button>
-                            </div>
+                            <button @click="showAddTraineeModal = true" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Add Manually
+                            </button>
                         </div>
 
-                        <div class="rounded-lg bg-white p-2 shadow-sm">
-                            <div class="mb-2 flex items-center gap-2 text-sm font-medium text-teal-600">
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="text" placeholder="Search trainees..." class="flex-1 rounded-lg border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-teal-500" />
+                            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                                </svg>
+                                Filter
+                            </button>
+                            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                </svg>
+                                Sort
+                            </button>
+                            <button class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                Export
+                            </button>
+                        </div>
+
+                        <div class="rounded-lg bg-white shadow-sm">
+                            <div class="border-b border-gray-200 px-4 py-3 flex items-center gap-2 text-sm font-medium text-teal-600">
                                 <div class="h-2 w-2 rounded-full bg-teal-600"></div>
                                 ENROLLED (4)
                             </div>
 
-                            <div class="space-y-2">
-                                <div v-for="trainee in trainees" :key="trainee.id" class="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50">
-                                    <div class="flex items-center gap-4">
-                                        <img :src="trainee.avatar" :alt="trainee.name" class="h-12 w-12 rounded-full" />
-                                        <div>
-                                            <div class="font-medium text-gray-900">{{ trainee.name }}</div>
-                                            <div class="text-sm text-gray-500">{{ trainee.email }}</div>
-                                            <div class="text-xs text-gray-400">ID: {{ trainee.employee_id }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center gap-8">
-                                        <div class="text-sm">
-                                            <div class="text-gray-500">Enrolled</div>
-                                            <div class="font-medium text-gray-900">{{ trainee.enrolled_date }}</div>
+                            <div class="divide-y divide-gray-200">
+                                <div v-for="trainee in trainees" :key="trainee.id" class="px-4 py-4 hover:bg-gray-50">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-4 flex-1">
+                                            <img :src="trainee.avatar" :alt="trainee.name" class="h-12 w-12 rounded-full" />
+                                            <div class="min-w-0 flex-1">
+                                                <div class="font-medium text-gray-900">{{ trainee.name }}</div>
+                                                <div class="text-sm text-gray-500">{{ trainee.email }}</div>
+                                                <div class="text-xs text-gray-400">ID: {{ trainee.employee_id }}</div>
+                                            </div>
                                         </div>
 
-                                        <div class="text-sm">
-                                            <div class="text-gray-500">Department</div>
-                                            <div class="font-medium text-gray-900">{{ trainee.department }}</div>
-                                        </div>
+                                        <div class="flex items-center gap-8">
+                                            <div class="text-sm text-center">
+                                                <div class="text-gray-500 mb-1">Enrolled</div>
+                                                <div class="font-medium text-gray-900">{{ trainee.enrolled_date }}</div>
+                                            </div>
 
-                                        <div class="text-sm">
-                                            <div class="text-gray-500">Roles</div>
-                                            <div class="font-medium text-gray-900">{{ trainee.role }}</div>
-                                        </div>
+                                            <div class="text-sm text-center">
+                                                <div class="text-gray-500 mb-1">Department</div>
+                                                <div class="font-medium text-gray-900">{{ trainee.department }}</div>
+                                            </div>
 
-                                        <div class="text-sm">
-                                            <div class="text-gray-500">Certificates</div>
-                                            <span :class="['inline-block rounded border px-2 py-1 text-xs font-medium', getCertificateStatusColor(trainee.certificate_status)]">
-                                                {{ trainee.certificate_status }}
-                                            </span>
-                                        </div>
+                                            <div class="text-sm text-center">
+                                                <div class="text-gray-500 mb-1">Roles</div>
+                                                <div class="font-medium text-gray-900">{{ trainee.role }}</div>
+                                            </div>
 
-                                        <button @click="confirmRemoveTrainee(trainee)" class="text-red-600 hover:text-red-700">
-                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                            </svg>
-                                        </button>
+                                            <div class="text-sm">
+                                                <div class="text-gray-500 mb-1">Certificates</div>
+                                                <select v-model="trainee.certificate_status" @change="updateCertificateStatus(trainee)" :class="['rounded-lg border px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-teal-500', getCertificateSelectColor(trainee.certificate_status)]">
+                                                    <option value="Approved">✓ Approved</option>
+                                                    <option value="Pending">⌛ Pending</option>
+                                                    <option value="Not Eligible">✗ Not Eligible</option>
+                                                </select>
+                                            </div>
+
+                                            <button @click="confirmRemoveTrainee(trainee)" class="text-red-600 hover:text-red-700">
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -790,6 +1107,213 @@ const getCertificateStatusColor = (status: string) => {
                     <button type="submit" class="flex-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Add Session Modal -->
+    <div v-if="showAddSessionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showAddSessionModal = false; sessionErrors = {}; sessionForm.reset();">
+        <div class="w-full max-w-2xl rounded-lg bg-white shadow-xl">
+            <div class="border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="text-center flex-1">
+                        <h2 class="text-xl font-bold text-gray-900">Add Sessions</h2>
+                        <p class="mt-1 text-sm text-gray-500">Leadership Fundamentals | Current enrollment: 24/30 (6 seat available)</p>
+                    </div>
+                    <button @click="showAddSessionModal = false; sessionErrors = {}; sessionForm.reset();" class="rounded-lg p-2 hover:bg-gray-100">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <form @submit.prevent="submitAddSession" class="p-6 space-y-4">
+                <!-- Course Dropdown -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Courses <span class="text-red-500">*</span></label>
+                    <select v-model="sessionForm.course" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.course ? 'border-red-300' : 'border-gray-300']">
+                        <option v-for="course in availableCourses" :key="course" :value="course">{{ course }}</option>
+                    </select>
+                    <p v-if="sessionErrors.course" class="mt-1 text-sm text-red-600">{{ sessionErrors.course }}</p>
+                </div>
+
+                <!-- Date and Time -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Date <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.date" type="date" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.date ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.date" class="mt-1 text-sm text-red-600">{{ sessionErrors.date }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Start Time <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.start_time" type="time" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.start_time ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.start_time" class="mt-1 text-sm text-red-600">{{ sessionErrors.start_time }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">End Time <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.end_time" type="time" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.end_time ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.end_time" class="mt-1 text-sm text-red-600">{{ sessionErrors.end_time }}</p>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Location <span class="text-red-500">*</span></label>
+                    <div class="relative mt-1">
+                        <input v-model="sessionForm.location" type="text" placeholder="e.g., Main Conference Room" :class="['block w-full rounded-md pr-10 focus:border-teal-500 focus:ring-teal-500', sessionErrors.location ? 'border-red-300' : 'border-gray-300']" />
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p v-if="sessionErrors.location" class="mt-1 text-sm text-red-600">{{ sessionErrors.location }}</p>
+                </div>
+
+                <!-- Trainer -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Trainer</label>
+                    <input v-model="sessionForm.trainer" type="text" placeholder="e.g., John Doe" class="mt-1 block w-full rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500" />
+                </div>
+
+                <!-- Capacity and Status -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Capacity <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.capacity" type="number" min="1" placeholder="e.g., 30" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.capacity ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.capacity" class="mt-1 text-sm text-red-600">{{ sessionErrors.capacity }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                        <select v-model="sessionForm.status" class="mt-1 block w-full rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Open">Open</option>
+                            <option value="Close">Close</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" @click="showAddSessionModal = false; sessionErrors = {}; sessionForm.reset();" class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="flex-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Session Modal -->
+    <div v-if="showEditSessionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="showEditSessionModal = false; sessionErrors = {}; sessionForm.reset(); selectedSession = null;">
+        <div class="w-full max-w-2xl rounded-lg bg-white shadow-xl">
+            <div class="border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="text-center flex-1">
+                        <h2 class="text-xl font-bold text-gray-900">Edit Session</h2>
+                        <p class="mt-1 text-sm text-gray-500">Leadership Fundamentals | Current enrollment: 24/30 (6 seat available)</p>
+                    </div>
+                    <button @click="showEditSessionModal = false; sessionErrors = {}; sessionForm.reset(); selectedSession = null;" class="rounded-lg p-2 hover:bg-gray-100">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <form @submit.prevent="submitEditSession" class="p-6 space-y-4">
+                <!-- Course Dropdown -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Courses <span class="text-red-500">*</span></label>
+                    <select v-model="sessionForm.course" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.course ? 'border-red-300' : 'border-gray-300']">
+                        <option v-for="course in availableCourses" :key="course" :value="course">{{ course }}</option>
+                    </select>
+                    <p v-if="sessionErrors.course" class="mt-1 text-sm text-red-600">{{ sessionErrors.course }}</p>
+                </div>
+
+                <!-- Date and Time -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Date <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.date" type="date" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.date ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.date" class="mt-1 text-sm text-red-600">{{ sessionErrors.date }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Start Time <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.start_time" type="time" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.start_time ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.start_time" class="mt-1 text-sm text-red-600">{{ sessionErrors.start_time }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">End Time <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.end_time" type="time" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.end_time ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.end_time" class="mt-1 text-sm text-red-600">{{ sessionErrors.end_time }}</p>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Location <span class="text-red-500">*</span></label>
+                    <div class="relative mt-1">
+                        <input v-model="sessionForm.location" type="text" placeholder="e.g., Main Conference Room" :class="['block w-full rounded-md pr-10 focus:border-teal-500 focus:ring-teal-500', sessionErrors.location ? 'border-red-300' : 'border-gray-300']" />
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p v-if="sessionErrors.location" class="mt-1 text-sm text-red-600">{{ sessionErrors.location }}</p>
+                </div>
+
+                <!-- Trainer -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Trainer</label>
+                    <input v-model="sessionForm.trainer" type="text" placeholder="e.g., John Doe" class="mt-1 block w-full rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500" />
+                </div>
+
+                <!-- Capacity and Status -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Capacity <span class="text-red-500">*</span></label>
+                        <input v-model="sessionForm.capacity" type="number" min="1" placeholder="e.g., 30" :class="['mt-1 block w-full rounded-md focus:border-teal-500 focus:ring-teal-500', sessionErrors.capacity ? 'border-red-300' : 'border-gray-300']" />
+                        <p v-if="sessionErrors.capacity" class="mt-1 text-sm text-red-600">{{ sessionErrors.capacity }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                        <select v-model="sessionForm.status" class="mt-1 block w-full rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Open">Open</option>
+                            <option value="Close">Close</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" @click="showEditSessionModal = false; sessionErrors = {}; sessionForm.reset(); selectedSession = null;" class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="flex-1 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Session Confirmation Modal -->
+    <div v-if="showDeleteSessionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div class="text-center">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="mt-4 text-lg font-semibold text-gray-900">Confirm Delete Session</h3>
+                <p class="mt-2 text-sm text-gray-600">
+                    Are you sure you want to delete session <strong>{{ selectedSession?.id }}</strong>?<br>
+                    This action cannot be undone.
+                </p>
+
+                <div class="mt-6 flex gap-3">
+                    <button @click="showDeleteSessionModal = false; selectedSession = null;" class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">No, Keep it</button>
+                    <button @click="deleteSession" class="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Yes, Delete !</button>
+                </div>
+            </div>
         </div>
     </div>
 
