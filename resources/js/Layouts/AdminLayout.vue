@@ -1,0 +1,169 @@
+<script setup>
+import { ref, computed } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import {
+    LayoutDashboard,
+    Users,
+    Tags,
+    BookOpen,
+    BookCheck,
+    MessageSquare,
+    Settings,
+    LogOut,
+} from "lucide-vue-next";
+
+const showingSidebar = ref(true);
+const showingMobileMenu = ref(false);
+const showingProfileDropdown = ref(false);
+const page = usePage();
+
+// Get user initials for avatar
+const userInitials = computed(() => {
+    const name = page.props.auth?.user?.name || "";
+    return name
+        .split(" ")
+        .map((word) => word[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2);
+});
+
+const currentPath = computed(() => page.url);
+
+const navigationItems = [
+    {
+        name: "Dashboard",
+        path: "/admin/dashboard",
+        icon: LayoutDashboard,
+    },
+    {
+        name: "Users",
+        path: "/admin/users",
+        icon: Users,
+    },
+    {
+        name: "Categories",
+        path: "/admin/categories",
+        icon: Tags,
+    },
+    {
+        name: "My Courses",
+        path: "/admin/my-courses",
+        icon: BookOpen,
+    },
+    {
+        name: "Attendance",
+        path: "/admin/attendance",
+        icon: BookCheck,
+    },
+    {
+        name: "Feedback",
+        path: "/admin/feedback",
+        icon: MessageSquare,
+    },
+    {
+        name: "Settings",
+        path: "/admin/settings",
+        icon: Settings,
+    },
+];
+
+const isActive = (path) => {
+    return currentPath.value === path;
+};
+
+</script>
+
+<template>
+    <div class="min-h-screen bg-gray-100">
+
+        <!-- Admin Profile Section -->
+        <div class="fixed top-6 right-14 z-50 flex items-center gap-3">
+            <!-- Avatar with online indicator -->
+            <div class="relative">
+                <div
+                    class="flex items-center justify-center w-10 h-10 rounded-full bg-[#2F837D] text-white font-semibold text-sm"
+                >
+                    {{ userInitials }}
+                </div>
+                <!-- Online indicator dot -->
+                <div
+                    class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                ></div>
+            </div>
+            <div class="hidden sm:block text-left">
+                <p class="text-sm font-medium text-gray-900">
+                    {{ page.props.auth?.user?.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                    {{ page.props.auth?.user?.email }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside
+            :class="showingSidebar ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed top-0 left-0 z-20 w-64 h-screen transition-transform bg-white border-r border-gray-200"
+        >
+            <div class="h-full px-6 pb-4 overflow-y-auto bg-white flex flex-col">
+                <div class="flex-1">
+                    <Link href="/admin/dashboard" class="flex pt-4 pb-14">
+                        <img
+                            src="/images/project_logo.png"
+                            class="h-12 w-auto object-contain max-w-full"
+                            alt="Logo"
+                        />
+                    </Link>
+                    <ul class="space-y-2">
+                        <li v-for="item in navigationItems" :key="item.path">
+                            <Link
+                                :href="item.path"
+                                :class="[
+                                    'flex items-center p-2 rounded-lg group transition-colors',
+                                    isActive(item.path)
+                                        ? 'bg-[#DAFFED] text-[#2F837D]'
+                                        : 'text-gray-900 hover:bg-gray-100',
+                                ]"
+                            >
+                                <component
+                                    :is="item.icon"
+                                    :class="[
+                                        'w-5 h-5 transition duration-75',
+                                        isActive(item.path)
+                                            ? 'text-[#2F837D]'
+                                            : 'text-gray-500 group-hover:text-gray-900',
+                                    ]"
+                                />
+                                <span class="ml-3">{{ item.name }}</span>
+                            </Link>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Logout Button -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <Link
+                        href="/logout"
+                        method="post"
+                        as="button"
+                        class="flex items-center p-2 w-full rounded-lg group transition-colors text-[#2F837D] hover:bg-[#2F837D]/20"
+                    >
+                        <LogOut class="w-5 h-5 transition duration-75" />
+                        <span class="ml-3">Logout</span>
+                    </Link>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div
+            :class="showingSidebar ? 'ml-64' : 'ml-0'"
+            class="p-4 pt-24 transition-all duration-300"
+        >
+            <div class="p-4 rounded-lg">
+                <slot />
+            </div>
+        </div>
+    </div>
+</template>

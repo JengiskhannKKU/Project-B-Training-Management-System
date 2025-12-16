@@ -39,9 +39,7 @@ const menuLinks = computed(() => {
     }
 
     if (isAuthenticated.value) {
-        const links = [
-            { label: 'Dashboard', href: route('dashboard') },
-        ];
+        const links = [];
 
         if (roleName.value && roleLinkMap[roleName.value]) {
             links.push(roleLinkMap[roleName.value]);

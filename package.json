@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "serve": "concurrently \"php artisan serve\" \"npm run dev\" --names \"Laravel,Vite\" --prefix-colors \"blue,green\""
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
@@ -21,6 +22,7 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "lucide-vue-next": "^0.561.0",
         "sweetalert2": "^11.26.10",
         "vue-toastification": "^2.0.0-rc.5"
     }
