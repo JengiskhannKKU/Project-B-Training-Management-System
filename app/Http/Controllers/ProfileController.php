@@ -25,6 +25,71 @@ class ProfileController extends Controller
     }
 
     /**
+     * Display the user's profile information.
+     */
+    public function showMyProfile(Request $request): Response
+    {
+        $user = $request->user()->load('profile', 'role');
+
+        return Inertia::render('Profile/Show', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role?->name,
+                'profile' => $user->profile ? [
+                    'phone' => $user->profile->phone,
+                    'date_of_birth' => $user->profile->date_of_birth?->format('Y-m-d'),
+                    'gender' => $user->profile->gender,
+                    'organization' => $user->profile->organization,
+                    'department' => $user->profile->department,
+                    'bio' => $user->profile->bio,
+                    'has_avatar' => (bool) $user->profile->avatar_image,
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Update the user's profile information.
+     */
+    public function updateMyProfile(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', 'string', 'max:50'],
+            'organization' => ['nullable', 'string', 'max:255'],
+            'department' => ['nullable', 'string', 'max:255'],
+            'bio' => ['nullable', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        // Update user name
+        $user->update(['name' => $validated['name']]);
+
+        // Update or create profile
+        $profileData = [
+            'phone' => $validated['phone'] ?? null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+            'organization' => $validated['organization'] ?? null,
+            'department' => $validated['department'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+        ];
+
+        if ($user->profile) {
+            $user->profile->update($profileData);
+        } else {
+            $user->profile()->create($profileData);
+        }
+
+        return Redirect::route('me.profile')->with('success', 'Profile updated successfully!');
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
