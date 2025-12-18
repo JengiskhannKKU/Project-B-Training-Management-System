@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import { Star, GraduationCap, Gem, CalendarClock, Clock, MapPin } from 'lucide-vue-next';
 
-interface CourseCardProps {
+interface AdminCourseCardProps {
     id: number;
     name: string;
     image_url: string;
@@ -15,7 +14,11 @@ interface CourseCardProps {
     location?: string;
 }
 
-defineProps<CourseCardProps>();
+defineProps<AdminCourseCardProps>();
+
+const emit = defineEmits<{
+    viewSessions: [courseId: number];
+}>();
 
 const getLevelColor = (level: string) => {
     const colors = {
@@ -37,9 +40,8 @@ const getStarType = (index: number, rating: number) => {
 </script>
 
 <template>
-    <Link
-        :href="`/trainer/programs/${id}`"
-        class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer"
+    <div
+        class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
     >
         <div class="aspect-video w-full overflow-hidden flex-shrink-0">
             <img
@@ -102,6 +104,14 @@ const getStarType = (index: number, rating: number) => {
                     <span class="truncate">{{ location }}</span>
                 </div>
             </div>
+
+            <!-- Sessions Button - Stays at bottom -->
+            <button
+                @click="emit('viewSessions', id)"
+                class="w-full inline-flex justify-center items-center bg-[#2f837d] hover:bg-[#26685f] text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md mt-auto"
+            >
+                Sessions
+            </button>
         </div>
-    </Link>
+    </div>
 </template>

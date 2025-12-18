@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
-import AdminLayout from "@/Layouts/AdminLayout.vue";
+import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import {
     Search,
     Archive,
@@ -314,11 +314,11 @@ const resetSort = () => {
 
 <template>
     <Head title="Session Attendance" />
-    <AdminLayout>
+    <TrainerLayout>
         <div class="space-y-6">
             <!-- Go Back Button -->
             <Link
-                href="/admin/attendance"
+                href="/trainer/attendance"
                 class="inline-flex items-center gap-2 text-[#2f837d] hover:text-[#26685f] font-medium transition-colors"
             >
                 <ArrowLeft :size="20" />
@@ -789,5 +789,5 @@ const resetSort = () => {
                 @reset="resetSort"
             />
         </div>
-    </AdminLayout>
+    </TrainerLayout>
 </template>

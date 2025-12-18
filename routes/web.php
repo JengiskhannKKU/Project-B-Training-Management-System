@@ -120,6 +120,13 @@ Route::middleware(['auth', 'role:trainer'])->group(function () {
         return Inertia::render('Trainer/Attendance');
     })->name('trainer.attendance');
 
+    Route::get('/trainer/attendance/{courseId}/{sessionId}', function ($courseId, $sessionId) {
+        return Inertia::render('Trainer/SessionAttendance', [
+            'courseId' => $courseId,
+            'sessionId' => $sessionId
+        ]);
+    })->name('trainer.attendance.session');
+
     Route::get('/trainer/feedback', function () {
         return Inertia::render('Trainer/Feedback');
     })->name('trainer.feedback');

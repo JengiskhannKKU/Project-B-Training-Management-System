@@ -2,7 +2,7 @@
 import { ref, computed, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import AdminCourseCard from "@/Components/AdminCourseCard.vue";
+import AttendanceCourseCard from "@/Components/AttendanceCourseCard.vue";
 import {
     Search,
     Archive,
@@ -531,7 +531,7 @@ const selectedCourseName = computed(() => {
                         v-if="paginatedCourses.length > 0"
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
-                        <AdminCourseCard
+                        <AttendanceCourseCard
                             v-for="course in paginatedCourses"
                             :key="course.id"
                             :id="course.id"

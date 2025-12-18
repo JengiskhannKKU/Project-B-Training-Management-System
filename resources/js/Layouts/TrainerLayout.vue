@@ -64,31 +64,6 @@ const isActive = (path) => {
 
 <template>
     <div class="min-h-screen bg-gray-100">
-
-        <!-- Trainer Profile Section -->
-        <div class="fixed top-6 right-14 z-50 flex items-center gap-3">
-            <!-- Avatar with online indicator -->
-            <div class="relative">
-                <div
-                    class="flex items-center justify-center w-10 h-10 rounded-full bg-[#2F837D] text-white font-semibold text-sm"
-                >
-                    {{ userInitials }}
-                </div>
-                <!-- Online indicator dot -->
-                <div
-                    class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                ></div>
-            </div>
-            <div class="hidden sm:block text-left">
-                <p class="text-sm font-medium text-gray-900">
-                    {{ page.props.auth?.user?.name }}
-                </p>
-                <p class="text-xs text-gray-500">
-                    {{ page.props.auth?.user?.email }}
-                </p>
-            </div>
-        </div>
-
         <!-- Sidebar -->
         <aside
             :class="showingSidebar ? 'translate-x-0' : '-translate-x-full'"
@@ -147,9 +122,38 @@ const isActive = (path) => {
         <!-- Main Content -->
         <div
             :class="showingSidebar ? 'ml-64' : 'ml-0'"
-            class="p-4 pt-24 transition-all duration-300"
+            class="transition-all duration-300"
         >
-            <div class="p-4 rounded-lg">
+            <!-- Header with Profile -->
+            <header>
+                <div class="px-8 py-4 flex justify-end items-center">
+                    <div class="flex items-center gap-3">
+                        <!-- Avatar with online indicator -->
+                        <div class="relative">
+                            <div
+                                class="flex items-center justify-center w-10 h-10 rounded-full bg-[#2F837D] text-white font-semibold text-sm"
+                            >
+                                {{ userInitials }}
+                            </div>
+                            <!-- Online indicator dot -->
+                            <div
+                                class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
+                            ></div>
+                        </div>
+                        <div class="hidden sm:block text-left">
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ page.props.auth?.user?.name }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                {{ page.props.auth?.user?.email }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="p-8">
                 <slot />
             </div>
         </div>
