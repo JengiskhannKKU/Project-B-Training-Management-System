@@ -1,21 +1,45 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+const props = defineProps<{
     program: {
-        id: number;
-        name: string;
-        code: string;
-        category: string;
-        level: string;
-        period: string;
-        time: string;
-        location: string;
-        trainer: string;
-        certificated: string;
-        status: string;
-        description: string;
-        image_url: string | null;
+        id?: number;
+        name?: string;
+        code?: string;
+        category?: string;
+        level?: string;
+        period?: string;
+        time?: string;
+        location?: string;
+        trainer?: string;
+        certificated?: string;
+        status?: string;
+        description?: string;
+        image_url?: string | null;
+        approval_status?: string;
     };
 }>();
+
+const programData = computed(() => ({
+    name: props.program?.name || 'Program',
+    description: props.program?.description || 'No description provided.',
+    category: props.program?.category || 'General',
+    level: props.program?.level || 'Beginner',
+    period: props.program?.period || '—',
+    time: props.program?.time || '—',
+    location: props.program?.location || '—',
+    trainer: props.program?.trainer || '—',
+    certificated: props.program?.certificated || '—',
+    status: props.program?.status || 'pending',
+    approval_status: props.program?.approval_status || 'pending',
+}));
+
+const statusStyles = computed(() => {
+    const s = programData.value.approval_status;
+    if (s === 'approved') return { text: 'Approved', class: 'text-green-700', dot: 'bg-green-500' };
+    if (s === 'rejected') return { text: 'Rejected', class: 'text-red-700', dot: 'bg-red-500' };
+    return { text: 'Pending', class: 'text-amber-700', dot: 'bg-amber-500' };
+});
 </script>
 
 <template>
@@ -25,7 +49,7 @@ defineProps<{
             <div class="rounded-lg bg-white p-6 shadow-sm">
                 <h2 class="mb-4 text-lg font-semibold text-gray-900">Description</h2>
                 <p class="text-gray-600">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue nullam consectetur ornare consectetur sed in leo. Enim imperdiet urna tincidunt at integer nunc amet vitae orci. Ultrices augue scelerisque.
+                    {{ programData.description }}
                 </p>
 
                 <h3 class="mb-3 mt-6 font-semibold text-gray-900">What You'll Learn</h3>
@@ -102,37 +126,37 @@ defineProps<{
                 <div class="space-y-3 text-sm">
                     <div>
                         <div class="text-gray-500">Category:</div>
-                        <div class="font-medium text-gray-900">Design</div>
+                        <div class="font-medium text-gray-900">{{ programData.category }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Level:</div>
-                        <span class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700">Advanced</span>
+                        <span class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700">{{ programData.level }}</span>
                     </div>
                     <div>
                         <div class="text-gray-500">Period:</div>
-                        <div class="font-medium text-gray-900">May 1 - MAY 2</div>
+                        <div class="font-medium text-gray-900">{{ programData.period }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Time:</div>
-                        <div class="font-medium text-gray-900">09:00 - 12:00 AM</div>
+                        <div class="font-medium text-gray-900">{{ programData.time }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Location:</div>
-                        <div class="font-medium text-gray-900">Smart Classrom</div>
+                        <div class="font-medium text-gray-900">{{ programData.location }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Trainer:</div>
-                        <div class="font-medium text-gray-900">Natthiya Chakaew</div>
+                        <div class="font-medium text-gray-900">{{ programData.trainer }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Certificated:</div>
-                        <div class="font-medium text-gray-900">Standard</div>
+                        <div class="font-medium text-gray-900">{{ programData.certificated }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Status:</div>
                         <div class="flex items-center gap-1">
-                            <div class="h-2 w-2 rounded-full bg-green-500"></div>
-                            <span class="font-medium text-green-700">OPEN</span>
+                            <div :class="['h-2 w-2 rounded-full', statusStyles.dot]"></div>
+                            <span :class="['font-medium', statusStyles.class]">{{ statusStyles.text }}</span>
                         </div>
                     </div>
                 </div>

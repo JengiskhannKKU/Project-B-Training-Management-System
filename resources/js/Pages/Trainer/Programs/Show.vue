@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import axios from 'axios';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import CourseModal from '@/Components/CourseModal.vue';
@@ -27,8 +28,11 @@ const props = defineProps<{
         status: string;
         description: string;
         image_url: string | null;
+        approval_status?: string;
+        duration_hours?: number;
     };
 }>();
+type ProgramData = typeof props.program & { approval_status?: string; duration_hours?: number };
 
 const activeTab = ref('overview');
 const showEditModal = ref(false);
@@ -41,6 +45,9 @@ const showDeleteSessionModal = ref(false);
 const selectedTrainee = ref<any>(null);
 const selectedSession = ref<any>(null);
 const sessionErrors = ref<Record<string, string>>({});
+const isSubmitting = ref(false);
+const isLoadingSessions = ref(false);
+const sessionRequestRows = ref<any[]>([]);
 
 const sessionForm = useForm({
     course: 'UX/UI Design Fundamentals',
@@ -55,11 +62,22 @@ const sessionForm = useForm({
 
 const toast = useToast();
 const page = usePage();
+const handleApiError = (error: any, fallback = 'Something went wrong') => {
+    const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        fallback;
+    toast.error(message);
+};
+const ensureCsrf = () => axios.get('/sanctum/csrf-cookie');
 
 // Determine back link based on current URL
+const userRole = computed(() => (page.props.auth?.user as AppUser | undefined)?.role?.name || '');
+const isTrainer = computed(() => userRole.value === 'trainer' || !userRole.value);
+
 const backLink = computed(() => {
     const currentUrl = page.url;
-    if (currentUrl.startsWith('/admin/')) {
+    if (currentUrl.startsWith('/admin/') || userRole.value === 'admin') {
         return '/admin/my-courses';
     }
     return '/trainer/programs';
@@ -67,8 +85,8 @@ const backLink = computed(() => {
 
 const backLinkText = computed(() => {
     const currentUrl = page.url;
-    if (currentUrl.startsWith('/admin/')) {
-        return 'Back to My Courses';
+    if (currentUrl.startsWith('/admin/') || userRole.value === 'admin') {
+        return 'Back to Program Requests';
     }
     return 'Back to My Courses';
 });
@@ -111,58 +129,13 @@ const traineeForm = useForm({
     employee_id: '',
     department: 'Engineering',
     position: 'Software Engineer',
+    session_id: '',
 });
 
 const categories = ['Design', 'Development', 'Marketing', 'Business'];
 
 // Mock sessions data
-const sessions = ref([
-    {
-        id: 'Se-001',
-        date: '2024-03-15',
-        time: '08:00 - 16:00',
-        session: 'Session 101',
-        location: 'Room 101',
-        capacity: '45/50',
-        status: 'Open'
-    },
-    {
-        id: 'Se-002',
-        date: '2024-04-15',
-        time: '08:00 - 16:00',
-        session: 'Session 102',
-        location: 'EN18303',
-        capacity: '20/30',
-        status: 'Open'
-    },
-    {
-        id: 'Se-003',
-        date: '2024-03-15',
-        time: '09:00 - 16:00',
-        session: 'Session 103',
-        location: 'Room3032',
-        capacity: '32/45',
-        status: 'Open'
-    },
-    {
-        id: 'Se-004',
-        date: '2024-03-15',
-        time: '08:00 - 16:00',
-        session: 'Data Analysis',
-        location: 'Room3032',
-        capacity: '20/20',
-        status: 'Close'
-    },
-    {
-        id: 'Se-005',
-        date: '2024-03-15',
-        time: '08:00 - 16:00',
-        session: 'UX/UI design',
-        location: 'Room3032',
-        capacity: '45/50',
-        status: 'Close'
-    },
-]);
+const sessions = ref<Array<any>>([]);
 
 // Mock trainees data
 const trainees = ref([
@@ -175,7 +148,8 @@ const trainees = ref([
         department: 'Computer Engineering',
         role: 'Students',
         certificate_status: 'Approved',
-        avatar: 'https://ui-avatars.com/api/?name=Natthiya+Chakasw&background=0D8ABC&color=fff'
+        avatar: 'https://ui-avatars.com/api/?name=Natthiya+Chakasw&background=0D8ABC&color=fff',
+        session_id: 1,
     },
     {
         id: 2,
@@ -186,7 +160,8 @@ const trainees = ref([
         department: 'Computer Engineering',
         role: 'Students',
         certificate_status: 'Pending',
-        avatar: 'https://ui-avatars.com/api/?name=Manee+LoveU&background=0D8ABC&color=fff'
+        avatar: 'https://ui-avatars.com/api/?name=Manee+LoveU&background=0D8ABC&color=fff',
+        session_id: 2,
     },
     {
         id: 3,
@@ -197,7 +172,8 @@ const trainees = ref([
         department: 'Computer Engineering',
         role: 'Students',
         certificate_status: 'Not Eligible',
-        avatar: 'https://ui-avatars.com/api/?name=Hardtosay+yes&background=0D8ABC&color=fff'
+        avatar: 'https://ui-avatars.com/api/?name=Hardtosay+yes&background=0D8ABC&color=fff',
+        session_id: 3,
     },
     {
         id: 4,
@@ -208,7 +184,8 @@ const trainees = ref([
         department: 'Computer Engineering',
         role: 'Students',
         certificate_status: 'Pending',
-        avatar: 'https://ui-avatars.com/api/?name=Someone+like+you&background=0D8ABC&color=fff'
+        avatar: 'https://ui-avatars.com/api/?name=Someone+like+you&background=0D8ABC&color=fff',
+        session_id: 4,
     },
 ]);
 
@@ -238,9 +215,23 @@ const handleEditModalClose = () => {
     showEditModal.value = false;
 };
 
-const handleEditModalSuccess = () => {
-    // Refresh course data or perform any action after successful edit
-    console.log('Course edited successfully');
+const handleEditModalSuccess = (payload?: Record<string, unknown>) => {
+    if (!payload) {
+        showEditModal.value = false;
+        return;
+    }
+
+    ensureCsrf()
+        .then(() => axios.post('/api/trainer/program-requests', {
+            action: 'update',
+            program_id: props.program.id,
+            payload,
+        }))
+        .then(() => {
+            toast.success('Course update request sent to admin.');
+            showEditModal.value = false;
+        })
+        .catch((error) => handleApiError(error, 'Unable to submit course update.'));
 };
 
 const validateSessionForm = () => {
@@ -268,28 +259,38 @@ const validateSessionForm = () => {
     return Object.keys(sessionErrors.value).length === 0;
 };
 
-const submitAddSession = () => {
+const submitAddSession = async () => {
     if (validateSessionForm()) {
-        // Generate new session ID
-        const newId = `Se-${String(sessions.value.length + 1).padStart(3, '0')}`;
+        try {
+            isSubmitting.value = true;
+            await ensureCsrf();
+            const payload = {
+                course: sessionForm.course,
+                date: sessionForm.date,
+                start_time: sessionForm.start_time,
+                end_time: sessionForm.end_time,
+                location: sessionForm.location,
+                trainer: sessionForm.trainer,
+                capacity: sessionForm.capacity,
+                status: sessionForm.status,
+            };
 
-        // Add new session to the list
-        sessions.value.push({
-            id: newId,
-            date: sessionForm.date,
-            time: `${sessionForm.start_time} - ${sessionForm.end_time}`,
-            session: sessionForm.course,
-            location: sessionForm.location,
-            capacity: `0/${sessionForm.capacity}`,
-            status: sessionForm.status,
-        });
+            await axios.post('/api/trainer/session-requests', {
+                action: 'create',
+                program_id: displayProgram.value?.id || props.program.id,
+                payload,
+            });
 
-        showAddSessionModal.value = false;
-        sessionForm.reset();
-        sessionErrors.value = {};
-
-        // Show success toast
-        toast.success('Session added successfully!');
+            toast.success('Session request sent to admin for approval.');
+            showAddSessionModal.value = false;
+            sessionForm.reset();
+            sessionErrors.value = {};
+            fetchSessions();
+        } catch (error) {
+            handleApiError(error, 'Unable to submit session request.');
+        } finally {
+            isSubmitting.value = false;
+        }
     }
 };
 
@@ -307,7 +308,7 @@ const handleEditSession = (session: any) => {
     sessionForm.start_time = times[0];
     sessionForm.end_time = times[1];
     sessionForm.location = session.location;
-    sessionForm.capacity = session.capacity.split('/')[1];
+    sessionForm.capacity = session.capacity.split('/')[1] || session.capacity;
     sessionForm.status = session.status;
     showEditSessionModal.value = true;
 };
@@ -319,27 +320,30 @@ const handleDeleteSession = (session: any) => {
 
 const submitEditSession = () => {
     if (validateSessionForm()) {
-        if (selectedSession.value) {
-            const index = sessions.value.findIndex(s => s.id === selectedSession.value.id);
-            if (index > -1) {
-                sessions.value[index] = {
-                    ...sessions.value[index],
-                    date: sessionForm.date,
-                    time: `${sessionForm.start_time} - ${sessionForm.end_time}`,
-                    session: sessionForm.course,
-                    location: sessionForm.location,
-                    capacity: `${sessions.value[index].capacity.split('/')[0]}/${sessionForm.capacity}`,
-                    status: sessionForm.status,
-                };
-            }
-        }
-        showEditSessionModal.value = false;
-        sessionForm.reset();
-        sessionErrors.value = {};
-        selectedSession.value = null;
-
-        // Show success toast
-        toast.success('Session updated successfully!');
+        ensureCsrf().then(() => axios.post('/api/trainer/session-requests', {
+            action: 'update',
+            session_id: selectedSession.value?.id,
+            program_id: displayProgram.value?.id || props.program.id,
+            payload: {
+                course: sessionForm.course,
+                date: sessionForm.date,
+                start_time: sessionForm.start_time,
+                end_time: sessionForm.end_time,
+                location: sessionForm.location,
+                trainer: sessionForm.trainer,
+                capacity: sessionForm.capacity,
+                status: sessionForm.status,
+            },
+        }))
+            .then(() => {
+                toast.success('Session update request sent to admin.');
+                showEditSessionModal.value = false;
+                sessionForm.reset();
+                sessionErrors.value = {};
+                selectedSession.value = null;
+                fetchSessions();
+            })
+            .catch((error) => handleApiError(error, 'Unable to submit session update.'));
     }
 };
 
@@ -352,25 +356,55 @@ const closeSessionModal = () => {
 };
 
 const deleteSession = () => {
-    if (selectedSession.value) {
-        const index = sessions.value.findIndex(s => s.id === selectedSession.value.id);
-        if (index > -1) {
-            sessions.value.splice(index, 1);
-
-            // Show success toast
-            toast.success('Session deleted successfully!');
-        }
+    if (!selectedSession.value) {
+        return;
     }
-    showDeleteSessionModal.value = false;
-    selectedSession.value = null;
+
+    ensureCsrf().then(() => axios.post('/api/trainer/session-requests', {
+        action: 'delete',
+        session_id: selectedSession.value.id,
+        program_id: displayProgram.value?.id || props.program.id,
+        payload: {
+            reason: 'Trainer requested deletion',
+        },
+    }))
+        .then(() => {
+            toast.success('Session deletion request sent to admin.');
+            fetchSessions();
+        })
+        .catch((error) => handleApiError(error, 'Unable to submit delete request.'))
+        .finally(() => {
+            showDeleteSessionModal.value = false;
+            selectedSession.value = null;
+        });
 };
 
 const handleAddTrainee = () => {
+    if (sessions.value.length && !traineeForm.session_id) {
+        traineeForm.session_id = sessions.value[0].id;
+    }
     showAddTraineeModal.value = true;
 };
 
 const submitAddTrainee = () => {
-    showAddTraineeModal.value = false;
+    if (!traineeForm.session_id) {
+        toast.error('Please select a session for this trainee.');
+        return;
+    }
+
+    ensureCsrf().then(() => axios.post('/api/trainer/trainee-requests', {
+        action: 'add',
+        session_id: traineeForm.session_id,
+        payload: {
+            ...traineeForm.data(),
+        },
+    }))
+        .then(() => {
+            toast.success('Trainee add request sent to admin.');
+            showAddTraineeModal.value = false;
+            traineeForm.reset();
+        })
+        .catch((error) => handleApiError(error, 'Unable to submit trainee request.'));
 };
 
 const handleRemoveTrainee = (trainee: any) => {
@@ -379,14 +413,234 @@ const handleRemoveTrainee = (trainee: any) => {
 };
 
 const removeTrainee = () => {
-    if (selectedTrainee.value) {
-        const index = trainees.value.findIndex(t => t.id === selectedTrainee.value.id);
-        if (index > -1) {
-            trainees.value.splice(index, 1);
+    if (!selectedTrainee.value) {
+        return;
+    }
+
+    ensureCsrf().then(() => axios.post('/api/trainer/trainee-requests', {
+        action: 'remove',
+        session_id: selectedTrainee.value.session_id,
+        trainee_id: selectedTrainee.value.id,
+        payload: {
+            name: selectedTrainee.value.name,
+            email: selectedTrainee.value.email,
+        },
+    }))
+        .then(() => {
+            toast.success('Trainee removal request sent to admin.');
+        })
+        .catch((error) => handleApiError(error, 'Unable to submit remove request.'))
+        .finally(() => {
+            showRemoveTraineeModal.value = false;
+            selectedTrainee.value = null;
+        });
+};
+
+const mapSessionForDisplay = (session: any) => {
+    const start = session.start_time ? session.start_time.slice(0, 5) : '--:--';
+    const end = session.end_time ? session.end_time.slice(0, 5) : '--:--';
+    const capacityTaken = session.active_enrollments_count ?? 0;
+    const capacityTotal = session.capacity ?? 0;
+
+    return {
+        id: session.id,
+        display_id: session.display_id || `Se-${String(session.id).padStart(3, '0')}`,
+        date: session.start_date || '',
+        time: `${start} - ${end}`,
+        session: session.title || 'Session',
+        location: session.location || '',
+        capacity: `${capacityTaken}/${capacityTotal}`,
+        status: session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Open',
+    };
+};
+
+const mapSessionRequest = (req: any) => {
+    const payload = req.payload || {};
+    const startTime = payload.start_time || payload.startTime || '';
+    const endTime = payload.end_time || payload.endTime || '';
+    const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : `${startTime || '--:--'} - ${endTime || '--:--'}`;
+
+    const statusMap: Record<string, string> = {
+        approved: 'Approved',
+        pending: 'Pending',
+        rejected: 'Closed',
+    };
+
+    return {
+        id: `req-${req.id}`,
+        display_id: payload.code || `Pending-${req.id}`,
+        date: payload.date || payload.start_date || '',
+        time: timeRange,
+        session: payload.course || payload.title || `Session ${req.id}`,
+        location: payload.location || '',
+        capacity: payload.capacity ? `0/${payload.capacity}` : '0',
+        status: statusMap[req.status] || req.status || 'Pending',
+    };
+};
+
+const fetchSessionRequests = async () => {
+    const requestUrl = isTrainer.value ? '/api/trainer/requests' : '/api/admin/requests';
+    try {
+        await ensureCsrf();
+        const { data } = await axios.get(requestUrl);
+        const list = data?.data || data || [];
+        const programId = Number(displayProgram.value?.id || props.program.id);
+        sessionRequestRows.value = list
+            .filter(
+                (r: any) =>
+                    r.target_type === 'session' &&
+                    r.status === 'pending' &&
+                    Number(r.payload?.program_id || r.program_id) === programId
+            )
+            .map(mapSessionRequest);
+    } catch (error) {
+        sessionRequestRows.value = [];
+    }
+};
+
+const fetchSessions = async () => {
+    isLoadingSessions.value = true;
+    try {
+        const programId = displayProgram.value?.id || props.program.id;
+        const { data } = await axios.get('/api/sessions', {
+            params: { program_id: programId },
+        });
+        const apiSessions = data?.data ?? data ?? [];
+        await fetchSessionRequests();
+        sessions.value = [
+            ...apiSessions.map(mapSessionForDisplay),
+            ...sessionRequestRows.value,
+        ];
+    } catch (error) {
+        handleApiError(error, 'Unable to load sessions.');
+    } finally {
+        isLoadingSessions.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchSessions();
+});
+
+const program = ref<ProgramData | null>(props.program || null);
+const requestFallback = ref<any | null>(null);
+const isLoadingProgram = ref(false);
+
+const fetchProgramRequestFallback = async () => {
+    const tryFetch = async (url: string) => {
+        const { data } = await axios.get(url);
+        const list = data?.data || data || [];
+        return list.find((r: any) => r.id === Number(props.program.id));
+    };
+
+    try {
+        await ensureCsrf();
+        // Prefer trainer requests when the path is trainer, otherwise admin
+        const isAdminPath = page.url.startsWith('/admin/');
+        const firstUrl = isAdminPath ? '/api/admin/requests' : '/api/trainer/requests';
+        const fallbackUrl = isAdminPath ? '/api/trainer/requests' : '/api/admin/requests';
+
+        let match = null;
+        try {
+            match = await tryFetch(firstUrl);
+        } catch (err: any) {
+            // ignore and try fallback
+        }
+        if (!match) {
+            try {
+                match = await tryFetch(fallbackUrl);
+            } catch (err: any) {
+                // ignore
+            }
+        }
+
+        if (match) {
+            requestFallback.value = match;
+        }
+    } catch (error) {
+        // ignore fallback errors
+    }
+};
+
+const fetchProgram = async () => {
+    if (!props.program?.id) return;
+    isLoadingProgram.value = true;
+    try {
+        await ensureCsrf();
+        const { data } = await axios.get(`/api/programs/${props.program.id}`);
+        program.value = (data?.data || data || props.program) as ProgramData;
+    } catch (error: any) {
+        if (error?.response?.status === 404) {
+            program.value = null;
+            await fetchProgramRequestFallback();
+        } else if (![401, 403].includes(error?.response?.status)) {
+            handleApiError(error, 'Unable to load program details.');
+        }
+    } finally {
+        isLoadingProgram.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchProgram();
+});
+
+const displayProgram = computed<ProgramData>(() => {
+    if (program.value) return program.value as ProgramData;
+    if (requestFallback.value?.payload) {
+        const payload = requestFallback.value.payload;
+        return {
+            id: requestFallback.value.target_id || requestFallback.value.id,
+            name: payload.title || payload.name || 'Program',
+            code: payload.code || '',
+            category: payload.category || 'General',
+            level: payload.level || '',
+            period: payload.period || '',
+            time: payload.time || '',
+            location: payload.location || '',
+            trainer: payload.trainer || '',
+            certificated: payload.certificated || '',
+            status: payload.status || 'pending',
+            description: payload.description || payload.full_description || '',
+            image_url: payload.image_url || null,
+            approval_status: requestFallback.value.status || 'pending',
+            duration_hours: payload.duration_hours || 0,
+        } as ProgramData;
+    }
+    return (props.program || {}) as ProgramData;
+});
+
+const programApprovalStatus = computed(() => displayProgram.value?.approval_status || requestFallback.value?.status || 'pending');
+
+const statusBadge = computed(() => {
+    const status = programApprovalStatus.value;
+    if (status === 'approved') return { text: 'Approved', class: 'bg-green-100 text-green-700' };
+    if (status === 'rejected') return { text: 'Rejected', class: 'bg-red-100 text-red-700' };
+    return { text: 'Pending', class: 'bg-yellow-100 text-yellow-700' };
+});
+
+watch(
+    () => displayProgram.value?.id,
+    (newId, oldId) => {
+        if (newId && newId !== oldId) {
+            fetchSessions();
         }
     }
-    showRemoveTraineeModal.value = false;
-    selectedTrainee.value = null;
+);
+
+const resubmitProgram = async () => {
+    try {
+        await ensureCsrf();
+        await axios.post('/api/trainer/program-requests', {
+            action: 'update',
+            program_id: displayProgram.value?.id,
+            payload: displayProgram.value,
+        });
+        toast.success('Resubmitted program for approval.');
+        fetchProgram();
+    } catch (error) {
+        handleApiError(error, 'Unable to resubmit program.');
+    }
 };
 
 const getCertificateSelectColor = (status: string) => {
@@ -453,40 +707,52 @@ const getCertificateStatusColor = (status: string) => {
             <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div class="flex-1">
                     <div class="mb-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Advanced UX Design Principles</h1>
-                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 w-fit">Management</span>
+                        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+                            {{ displayProgram.name || 'Program' }}
+                        </h1>
+                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 w-fit">
+                            {{ displayProgram.category || 'General' }}
+                        </span>
                     </div>
-                    <p class="mb-4 text-sm sm:text-base text-gray-600">A comprehensive course on creating intuitive and beautiful user experience.</p>
+                    <p class="mb-4 text-sm sm:text-base text-gray-600">
+                        {{ displayProgram.description || 'No description provided.' }}
+                    </p>
 
                     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <span class="flex items-center gap-1 text-xs sm:text-sm text-teal-600">
-                            <svg class="h-3 w-3 sm:h-4 sm:w-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            Published
+                        <span class="flex items-center gap-1 text-xs sm:text-sm" :class="statusBadge.class">
+                            {{ statusBadge.text }}
                         </span>
                         <span class="flex items-center gap-1 text-xs sm:text-sm text-blue-600">
-                            <svg class="h-3 w-3 sm:h-4 sm:w-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            Registration Open
+                            Code: {{ displayProgram.code || '—' }}
                         </span>
-                        <span class="flex items-center gap-1 text-xs sm:text-sm text-orange-600">
-                            <svg class="h-3 w-3 sm:h-4 sm:w-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="hidden xs:inline">Start in 15 days</span>
-                            <span class="xs:hidden">15 days</span>
+                        <span class="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
+                            Duration: {{ displayProgram.duration_hours ? `${displayProgram.duration_hours} hrs` : '—' }}
                         </span>
                     </div>
                 </div>
 
-                <button v-if="activeTab === 'overview'" @click="showEditModal = true" class="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 w-full sm:w-auto">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    Edit Course
-                </button>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button
+                        v-if="activeTab === 'overview' && programApprovalStatus === 'rejected'"
+                        @click="resubmitProgram"
+                        class="flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 w-full sm:w-auto"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M12 8v4l3 3"/>
+                        </svg>
+                        Submit Again
+                    </button>
+                    <button
+                        v-if="activeTab === 'overview' && !page.url.startsWith('/admin/')"
+                        @click="showEditModal = true"
+                        class="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 w-full sm:w-auto"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit Course
+                    </button>
+                </div>
             </div>
 
             <!-- Tabs -->
@@ -505,7 +771,7 @@ const getCertificateStatusColor = (status: string) => {
             </div>
 
             <!-- Content Area -->
-            <ProgramOverviewTab v-if="activeTab === 'overview'" :program="program" />
+            <ProgramOverviewTab v-if="activeTab === 'overview'" :program="displayProgram" />
             <SessionsTab
                 v-if="activeTab === 'sessions'"
                 :sessions="sessions"
@@ -543,6 +809,7 @@ const getCertificateStatusColor = (status: string) => {
     <AddTraineeModal
         :show="showAddTraineeModal"
         :trainee-form="traineeForm"
+        :sessions="sessions"
         @close="showAddTraineeModal = false"
         @submit="submitAddTrainee"
     />

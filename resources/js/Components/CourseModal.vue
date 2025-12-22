@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import Swal from 'sweetalert2';
 import { useToast } from 'vue-toastification';
 import {
     X,
@@ -13,13 +12,19 @@ import {
     Link as LinkIcon,
     Code,
     MapPin,
-    Image
+    Image,
+    AlertTriangle,
+    CheckCircle2,
+    XCircle,
+    Paperclip,
+    UploadCloud,
 } from 'lucide-vue-next';
 
 const toast = useToast();
 
 interface Props {
     show: boolean;
+    enablePreviewDialogs?: boolean;
     course?: {
         id?: number;
         title?: string;
@@ -47,15 +52,21 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     show: false,
-    course: null
+    course: null,
+    enablePreviewDialogs: true,
 });
 
 const emit = defineEmits<{
     close: [];
-    success: [];
+    success: [payload?: Record<string, unknown>];
 }>();
 
 const errors = ref<Record<string, string>>({});
+const showConfirmDialog = ref(false);
+const showSuccessDialog = ref(false);
+const showRejectedDialog = ref(false);
+const showAttachmentsModal = ref(false);
+const outcomePreview = ref<'success' | 'rejected'>('success');
 
 const form = useForm({
     title: props.course?.title || '',
@@ -80,6 +91,11 @@ const form = useForm({
     certificate_template: props.course?.certificate_template || 'standard',
     certificate_type: props.course?.certificate_type || 'free',
 });
+
+const attachments = ref([
+    { id: 1, name: 'Tech design requirements.png', size: '200 KB', progress: 100, status: 'uploaded' as const },
+    { id: 2, name: 'Dashboard prototype recording.jpg', size: '16 MB', progress: 40, status: 'uploading' as const },
+]);
 
 const categories = [
     'Design',
@@ -154,46 +170,8 @@ const validateForm = () => {
 
 const handleSubmit = async () => {
     if (validateForm()) {
-        // Show SweetAlert confirmation
-        const result = await Swal.fire({
-            title: `Are you sure you want to ${isEditMode.value ? 'update' : 'request'} this course?`,
-            text: isEditMode.value
-                ? 'The course will be updated with the new information.'
-                : 'Please wait for admin approval after requesting this course.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#0d9488',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Confirm',
-            cancelButtonText: 'Cancel',
-            customClass: {
-                popup: 'rounded-lg',
-                title: 'text-lg font-semibold',
-                htmlContainer: 'text-sm text-gray-600',
-            }
-        });
-
-        if (result.isConfirmed) {
-            // Simulate successful creation/update
-            emit('close');
-
-            // Show success toast
-            toast.success(
-                isEditMode.value
-                    ? 'Course updated successfully!'
-                    : 'Course published successfully! Registration is now open for students.',
-                {
-                    timeout: 5000,
-                }
-            );
-
-            // Reset form
-            form.reset();
-            errors.value = {};
-            emit('success');
-        }
+        showConfirmDialog.value = true;
     } else {
-        // Scroll to first error
         const firstError = Object.keys(errors.value)[0];
         const element = document.getElementById(firstError);
         if (element) {
@@ -203,10 +181,61 @@ const handleSubmit = async () => {
 };
 
 const saveDraft = () => {
-    console.log('Saving draft...');
+    toast.info('Draft saved locally. Connect API to persist.', { timeout: 3500 });
+};
+
+const confirmRequest = () => {
+    showConfirmDialog.value = false;
+    const payload = typeof form.data === 'function' ? form.data() : { ...form };
+
+    // If consumer wants to skip preview overlays, emit directly
+    if (!props.enablePreviewDialogs) {
+        emit('success', payload);
+        form.reset();
+        errors.value = {};
+        return;
+    }
+
+    if (outcomePreview.value === 'rejected') {
+        showRejectedDialog.value = true;
+        toast.error('Course request rejected (UI preview)', { timeout: 4000 });
+    } else {
+        showSuccessDialog.value = true;
+        toast.success('Course published successfully (UI preview)', { timeout: 4000 });
+    }
+
+    emit('success', payload);
+    form.reset();
+    errors.value = {};
+};
+
+const closeAllDialogs = () => {
+    showConfirmDialog.value = false;
+    showSuccessDialog.value = false;
+    showRejectedDialog.value = false;
+};
+
+const openAttachments = () => {
+    showAttachmentsModal.value = true;
+};
+
+const removeAttachment = (id: number) => {
+    attachments.value = attachments.value.filter((file) => file.id !== id);
+};
+
+const simulateUpload = () => {
+    const nextId = attachments.value.length + 1;
+    attachments.value.push({
+        id: nextId,
+        name: `New attachment ${nextId}.png`,
+        size: '400 KB',
+        progress: 60,
+        status: 'uploading',
+    });
 };
 
 const handleClose = () => {
+    closeAllDialogs();
     emit('close');
 };
 </script>
@@ -502,6 +531,17 @@ const handleClose = () => {
                             <p class="text-xs text-gray-500">JPG, JPEG, PNG less than 1MB (max 1280*720 px)</p>
                         </div>
                     </div>
+                    <div class="mt-3 flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="openAttachments"
+                            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-teal-200 hover:text-teal-700"
+                        >
+                            <Paperclip :size="18" />
+                            Upload & Attach files
+                        </button>
+                        <p class="text-xs text-gray-500">Attach briefs, references, or supporting docs.</p>
+                    </div>
                 </div>
 
                 <!-- Registration Period -->
@@ -591,15 +631,181 @@ const handleClose = () => {
                 </div>
 
                 <!-- Buttons -->
-                <div class="flex items-center justify-between border-t pt-6">
-                    <button type="button" @click="saveDraft" class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Save draft
-                    </button>
-                    <button type="submit" class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                        Confirm
-                    </button>
+                <div class="flex flex-col gap-3 border-t pt-6">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="text-sm font-medium text-gray-700">Preview admin response:</span>
+                        <label class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
+                            :class="outcomePreview === 'success' ? 'border-teal-300 text-teal-700' : 'border-gray-200 text-gray-600'">
+                            <input type="radio" class="sr-only" value="success" v-model="outcomePreview" />
+                            <CheckCircle2 :size="16" />
+                            Success
+                        </label>
+                        <label class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
+                            :class="outcomePreview === 'rejected' ? 'border-rose-300 text-rose-700' : 'border-gray-200 text-gray-600'">
+                            <input type="radio" class="sr-only" value="rejected" v-model="outcomePreview" />
+                            <XCircle :size="16" />
+                            Rejected
+                        </label>
+                        <span class="text-xs text-gray-500">UI-only preview; will be wired to real API later.</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-4">
+                        <button type="button" @click="saveDraft" class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Save draft
+                        </button>
+                        <button type="submit" class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                            Confirm
+                        </button>
+                    </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Confirm Request Dialog -->
+    <div v-if="showConfirmDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+                <AlertTriangle :size="28" />
+            </div>
+            <h3 class="text-center text-lg font-semibold text-gray-900">Are you sure you want to request this course?</h3>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Please wait for admin approval after requesting this course.
+            </p>
+            <div class="mt-6 flex items-center justify-center gap-3">
+                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button @click="confirmRequest" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Dialog -->
+    <div v-if="showSuccessDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+        <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
+            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+                <CheckCircle2 :size="28" />
+            </div>
+            <h3 class="text-center text-lg font-semibold text-gray-900">Course published successfully !</h3>
+            <p class="mt-1 text-center text-sm text-gray-600">Leadership Fundamentals is now live</p>
+            <div class="mt-5 space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                <p class="text-sm font-semibold text-emerald-800">What happens next</p>
+                <div class="space-y-2 text-sm text-emerald-900">
+                    <div class="flex items-start gap-2">
+                        <CheckCircle2 :size="16" class="mt-0.5" />
+                        <span>Registration is now open for students.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <CheckCircle2 :size="16" class="mt-0.5" />
+                        <span>Students can now view and enroll in the course.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <CheckCircle2 :size="16" class="mt-0.5" />
+                        <span>Notifications have been sent to relevant group.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex items-center justify-center gap-3">
+                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Close
+                </button>
+                <button @click="closeAllDialogs" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    View Course
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejected Dialog -->
+    <div v-if="showRejectedDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+        <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
+            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-500">
+                <XCircle :size="28" />
+            </div>
+            <h3 class="text-center text-lg font-semibold text-gray-900">Course has rejected</h3>
+            <p class="mt-1 text-center text-sm text-gray-600">Leadership Fundamentals is not live</p>
+            <div class="mt-5 space-y-3 rounded-xl border border-rose-100 bg-rose-50/60 p-4">
+                <p class="text-sm font-semibold text-rose-800">What happens next</p>
+                <p class="text-sm text-rose-900">Revise the program then send the request again.</p>
+            </div>
+            <div class="mt-6 flex items-center justify-center gap-3">
+                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Close
+                </button>
+                <button @click="closeAllDialogs" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    View Course
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachments Modal -->
+    <div v-if="showAttachmentsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showAttachmentsModal = false">
+        <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Upload and attach files</h3>
+                    <p class="text-sm text-gray-600">Upload and attach files to this project.</p>
+                </div>
+                <button @click="showAttachmentsModal = false" class="rounded p-2 hover:bg-gray-100">
+                    <X :size="18" />
+                </button>
+            </div>
+            <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
+                <UploadCloud class="mx-auto text-teal-500" :size="36" />
+                <p class="mt-2 text-sm font-semibold text-gray-800">Click to upload</p>
+                <p class="text-xs text-gray-500">SVG, PNG, JPG or GIF (max. 1280×720px)</p>
+                <button
+                    type="button"
+                    @click="simulateUpload"
+                    class="mt-3 rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+                >
+                    Simulate upload
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                <div
+                    v-for="file in attachments"
+                    :key="file.id"
+                    class="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
+                >
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-teal-50 text-teal-600">
+                        <Paperclip :size="18" />
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between text-sm font-medium text-gray-900">
+                            <span>{{ file.name }}</span>
+                            <span class="text-xs text-gray-500">{{ file.size }}</span>
+                        </div>
+                        <div class="mt-2 h-2 rounded-full bg-gray-100">
+                            <div
+                                class="h-2 rounded-full transition-all"
+                                :class="file.status === 'uploaded' ? 'bg-teal-500' : 'bg-amber-400'"
+                                :style="{ width: `${file.progress}%` }"
+                            ></div>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        class="text-gray-400 hover:text-rose-500"
+                        @click="removeAttachment(file.id)"
+                    >
+                        <X :size="16" />
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center justify-end gap-3">
+                <button @click="showAttachmentsModal = false" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button @click="showAttachmentsModal = false" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                    Attach files
+                </button>
+            </div>
         </div>
     </div>
 </template>

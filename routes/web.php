@@ -2,12 +2,29 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+$redirectToRoleDashboard = function () {
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $role = Auth::user()->role->name ?? 'student';
+
+    return redirect()->route(match ($role) {
+        'admin'   => 'admin.dashboard',
+        'trainer' => 'trainer.dashboard',
+        default   => 'student.dashboard',
+    });
+};
+
+Route::get('/', $redirectToRoleDashboard);
+
+Route::get('/dashboard', $redirectToRoleDashboard)
+    ->middleware(['auth'])
+    ->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -47,25 +64,25 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/MyCourses');
     })->name('admin.my-courses');
 
-    Route::get('/admin/my-courses/{id}', function ($id) {
-        return Inertia::render('Trainer/Programs/Show', [
-            'program' => [
-                'id' => $id,
-                'name' => 'Advanced UX Design Principles',
-                'code' => 'PRG-001',
-                'category' => 'Design',
-                'level' => 'Advanced',
-                'period' => 'May 1 - MAY 2',
-                'time' => '09:00 - 12:00 AM',
-                'location' => 'Smart Classrom',
-                'trainer' => 'Natthiya Chakaew',
-                'certificated' => 'Standard',
-                'status' => 'OPEN',
-                'description' => 'A comprehensive course on creating intuitive and beautiful user experience.',
-                'image_url' => null,
-            ]
-        ]);
-    })->name('admin.my-courses.show');
+Route::get('/admin/my-courses/{id}', function ($id) {
+    return Inertia::render('Trainer/Programs/Show', [
+        'program' => [
+            'id' => $id,
+            'name' => '',
+            'code' => '',
+            'category' => '',
+            'level' => '',
+            'period' => '',
+            'time' => '',
+            'location' => '',
+            'trainer' => '',
+            'certificated' => '',
+            'status' => '',
+            'description' => '',
+            'image_url' => null,
+        ]
+    ]);
+})->name('admin.my-courses.show');
 
     Route::get('/admin/attendance', function () {
         return Inertia::render('Admin/Attendance');
@@ -87,7 +104,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.settings');
 });
 
-Route::middleware(['auth', 'role:trainer'])->group(function () {
+Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     Route::get('/trainer', function () {
         return Inertia::render('Trainer/Dashboard');
     })->name('trainer.dashboard');
@@ -99,25 +116,25 @@ Route::middleware(['auth', 'role:trainer'])->group(function () {
         ]);
     })->name('trainer.programs.index');
 
-    Route::get('/trainer/programs/{id}', function ($id) {
-        return Inertia::render('Trainer/Programs/Show', [
-            'program' => [
-                'id' => $id,
-                'name' => 'Advanced UX Design Principles',
-                'code' => 'PRG-001',
-                'category' => 'Design',
-                'level' => 'Advanced',
-                'period' => 'May 1 - MAY 2',
-                'time' => '09:00 - 12:00 AM',
-                'location' => 'Smart Classrom',
-                'trainer' => 'Natthiya Chakaew',
-                'certificated' => 'Standard',
-                'status' => 'OPEN',
-                'description' => 'A comprehensive course on creating intuitive and beautiful user experience.',
-                'image_url' => null,
-            ]
-        ]);
-    })->name('trainer.programs.show');
+Route::get('/trainer/programs/{id}', function ($id) {
+    return Inertia::render('Trainer/Programs/Show', [
+        'program' => [
+            'id' => $id,
+            'name' => '',
+            'code' => '',
+            'category' => '',
+            'level' => '',
+            'period' => '',
+            'time' => '',
+            'location' => '',
+            'trainer' => '',
+            'certificated' => '',
+            'status' => '',
+            'description' => '',
+            'image_url' => null,
+        ]
+    ]);
+})->name('trainer.programs.show');
 
     Route::get('/trainer/attendance', function () {
         return Inertia::render('Trainer/Attendance');

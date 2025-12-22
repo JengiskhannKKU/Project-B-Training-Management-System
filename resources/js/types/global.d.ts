@@ -1,30 +1,20 @@
-import type { PageProps as InertiaPageProps } from '@inertiajs/core';
+export {};
 
 declare global {
-    type RoleName = 'admin' | 'trainer' | 'student';
-
-    interface Role {
+    interface AppUserRole {
         id: number;
-        name: RoleName;
-        label?: string | null;
+        name: string;
+        label?: string;
     }
 
-    interface User {
+    interface AppUser {
         id: number;
         name: string;
         email: string;
-        email_verified_at?: string | null;
-        role?: Role | null;
+        role?: AppUserRole;
     }
 
-    interface PageProps extends InertiaPageProps {
-        auth: {
-            user: User;
-        };
-        flash?: {
-            status?: string;
-        };
+    interface Window {
+        axios: any;
     }
 }
-
-export {};

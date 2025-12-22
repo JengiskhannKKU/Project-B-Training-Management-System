@@ -10,7 +10,9 @@ defineProps<{
         employee_id: string;
         department: string;
         position: string;
+        session_id: number | string;
     };
+    sessions: Array<{ id: number | string; display_id?: string; session?: string; date?: string }>;
 }>();
 
 const emit = defineEmits<{
@@ -26,6 +28,16 @@ const emit = defineEmits<{
             <p class="mb-4 sm:mb-6 text-center text-xs sm:text-sm text-gray-500">Leadership Fundamentals | 24/30 (6 available)</p>
 
             <form @submit.prevent="emit('submit')" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Assign to Session <span class="text-red-500">*</span></label>
+                    <select v-model="traineeForm.session_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm sm:text-base">
+                        <option value="">Select session</option>
+                        <option v-for="session in sessions" :key="session.id" :value="session.id">
+                            {{ session.display_id || session.session || `Session #${session.id}` }}{{ session.date ? ` (${session.date})` : '' }}
+                        </option>
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Full Name <span class="text-red-500">*</span></label>
                     <input v-model="traineeForm.full_name" type="text" placeholder="e.g. Alex Doe" class="mt-1 block w-full rounded-md border-gray-300 text-sm sm:text-base" required />

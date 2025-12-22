@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import axios from 'axios';
+import { useToast } from 'vue-toastification';
 import { Head } from '@inertiajs/vue3';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import CourseCard from '@/Components/CourseCard.vue';
@@ -36,6 +38,8 @@ defineProps<{
     }>;
 }>();
 
+const toast = useToast();
+
 const searchQuery = ref('');
 const selectedDepartment = ref('all');
 const selectedStatus = ref('all');
@@ -47,20 +51,40 @@ const showSortModal = ref(false);
 const showCreateModal = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = ref(9); // 9 cards per page for grid layout
+const isSubmittingProgram = ref(false);
+const showApiLogin = ref(false);
+const apiEmail = ref('');
+const apiPassword = ref('');
+const apiLoginLoading = ref(false);
+const apiLoginError = ref('');
+const programs = ref<any[]>([]);
+const isLoadingPrograms = ref(false);
 
 // Get unique departments for filter
 const departments = computed(() => {
-    return [...new Set(mockPrograms.map((course) => course.department || 'General'))];
+    const seen = new Set<string>();
+    const uniqueDepartments: string[] = [];
+
+    programs.value.forEach((course) => {
+        const department = course.department || 'General';
+
+        if (!seen.has(department)) {
+            seen.add(department);
+            uniqueDepartments.push(department);
+        }
+    });
+
+    return uniqueDepartments;
 });
 
 // Count courses
 const totalCoursesCount = computed(() => {
-    return mockPrograms.length;
+    return programs.value.length;
 });
 
 // Filtered and sorted courses
 const filteredCourses = computed(() => {
-    let result = mockPrograms;
+    let result = programs.value;
 
     // Filter by search query
     if (searchQuery.value) {
@@ -223,9 +247,113 @@ const handleModalClose = () => {
 };
 
 const handleModalSuccess = () => {
-    // Refresh courses or perform any action after successful creation/update
-    console.log('Course created/updated successfully');
+    // placeholder for compatibility
 };
+
+const handleCreateProgram = async (payload: Record<string, unknown> | undefined) => {
+    if (!payload) return;
+    isSubmittingProgram.value = true;
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        await axios.post('/api/trainer/program-requests', {
+            action: 'create',
+            payload,
+        });
+        toast.success('Program request sent to admin for approval.');
+        showCreateModal.value = false;
+        await fetchPrograms();
+    } catch (error: any) {
+        const message =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Unable to submit program request.';
+        toast.error(message);
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+    } finally {
+        isSubmittingProgram.value = false;
+    }
+};
+
+const setBearerToken = (token: string) => {
+    localStorage.setItem('api_token', token);
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+};
+
+const handleApiLogin = async () => {
+    apiLoginError.value = '';
+    apiLoginLoading.value = true;
+    try {
+        const { data } = await axios.post('/api/auth/login', {
+            email: apiEmail.value,
+            password: apiPassword.value,
+        });
+        const token = data?.data?.token || data?.token;
+        if (token) {
+            setBearerToken(token);
+            toast.success('API token saved. Please resubmit your request.');
+            showApiLogin.value = false;
+        } else {
+            apiLoginError.value = 'No token returned. Check credentials.';
+        }
+    } catch (error: any) {
+        apiLoginError.value =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Login failed. Check credentials.';
+    } finally {
+        apiLoginLoading.value = false;
+    }
+};
+
+const mapProgramFromRequest = (req: any) => {
+    const payload = req.payload || {};
+    return {
+        id: req.target_id || req.id,
+        request_id: req.id,
+        name: payload.title || payload.name || `Program ${req.id}`,
+        image_url: payload.image_url || '',
+        rating: payload.rating || null,
+        level: payload.level || '',
+        students_count: payload.students_count || 0,
+        price: payload.price || 'Free',
+        date: payload.date || payload.registration_start || '',
+        time: payload.time || '',
+        location: payload.location || '',
+        department: payload.category || 'General',
+        status: req.status || 'pending'
+    };
+};
+
+const ensureCsrf = () => axios.get('/sanctum/csrf-cookie');
+
+const fetchPrograms = async () => {
+    isLoadingPrograms.value = true;
+    try {
+        await ensureCsrf();
+        const { data } = await axios.get('/api/trainer/requests');
+        const list = data?.data || data || [];
+        programs.value = list
+            .filter((r: any) => r.target_type === 'program')
+            .map(mapProgramFromRequest);
+    } catch (error: any) {
+        const message =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Unable to load programs.';
+        toast.error(message);
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+    } finally {
+        isLoadingPrograms.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchPrograms();
+});
 
 // Mock data for demonstration
 const mockPrograms = [
@@ -327,6 +455,50 @@ const mockPrograms = [
                         Manage and track all your courses
                     </p>
                 </div>
+                <button
+                    @click="showCreateModal = true"
+                    class="inline-flex items-center gap-2 rounded-full bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#266a66]"
+                >
+                    <span class="text-lg leading-none">+</span>
+                    Create Course
+                </button>
+            </div>
+
+            <!-- API token fallback (for dev when session cookies fail) -->
+            <div
+                v-if="showApiLogin"
+                class="border border-amber-200 bg-amber-50 text-amber-900 rounded-lg p-4 space-y-3"
+            >
+                <div class="flex items-center gap-2 font-semibold">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    API auth required (fallback)
+                </div>
+                <p class="text-sm">
+                    Your browser session isn’t reaching the API. Enter trainer credentials to store an API token (Bearer) and retry.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-gray-700">Email</label>
+                        <input v-model="apiEmail" type="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-700">Password</label>
+                        <input v-model="apiPassword" type="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button
+                        @click="handleApiLogin"
+                        :disabled="apiLoginLoading"
+                        class="inline-flex items-center gap-2 rounded-md bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-60"
+                    >
+                        <span v-if="apiLoginLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                        Save API Token
+                    </button>
+                    <p v-if="apiLoginError" class="text-sm text-red-600">{{ apiLoginError }}</p>
+                </div>
             </div>
 
             <!-- Search, Filter, and Export Controls -->
@@ -336,8 +508,9 @@ const mockPrograms = [
                 <div class="flex items-center gap-3 mb-6">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <h2 class="text-xl font-semibold text-gray-900">
-                        All Courses ({{ totalCoursesCount }})
+                        My Programs ({{ totalCoursesCount }})
                     </h2>
+                    <span v-if="isLoadingPrograms" class="text-sm text-gray-500">Loading...</span>
                 </div>
 
                 <div
@@ -400,7 +573,7 @@ const mockPrograms = [
                     >
                         <CourseCard
                             v-for="course in paginatedCourses"
-                            :key="course.id"
+                            :key="course.request_id || course.id"
                             :id="course.id"
                             :name="course.name"
                             :image_url="course.image_url"
@@ -574,8 +747,9 @@ const mockPrograms = [
 
             <CourseModal
                 :show="showCreateModal"
+                :enable-preview-dialogs="false"
                 @close="handleModalClose"
-                @success="handleModalSuccess"
+                @success="handleCreateProgram"
             />
         </div>
     </TrainerLayout>

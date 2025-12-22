@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Head, router } from "@inertiajs/vue3";
+import axios from "axios";
+import { useToast } from "vue-toastification";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import {
     Search,
@@ -19,68 +21,15 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 
-const courses = ref([
-    {
-        id: 1,
-        title: "Advanced Laravel Development",
-        description: "Master advanced Laravel concepts and best practices",
-        category: "Programming",
-        instructor: "John Smith",
-        students: 45,
-        status: "Approved",
-        progress: 75,
-    },
-    {
-        id: 2,
-        title: "Vue.js Masterclass",
-        description: "Build modern web applications with Vue.js",
-        category: "Programming",
-        instructor: "Sarah Johnson",
-        students: 32,
-        status: "Approved",
-        progress: 60,
-    },
-    {
-        id: 3,
-        title: "UI/UX Design Principles",
-        description: "Learn fundamental design principles for better UX",
-        category: "Design",
-        instructor: "Mike Davis",
-        students: 28,
-        status: "Pending",
-        progress: 40,
-    },
-    {
-        id: 4,
-        title: "Digital Marketing Strategy",
-        description: "Comprehensive digital marketing strategies and tactics",
-        category: "Marketing",
-        instructor: "Emily Brown",
-        students: 56,
-        status: "Approved",
-        progress: 90,
-    },
-    {
-        id: 5,
-        title: "Python for Data Science",
-        description: "Data analysis and visualization with Python",
-        category: "Programming",
-        instructor: "David Lee",
-        students: 38,
-        status: "Pending",
-        progress: 55,
-    },
-    {
-        id: 6,
-        title: "Mobile App Development",
-        description: "Create cross-platform mobile applications",
-        category: "Programming",
-        instructor: "Lisa Wang",
-        students: 42,
-        status: "Rejected",
-        progress: 30,
-    },
-]);
+const toast = useToast();
+const rawRequests = ref([]);
+const isLoading = ref(false);
+const actionNote = ref("");
+const showApiLogin = ref(false);
+const apiEmail = ref("");
+const apiPassword = ref("");
+const apiLoginLoading = ref(false);
+const apiLoginError = ref("");
 
 const searchQuery = ref("");
 const selectedCategory = ref("all");
@@ -94,35 +43,40 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const openStatusDropdown = ref(null);
 const dropdownPosition = ref({ top: 0, left: 0 });
+const expandedPrograms = ref(new Set());
 
 // Available options for dropdowns
-const statusOptions = ["Approved", "Pending", "Rejected"];
+const statusOptions = ["approved", "pending", "rejected"];
 const categories = computed(() => {
-    return [...new Set(courses.value.map((course) => course.category))];
+    return [
+        ...new Set(
+            programRows.value.map((req) => req.category || "General")
+        ),
+    ];
 });
 
 // Count courses by status
 const activeCoursesCount = computed(() => {
-    return courses.value.filter((course) => course.status === "Approved")
+    return programRows.value.filter((course) => course.status === "approved")
         .length;
 });
 
 const totalCoursesCount = computed(() => {
-    return courses.value.length;
+    return programRows.value.length;
 });
 
 // Filtered and sorted courses
 const filteredCourses = computed(() => {
-    let result = courses.value;
+    let result = programRows.value;
 
     // Filter by search query
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
         result = result.filter(
             (course) =>
-                course.title.toLowerCase().includes(query) ||
-                course.category.toLowerCase().includes(query) ||
-                course.instructor.toLowerCase().includes(query)
+                (course.title || "").toLowerCase().includes(query) ||
+                (course.category || "").toLowerCase().includes(query) ||
+                (course.requester_email || "").toLowerCase().includes(query)
         );
     }
 
@@ -309,9 +263,21 @@ const toggleStatusDropdown = (courseId, event) => {
     }
 };
 
+const toggleSessions = (courseId) => {
+    const next = new Set(expandedPrograms.value);
+    if (next.has(courseId)) {
+        next.delete(courseId);
+    } else {
+        next.add(courseId);
+    }
+    expandedPrograms.value = next;
+};
+
+const isProgramExpanded = (courseId) => expandedPrograms.value.has(courseId);
+
 // Change course status
 const changeCourseStatus = (courseId, newStatus) => {
-    const course = courses.value.find((c) => c.id === courseId);
+    const course = rawRequests.value.find((c) => c.id === courseId);
     if (course) {
         course.status = newStatus;
     }
@@ -320,21 +286,18 @@ const changeCourseStatus = (courseId, newStatus) => {
 
 // Handle actions
 const openCreateModal = () => {
-    // Navigate to create course page or open modal for creation
-    // This can be implemented later if needed
-    alert("Create course functionality - to be implemented");
+    toast.info("Create course from admin not implemented yet.");
 };
 
 const editCourse = (courseId) => {
-    // Navigate to the course detail page
     router.visit(`/admin/my-courses/${courseId}`);
 };
 
 const deleteCourse = (courseId) => {
     if (confirm("Are you sure you want to delete this course?")) {
-        const index = courses.value.findIndex((c) => c.id === courseId);
+        const index = rawRequests.value.findIndex((c) => c.id === courseId);
         if (index !== -1) {
-            courses.value.splice(index, 1);
+            rawRequests.value.splice(index, 1);
         }
     }
 };
@@ -350,20 +313,263 @@ const getCategoryClasses = (category) => {
         Finance: "bg-emerald-100 text-emerald-800",
         Management: "bg-teal-100 text-teal-800",
         Technology: "bg-cyan-100 text-cyan-800",
+        General: "bg-gray-100 text-gray-800",
     };
     return colorMap[category] || "bg-gray-100 text-gray-800";
 };
+
+const mapRequestToRow = (req) => {
+    const payload = req.payload || {};
+    const startTime = payload.start_time || payload.startTime || "";
+    const endTime = payload.end_time || payload.endTime || "";
+    const timeRange =
+        startTime || endTime
+            ? `${startTime || "--:--"} - ${endTime || "--:--"}`
+            : "";
+
+    return {
+        id: req.id,
+        request_id: req.id,
+        program_key:
+            req.target_type === "program" ? req.target_id || req.id : null,
+        parent_program_id:
+            req.target_type === "session"
+                ? payload.program_id || req.program_id || req.target_id
+                : null,
+        title:
+            (req.target_type === "session"
+                ? payload.course
+                : payload.title || payload.name) ||
+            `${req.target_type} ${req.id}`,
+        program_label:
+            req.target_type === "session"
+                ? payload.program_title ||
+                  payload.program_name ||
+                  payload.program ||
+                  (payload.program_id ? `Program #${payload.program_id}` : "")
+                : "",
+        session_date: payload.date || payload.start_date || "",
+        session_time: timeRange,
+        session_location: payload.location || "",
+        session_capacity: payload.capacity ? `0/${payload.capacity}` : "",
+        category: payload.category || "General",
+        status: req.status || "pending",
+        requester_email: req.requester?.email || "N/A",
+        requester_name: req.requester?.name || "N/A",
+        created_at: req.created_at,
+        target_type: req.target_type,
+        action: req.action,
+        link:
+            req.target_type === "session"
+                ? `/trainer/programs/${payload.program_id || req.program_id || req.target_id || req.id}`
+                : `/trainer/programs/${req.target_id || req.id}`,
+    };
+};
+
+const programRows = computed(() => {
+    const programRequests = rawRequests.value
+        .filter((req) => req.target_type === "program")
+        .map(mapRequestToRow);
+    const sessionRequests = rawRequests.value
+        .filter((req) => req.target_type === "session")
+        .map(mapRequestToRow);
+
+    return programRequests.map((programRow) => {
+        const keys = new Set(
+            [programRow.program_key, programRow.request_id]
+                .filter(Boolean)
+                .map((value) => String(value))
+        );
+        const sessions = sessionRequests.filter((session) => {
+            if (!session.parent_program_id) {
+                return false;
+            }
+            return keys.has(String(session.parent_program_id));
+        });
+
+        return {
+            ...programRow,
+            sessions,
+        };
+    });
+});
+
+const getStatusClasses = (status) => {
+    const normalized = (status || "").toLowerCase();
+    if (normalized === "approved") {
+        return "bg-green-100 text-green-800";
+    }
+    if (normalized === "pending") {
+        return "bg-yellow-100 text-yellow-800";
+    }
+    if (normalized === "rejected" || normalized === "closed") {
+        return "bg-red-100 text-red-800";
+    }
+    return "bg-gray-100 text-gray-700";
+};
+
+const ensureCsrf = () => axios.get("/sanctum/csrf-cookie");
+
+const fetchRequests = async () => {
+    isLoading.value = true;
+    try {
+        await ensureCsrf();
+        const { data } = await axios.get("/api/admin/requests");
+        const list = data?.data || data || [];
+        rawRequests.value = list;
+    } catch (error) {
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+        toast.error(
+            error?.response?.data?.message ||
+                error?.message ||
+                "Unable to load requests."
+        );
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const approveRequest = async (id) => {
+    try {
+        await ensureCsrf();
+        await axios.post(`/api/admin/requests/${id}/approve`, {
+            admin_note: actionNote.value || null,
+        });
+        toast.success("Request approved.");
+        await fetchRequests();
+    } catch (error) {
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+        toast.error(
+            error?.response?.data?.message ||
+                error?.message ||
+                "Unable to approve request."
+        );
+    }
+};
+
+const rejectRequest = async (id) => {
+    try {
+        await ensureCsrf();
+        await axios.post(`/api/admin/requests/${id}/reject`, {
+            admin_note: actionNote.value || null,
+        });
+        toast.success("Request rejected.");
+        await fetchRequests();
+    } catch (error) {
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+        toast.error(
+            error?.response?.data?.message ||
+                error?.message ||
+                "Unable to reject request."
+        );
+    }
+};
+
+const showConfirm = ref(false);
+const confirmAction = ref("");
+const confirmRequestId = ref(null);
+
+const openConfirm = (id, action) => {
+    confirmRequestId.value = id;
+    confirmAction.value = action;
+    showConfirm.value = true;
+};
+
+const performConfirmedAction = () => {
+    if (!confirmRequestId.value || !confirmAction.value) {
+        showConfirm.value = false;
+        return;
+    }
+    const id = confirmRequestId.value;
+    const action = confirmAction.value;
+    showConfirm.value = false;
+    confirmRequestId.value = null;
+    confirmAction.value = "";
+
+    if (action === "approve") {
+        approveRequest(id);
+    } else if (action === "reject") {
+        rejectRequest(id);
+    }
+};
+
+const setBearerToken = (token) => {
+    localStorage.setItem("api_token", token);
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+};
+
+const handleApiLogin = async () => {
+    apiLoginError.value = "";
+    apiLoginLoading.value = true;
+    try {
+        await ensureCsrf();
+        const { data } = await axios.post("/api/auth/login", {
+            email: apiEmail.value,
+            password: apiPassword.value,
+        });
+        const token = data?.data?.token || data?.token;
+        if (token) {
+            setBearerToken(token);
+            toast.success("API token saved. Retry your action.");
+            showApiLogin.value = false;
+        } else {
+            apiLoginError.value = "No token returned. Check credentials.";
+        }
+    } catch (error) {
+        apiLoginError.value =
+            error?.response?.data?.message ||
+            error?.message ||
+            "Login failed. Check credentials.";
+    } finally {
+        apiLoginLoading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchRequests();
+});
 </script>
 
 <template>
-    <Head title="My Courses" />
+    <Head title="Program Requests" />
     <AdminLayout>
         <div class="space-y-6">
+            <div v-if="showApiLogin" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 space-y-3">
+                    <div class="font-semibold">API auth required (fallback)</div>
+                    <p class="text-sm">Enter admin credentials to store a Bearer token and retry.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-700">Email</label>
+                            <input v-model="apiEmail" type="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-700">Password</label>
+                            <input v-model="apiPassword" type="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button
+                            @click="handleApiLogin"
+                            :disabled="apiLoginLoading"
+                            class="inline-flex items-center gap-2 rounded-md bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-60"
+                        >
+                            <span v-if="apiLoginLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            Save API Token
+                        </button>
+                        <p v-if="apiLoginError" class="text-sm text-red-600">{{ apiLoginError }}</p>
+                    </div>
+                </div>
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">My Courses</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">Program Requests</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage and monitor all training courses
+                        Manage trainer-submitted programs: approve or reject with notes.
                     </p>
                 </div>
             </div>
@@ -375,17 +581,25 @@ const getCategoryClasses = (category) => {
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
                         <BookOpen class="h-6 w-6 text-[#2f837d]" />
+                        <div>
                         <h2 class="text-xl font-semibold text-gray-900">
-                            All Courses ({{ totalCoursesCount }})
+                            Program Requests ({{ totalCoursesCount }})
                         </h2>
+                        <p class="text-sm text-gray-500">
+                            Approve or reject trainer submissions
+                        </p>
                     </div>
-                    <button
-                        @click="openCreateModal"
-                        class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
-                    >
-                        <Plus class="h-4 w-4" />
-                        Create Course
-                    </button>
+                </div>
+                
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600">Admin note</label>
+                        <input
+                            v-model="actionNote"
+                            type="text"
+                            placeholder="Optional note"
+                            class="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        />
+                    </div>
                 </div>
 
                 <div
@@ -467,9 +681,26 @@ const getCategoryClasses = (category) => {
                                         class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            Course Title
+                                            Program Title
                                             <ChevronUp
                                                 v-if="sortColumn === 'title'"
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
+                                        @click="sort('target_type')"
+                                        class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            Type
+                                            <ChevronUp
+                                                v-if="sortColumn === 'target_type'"
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
@@ -516,22 +747,46 @@ const getCategoryClasses = (category) => {
                                     <th
                                         class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
+                                        Requester
+                                    </th>
+                                    <th
+                                        @click="sort('created_at')"
+                                        class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            Created
+                                            <ChevronUp
+                                                v-if="sortColumn === 'created_at'"
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
+                                        class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <tr
+                                <template
                                     v-for="(course, index) in paginatedCourses"
                                     :key="course.id"
-                                    :class="[
-                                        'transition-colors',
-                                        index % 2 === 0
-                                            ? 'bg-white'
-                                            : 'bg-gray-50',
-                                        'hover:bg-gray-100',
-                                    ]"
                                 >
+                                    <tr
+                                        :class="[
+                                            'transition-colors',
+                                            index % 2 === 0
+                                                ? 'bg-white'
+                                                : 'bg-gray-50',
+                                            'hover:bg-gray-100',
+                                        ]"
+                                    >
                                     <td
                                         class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
@@ -544,12 +799,16 @@ const getCategoryClasses = (category) => {
                                             >
                                                 {{ course.title }}
                                             </div>
-                                            <div
-                                                class="text-sm text-gray-500 truncate"
-                                            >
-                                                {{ course.description }}
+                                            <div class="text-xs text-gray-500">
+                                                Type: {{ course.target_type }} | Action: {{ course.action }}
+                                                <template v-if="course.target_type === 'session' && course.program_label">
+                                                    • Program: {{ course.program_label }}
+                                                </template>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm text-gray-700 capitalize">{{ course.target_type }}</span>
                                     </td>
                                     <td
                                         class="px-3 sm:px-6 py-4 whitespace-nowrap"
@@ -568,126 +827,126 @@ const getCategoryClasses = (category) => {
                                     <td
                                         class="px-3 sm:px-6 py-4 whitespace-nowrap"
                                     >
-                                        <button
-                                            @click="
-                                                toggleStatusDropdown(
-                                                    course.id,
-                                                    $event
-                                                )
-                                            "
-                                            :class="[
-                                                'status-dropdown-trigger px-3 py-2 inline-flex items-center justify-center gap-1 text-sm leading-5 rounded-md cursor-pointer hover:opacity-80 transition-opacity w-32',
-                                                course.status === 'Approved'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : course.status ===
-                                                      'Pending'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800',
-                                            ]"
+                                        <span
+                                            class="px-3 py-2 inline-flex items-center justify-center gap-1 text-sm leading-5 rounded-md w-32"
+                                            :class="getStatusClasses(course.status)"
                                         >
                                             {{ course.status }}
-                                            <ChevronDown class="h-3 w-3" />
-                                        </button>
-
-                                        <!-- Dropdown Menu (Teleported to body) -->
-                                        <Teleport to="body">
-                                            <div
-                                                v-if="
-                                                    openStatusDropdown ===
-                                                    course.id
-                                                "
-                                                class="status-dropdown-menu fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]"
-                                                :style="{
-                                                    top:
-                                                        dropdownPosition.top +
-                                                        'px',
-                                                    left:
-                                                        dropdownPosition.left +
-                                                        'px',
-                                                }"
-                                            >
-                                                <button
-                                                    @click="
-                                                        changeCourseStatus(
-                                                            course.id,
-                                                            'Approved'
-                                                        )
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                                                    :class="
-                                                        course.status ===
-                                                        'Approved'
-                                                            ? 'bg-green-50 text-green-800'
-                                                            : 'text-gray-700'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="h-2 w-2 rounded-full bg-green-500"
-                                                    ></span>
-                                                    Approved
-                                                </button>
-                                                <button
-                                                    @click="
-                                                        changeCourseStatus(
-                                                            course.id,
-                                                            'Pending'
-                                                        )
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                                                    :class="
-                                                        course.status ===
-                                                        'Pending'
-                                                            ? 'bg-yellow-50 text-yellow-800'
-                                                            : 'text-gray-700'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="h-2 w-2 rounded-full bg-yellow-500"
-                                                    ></span>
-                                                    Pending
-                                                </button>
-                                                <button
-                                                    @click="
-                                                        changeCourseStatus(
-                                                            course.id,
-                                                            'Rejected'
-                                                        )
-                                                    "
-                                                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
-                                                    :class="
-                                                        course.status ===
-                                                        'Rejected'
-                                                            ? 'bg-red-50 text-red-800'
-                                                            : 'text-gray-700'
-                                                    "
-                                                >
-                                                    <span
-                                                        class="h-2 w-2 rounded-full bg-red-500"
-                                                    ></span>
-                                                    Rejected
-                                                </button>
-                                            </div>
-                                        </Teleport>
+                                        </span>
+                                    </td>
+                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {{ course.requester_name }}
+                                        </div>
+       									<div class="text-xs text-gray-500">
+                                            {{ course.requester_email }}
+                                        </div>
+                                    </td>
+                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {{ course.created_at ? course.created_at.substring(0, 10) : '—' }}
                                     </td>
                                     <td
                                         class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3 sm:space-x-6"
                                     >
-                                        <button
-                                            @click="deleteCourse(course.id)"
-                                            class="text-gray-600 hover:text-red-800 transition-colors inline-flex items-center gap-1"
-                                            title="Delete"
-                                        >
-                                            <Trash2 class="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            @click="editCourse(course.id)"
-                                            class="text-gray-600 hover:text-[#257067] transition-colors inline-flex items-center gap-1"
-                                            title="Edit"
-                                        >
-                                            <Pencil class="h-4 w-4" />
-                                        </button>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <button
+                                                v-if="course.sessions?.length"
+                                                @click="toggleSessions(course.id)"
+                                                class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                                            >
+                                                <ChevronDown
+                                                    v-if="!isProgramExpanded(course.id)"
+                                                    class="h-4 w-4"
+                                                />
+                                                <ChevronUp
+                                                    v-else
+                                                    class="h-4 w-4"
+                                                />
+                                                Sessions ({{ course.sessions.length }})
+                                            </button>
+                                            <a
+                                                v-if="course.target_type !== 'session'"
+                                                :href="course.link"
+                                                target="_blank"
+                                                rel="noopener"
+                                                class="text-[#2f837d] hover:text-[#266a66] transition-colors inline-flex items-center gap-1 border border-[#2f837d]/20 bg-[#daffed] px-3 py-1 rounded-md"
+                                                title="View request detail"
+                                            >
+                                                View
+                                            </a>
+                                            <button
+                                                @click="openConfirm(course.id, 'approve')"
+                                                class="text-green-700 hover:text-green-900 transition-colors inline-flex items-center gap-1 border border-green-200 bg-green-50 px-3 py-1 rounded-md"
+                                                title="Approve"
+                                            >
+                                                <Pencil class="h-4 w-4" />
+                                                Approve
+                                            </button>
+                                            <button
+                                                @click="openConfirm(course.id, 'reject')"
+                                                class="text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1 border border-red-200 bg-red-50 px-3 py-1 rounded-md"
+                                                title="Reject"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                                Reject
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
+                                <tr
+                                    v-if="course.sessions?.length && isProgramExpanded(course.id)"
+                                    :key="`sessions-${course.id}`"
+                                    class="bg-gray-50"
+                                >
+                                    <td colspan="8" class="px-3 sm:px-6 py-4">
+                                        <div class="pl-4 border-l-2 border-teal-200 space-y-3">
+                                            <div class="text-sm font-semibold text-gray-700">
+                                                Session Requests
+                                            </div>
+                                            <div
+                                                v-for="session in course.sessions"
+                                                :key="session.id"
+                                                class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                            >
+                                                <div>
+                                                    <div class="text-sm font-semibold text-gray-900">
+                                                        {{ session.title }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">
+                                                        Request #{{ session.id }}
+                                                        <span v-if="session.session_date">• {{ session.session_date }}</span>
+                                                        <span v-if="session.session_time">• {{ session.session_time }}</span>
+                                                        <span v-if="session.session_location">• {{ session.session_location }}</span>
+                                                        <span v-if="session.session_capacity">• {{ session.session_capacity }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span
+                                                        class="px-3 py-1 text-xs font-semibold rounded-md capitalize"
+                                                        :class="getStatusClasses(session.status)"
+                                                    >
+                                                        {{ session.status }}
+                                                    </span>
+                                                    <button
+                                                        @click="openConfirm(session.id, 'approve')"
+                                                        class="text-green-700 hover:text-green-900 transition-colors inline-flex items-center gap-1 border border-green-200 bg-green-50 px-3 py-1 rounded-md"
+                                                    >
+                                                        <Pencil class="h-4 w-4" />
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        @click="openConfirm(session.id, 'reject')"
+                                                        class="text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1 border border-red-200 bg-red-50 px-3 py-1 rounded-md"
+                                                    >
+                                                        <Trash2 class="h-4 w-4" />
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                             </tbody>
                         </table>
                     </div>
@@ -861,4 +1120,30 @@ const getCategoryClasses = (category) => {
             />
         </div>
     </AdminLayout>
+
+    <!-- Confirm modal -->
+    <div v-if="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showConfirm = false">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                {{ confirmAction === 'approve' ? 'Approve request?' : 'Reject request?' }}
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">
+                This will {{ confirmAction === 'approve' ? 'create/update the program from this request.' : 'mark this request as rejected.' }}
+            </p>
+            <div class="flex items-center gap-3">
+                <button
+                    @click="showConfirm = false"
+                    class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="performConfirmedAction"
+                    class="rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-medium text-white hover:bg-[#266a66]"
+                >
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
 </template>

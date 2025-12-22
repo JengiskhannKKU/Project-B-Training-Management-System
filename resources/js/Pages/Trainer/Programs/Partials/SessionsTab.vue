@@ -3,7 +3,8 @@ import { Search, ListFilter, ArrowDownNarrowWide, Share } from 'lucide-vue-next'
 
 defineProps<{
     sessions: Array<{
-        id: string;
+        id: number | string;
+        display_id?: string;
         date: string;
         time: string;
         session: string;
@@ -82,7 +83,7 @@ const emit = defineEmits<{
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     <tr v-for="session in sessions" :key="session.id" class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm text-gray-900">{{ session.id }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ session.display_id || session.id }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ session.date }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ session.time }}</td>
                         <td class="px-4 py-3 text-sm text-gray-900">{{ session.session }}</td>
