@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\EnrollmentController;
 use App\Http\Controllers\Api\TrainerRequestController;
 use App\Http\Controllers\Api\AdminRequestActionController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('programs', ProgramController::class);
     Route::apiResource('sessions', TrainingSessionController::class);
+
+    Route::middleware('role:trainer,admin')->group(function () {
+        Route::get('sessions/{session}/enrollments-for-attendance', [AttendanceController::class, 'enrollmentsForAttendance']);
+        Route::get('sessions/{session}/attendances', [AttendanceController::class, 'sessionAttendances']);
+        Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);
+        Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
+        Route::post('attendances', [AttendanceController::class, 'store']);
+        Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
+    });
 
     Route::middleware('role:trainer')->prefix('trainer')->group(function () {
         Route::get('requests', [TrainerRequestController::class, 'index']);
