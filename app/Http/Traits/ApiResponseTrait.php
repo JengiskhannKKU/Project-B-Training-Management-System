@@ -17,7 +17,6 @@ trait ApiResponseTrait
     protected function successResponse($data = null, string $message = 'Success', int $statusCode = 200): JsonResponse
     {
         return response()->json([
-            'success' => true,
             'message' => $message,
             'data' => $data,
         ], $statusCode);
@@ -34,7 +33,6 @@ trait ApiResponseTrait
     protected function errorResponse(string $message = 'Error occurred', int $statusCode = 400, $errors = null): JsonResponse
     {
         $response = [
-            'success' => false,
             'message' => $message,
         ];
 

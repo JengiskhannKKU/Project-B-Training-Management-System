@@ -29,11 +29,11 @@ class EnrollmentController extends Controller
         ])->findOrFail($data['session_id']);
 
         if ($session->approval_status !== 'approved' || $session->status !== 'open') {
-            return response()->json(['message' => 'Session is not open for enrollment.'], 422);
+            return response()->json(['message' => 'Cannot enroll: Session is closed or not open for registration.'], 422);
         }
 
         if ($session->active_enrollments_count >= $session->capacity) {
-            return response()->json(['message' => 'Session capacity is full.'], 422);
+            return response()->json(['message' => 'Cannot enroll: Session capacity is full.'], 422);
         }
 
         $exists = Enrollment::where('user_id', $user->id)
@@ -41,7 +41,7 @@ class EnrollmentController extends Controller
             ->exists();
 
         if ($exists) {
-            return response()->json(['message' => 'Already enrolled in this session.'], 422);
+            return response()->json(['message' => 'You are already enrolled in this session.'], 422);
         }
 
         $enrollment = DB::transaction(function () use ($user, $session) {

@@ -69,7 +69,7 @@ class MeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'avatar' => ['required', 'image', 'max:10240'], // 10MB
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // Max 2MB
         ]);
 
         $file = $validated['avatar'];

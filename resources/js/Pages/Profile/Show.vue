@@ -3,8 +3,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import TextInput from '@/Components/TextInput.vue';
+
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import { useToast } from 'vue-toastification';
+
+const toast = useToast();
 
 const props = defineProps({
     user: {
@@ -78,9 +82,24 @@ const onAvatarSelected = async (event) => {
 
         // Reset file input
         event.target.value = '';
+        toast.success('Avatar updated successfully');
     } catch (error) {
         console.error('Avatar upload failed:', error);
-        alert('Failed to upload avatar. Please try again.');
+        
+        let message = 'Failed to upload avatar. Please try again.';
+        if (error.response?.status === 422) {
+            // Validation errors
+            const errors = error.response.data.errors;
+            if (errors && errors.avatar) {
+                message = errors.avatar[0];
+            } else {
+                message = error.response.data.message || message;
+            }
+        } else if (error.response?.data?.message) {
+            message = error.response.data.message;
+        }
+        
+        toast.error(message);
         avatarPreview.value = null;
     } finally {
         isUploadingAvatar.value = false;
