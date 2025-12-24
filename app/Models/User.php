@@ -107,4 +107,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Certificate::class, 'issued_by');
     }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class, 'checked_by');
+    }
 }
