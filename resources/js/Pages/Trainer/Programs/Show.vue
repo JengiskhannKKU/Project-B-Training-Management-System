@@ -478,19 +478,34 @@ const mapSessionRequest = (req: any) => {
     };
 };
 
+// Move these declarations before functions that depend on them
+const program = ref<ProgramData | null>(props.program || null);
+const requestFallback = ref<any | null>(null);
+const isLoadingProgram = ref(false);
+
 const fetchSessionRequests = async () => {
     const requestUrl = isTrainer.value ? '/api/trainer/requests' : '/api/admin/requests';
     try {
         await ensureCsrf();
         const { data } = await axios.get(requestUrl);
         const list = data?.data || data || [];
-        const programId = Number(displayProgram.value?.id || props.program.id);
+        // Use requestFallback.id for pending programs (URL contains request ID)
+        // Use program.value.id for approved programs (actual program ID)
+        const programId = Number(
+            program.value?.id || 
+            requestFallback.value?.target_id || 
+            requestFallback.value?.id || 
+            props.program.id
+        );
+        // Also check against the request ID for pending programs
+        const requestId = Number(props.program.id);
         sessionRequestRows.value = list
             .filter(
                 (r: any) =>
                     r.target_type === 'session' &&
                     r.status === 'pending' &&
-                    Number(r.payload?.program_id || r.program_id) === programId
+                    (Number(r.payload?.program_id || r.program_id) === programId ||
+                     Number(r.payload?.program_id || r.program_id) === requestId)
             )
             .map(mapSessionRequest);
     } catch (error) {
@@ -501,7 +516,9 @@ const fetchSessionRequests = async () => {
 const fetchSessions = async () => {
     isLoadingSessions.value = true;
     try {
-        const programId = displayProgram.value?.id || props.program.id;
+        // For approved programs, use the actual program ID from the programs table
+        // For pending programs, use the request ID to find session requests
+        const programId = program.value?.id || requestFallback.value?.target_id || props.program.id;
         const { data } = await axios.get('/api/sessions', {
             params: { program_id: programId },
         });
@@ -518,19 +535,21 @@ const fetchSessions = async () => {
     }
 };
 
-onMounted(() => {
-    fetchSessions();
-});
-
-const program = ref<ProgramData | null>(props.program || null);
-const requestFallback = ref<any | null>(null);
-const isLoadingProgram = ref(false);
+// Note: fetchSessions is called after fetchProgram completes via the watch on displayProgram.id
 
 const fetchProgramRequestFallback = async () => {
     const tryFetch = async (url: string) => {
         const { data } = await axios.get(url);
         const list = data?.data || data || [];
-        return list.find((r: any) => r.id === Number(props.program.id));
+        console.log('[DEBUG] Fetched requests from', url, ':', list);
+        console.log('[DEBUG] Searching for request with id:', props.program.id, 'type:', typeof props.program.id);
+        // Look for admin request by ID (the URL contains the request ID)
+        const match = list.find((r: any) => {
+            console.log('[DEBUG] Comparing request id:', r.id, 'type:', typeof r.id, 'with:', props.program.id);
+            return r.id === Number(props.program.id);
+        });
+        console.log('[DEBUG] Match result:', match);
+        return match;
     };
 
     try {
@@ -539,25 +558,44 @@ const fetchProgramRequestFallback = async () => {
         const isAdminPath = page.url.startsWith('/admin/');
         const firstUrl = isAdminPath ? '/api/admin/requests' : '/api/trainer/requests';
         const fallbackUrl = isAdminPath ? '/api/trainer/requests' : '/api/admin/requests';
+        console.log('[DEBUG] isAdminPath:', isAdminPath, 'firstUrl:', firstUrl);
 
         let match = null;
         try {
             match = await tryFetch(firstUrl);
         } catch (err: any) {
+            console.log('[DEBUG] Error fetching from firstUrl:', err?.message);
             // ignore and try fallback
         }
         if (!match) {
             try {
                 match = await tryFetch(fallbackUrl);
             } catch (err: any) {
+                console.log('[DEBUG] Error fetching from fallbackUrl:', err?.message);
                 // ignore
             }
         }
 
         if (match) {
+            console.log('[DEBUG] Setting requestFallback with payload:', match.payload);
             requestFallback.value = match;
+            
+            // If this request is approved and has a target_id, also fetch the actual program data
+            if (match.status === 'approved' && match.target_id) {
+                try {
+                    const { data } = await axios.get(`/api/programs/${match.target_id}`);
+                    program.value = (data?.data || data) as ProgramData;
+                    console.log('[DEBUG] Loaded program from programs table:', program.value);
+                } catch (err: any) {
+                    console.log('[DEBUG] Failed to load program from programs table:', err?.message);
+                    // Program might not exist yet, use payload as fallback
+                }
+            }
+        } else {
+            console.log('[DEBUG] No matching request found for id:', props.program.id);
         }
     } catch (error) {
+        console.log('[DEBUG] Error in fetchProgramRequestFallback:', error);
         // ignore fallback errors
     }
 };
@@ -567,17 +605,32 @@ const fetchProgram = async () => {
     isLoadingProgram.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get(`/api/programs/${props.program.id}`);
-        program.value = (data?.data || data || props.program) as ProgramData;
+        
+        // First, try to fetch the admin_request to get the program data
+        // The URL ID is the admin_request.id, not the program.id
+        await fetchProgramRequestFallback();
+        
+        // If we found a request with target_id, the program data was already loaded
+        // If not, try to load from programs table as a fallback (in case URL has actual program ID)
+        if (!program.value && !requestFallback.value) {
+            try {
+                const { data } = await axios.get(`/api/programs/${props.program.id}`);
+                program.value = (data?.data || data || props.program) as ProgramData;
+            } catch (error: any) {
+                // Program not found - this is expected for pending requests
+                if (![401, 403, 404].includes(error?.response?.status)) {
+                    handleApiError(error, 'Unable to load program details.');
+                }
+            }
+        }
     } catch (error: any) {
-        if (error?.response?.status === 404) {
-            program.value = null;
-            await fetchProgramRequestFallback();
-        } else if (![401, 403].includes(error?.response?.status)) {
+        if (![401, 403].includes(error?.response?.status)) {
             handleApiError(error, 'Unable to load program details.');
         }
     } finally {
         isLoadingProgram.value = false;
+        // Load sessions after program data is available
+        fetchSessions();
     }
 };
 
@@ -586,7 +639,11 @@ onMounted(() => {
 });
 
 const displayProgram = computed<ProgramData>(() => {
-    if (program.value) return program.value as ProgramData;
+    // Check if program.value has actual data (not just an empty object from props)
+    if (program.value && program.value.name) {
+        return program.value as ProgramData;
+    }
+    // Use requestFallback if available (for pending/rejected requests)
     if (requestFallback.value?.payload) {
         const payload = requestFallback.value.payload;
         return {
@@ -687,7 +744,15 @@ const getCertificateStatusColor = (status: string) => {
 
             <!-- Hero Banner -->
             <div class="mb-4 sm:mb-6 overflow-hidden rounded-xl sm:rounded-2xl">
-                <div class="h-32 sm:h-48 md:h-64 lg:h-80 w-full bg-gradient-to-br from-cyan-200 via-teal-300 to-teal-500">
+                <!-- Show uploaded image if available -->
+                <img
+                    v-if="displayProgram.image_url"
+                    :src="displayProgram.image_url"
+                    :alt="displayProgram.name || 'Program'"
+                    class="h-32 sm:h-48 md:h-64 lg:h-80 w-full object-cover"
+                />
+                <!-- Fallback gradient placeholder -->
+                <div v-else class="h-32 sm:h-48 md:h-64 lg:h-80 w-full bg-gradient-to-br from-cyan-200 via-teal-300 to-teal-500">
                     <!-- Decorative waves -->
                     <svg class="h-full w-full" viewBox="0 0 1200 400" preserveAspectRatio="none">
                         <defs>

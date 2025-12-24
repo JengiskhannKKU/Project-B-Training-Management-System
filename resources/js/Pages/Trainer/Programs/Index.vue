@@ -310,8 +310,11 @@ const handleApiLogin = async () => {
 const mapProgramFromRequest = (req: any) => {
     const payload = req.payload || {};
     return {
-        id: req.target_id || req.id,
+        // Use request ID for navigation (Show.vue looks up by admin_request.id)
+        id: req.id,
         request_id: req.id,
+        // Keep target_id for reference to actual program in programs table
+        program_id: req.target_id,
         name: payload.title || payload.name || `Program ${req.id}`,
         image_url: payload.image_url || '',
         rating: payload.rating || null,

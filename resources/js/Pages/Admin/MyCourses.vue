@@ -362,7 +362,9 @@ const mapRequestToRow = (req) => {
         link:
             req.target_type === "session"
                 ? `/trainer/programs/${payload.program_id || req.program_id || req.target_id || req.id}`
-                : `/trainer/programs/${req.target_id || req.id}`,
+                : `/trainer/programs/${req.id}`,
+        // Link for admin view - always use the request ID for correct lookup
+        admin_link: `/admin/my-courses/${req.id}`,
     };
 };
 
@@ -375,16 +377,22 @@ const programRows = computed(() => {
         .map(mapRequestToRow);
 
     return programRequests.map((programRow) => {
-        const keys = new Set(
-            [programRow.program_key, programRow.request_id]
-                .filter(Boolean)
-                .map((value) => String(value))
-        );
+        // Match sessions to programs:
+        // - If program has target_id (approved), only match sessions whose parent_program_id equals target_id
+        // - If program has no target_id (pending), match sessions whose parent_program_id equals request_id
+        // This prevents collisions where Program.id of one program equals AdminRequest.id of another
         const sessions = sessionRequests.filter((session) => {
             if (!session.parent_program_id) {
                 return false;
             }
-            return keys.has(String(session.parent_program_id));
+            const parentId = String(session.parent_program_id);
+            
+            // If program has been approved (has target_id), only match if session references that actual Program.id
+            if (programRow.program_key && programRow.program_key !== programRow.request_id) {
+                return parentId === String(programRow.program_key);
+            }
+            // If program hasn't been approved yet, match by request_id
+            return parentId === String(programRow.request_id);
         });
 
         return {
@@ -866,7 +874,7 @@ onMounted(() => {
                                             </button>
                                             <a
                                                 v-if="course.target_type !== 'session'"
-                                                :href="course.link"
+                                                :href="course.admin_link"
                                                 target="_blank"
                                                 rel="noopener"
                                                 class="text-[#2f837d] hover:text-[#266a66] transition-colors inline-flex items-center gap-1 border border-[#2f837d]/20 bg-[#daffed] px-3 py-1 rounded-md"

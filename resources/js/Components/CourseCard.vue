@@ -43,10 +43,18 @@ const getStarType = (index: number, rating: number) => {
     >
         <div class="aspect-video w-full overflow-hidden flex-shrink-0">
             <img
+                v-if="image_url"
                 :src="image_url"
                 :alt="name"
                 class="h-full w-full object-cover"
             />
+            <!-- Placeholder when no image -->
+            <div
+                v-else
+                class="h-full w-full bg-gradient-to-br from-cyan-200 via-teal-300 to-teal-500 flex items-center justify-center"
+            >
+                <GraduationCap :size="48" class="text-white/60" />
+            </div>
         </div>
 
         <div class="flex flex-col flex-grow p-4">

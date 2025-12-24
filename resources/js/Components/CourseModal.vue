@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
+import axios from 'axios';
 import {
     X,
     Bold,
@@ -18,6 +19,8 @@ import {
     XCircle,
     Paperclip,
     UploadCloud,
+    Trash2,
+    Loader2,
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -67,6 +70,13 @@ const showSuccessDialog = ref(false);
 const showRejectedDialog = ref(false);
 const showAttachmentsModal = ref(false);
 const outcomePreview = ref<'success' | 'rejected'>('success');
+
+// Image upload state
+const imagePreview = ref<string | null>(null);
+const imageUploading = ref(false);
+const imageUrl = ref<string>('');
+const imagePath = ref<string>('');
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const form = useForm({
     title: props.course?.title || '',
@@ -186,13 +196,20 @@ const saveDraft = () => {
 
 const confirmRequest = () => {
     showConfirmDialog.value = false;
-    const payload = typeof form.data === 'function' ? form.data() : { ...form };
+    const formPayload = typeof form.data === 'function' ? form.data() : { ...form };
+    
+    // Add image_url to payload if uploaded
+    const payload = {
+        ...formPayload,
+        image_url: imageUrl.value || null,
+    };
 
     // If consumer wants to skip preview overlays, emit directly
     if (!props.enablePreviewDialogs) {
         emit('success', payload);
         form.reset();
         errors.value = {};
+        removeImage();
         return;
     }
 
@@ -237,6 +254,70 @@ const simulateUpload = () => {
 const handleClose = () => {
     closeAllDialogs();
     emit('close');
+};
+
+// Handle image file selection and upload
+const handleImageUpload = async (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+        toast.error('Image file size must be less than 2MB');
+        return;
+    }
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        imagePreview.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to server
+    imageUploading.value = true;
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const { data } = await axios.post('/api/trainer/upload/image', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        
+        imageUrl.value = data.data.url;
+        imagePath.value = data.data.path;
+        toast.success('Image uploaded successfully');
+    } catch (error: any) {
+        const message = error?.response?.data?.message || error?.message || 'Failed to upload image';
+        toast.error(message);
+        imagePreview.value = null;
+    } finally {
+        imageUploading.value = false;
+    }
+};
+
+const removeImage = () => {
+    imagePreview.value = null;
+    imageUrl.value = '';
+    imagePath.value = '';
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+const triggerFileInput = () => {
+    fileInputRef.value?.click();
 };
 </script>
 
@@ -521,26 +602,63 @@ const handleClose = () => {
                 <!-- Course Thumbnail -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Course Thumbnail</label>
-                    <div class="mt-1 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 hover:border-gray-400">
-                        <div class="text-center">
-                            <Image :size="48" class="mx-auto text-teal-500" />
-                            <div class="mt-4 flex text-sm text-gray-600">
-                                <button type="button" class="font-medium text-teal-600 hover:text-teal-500">Click to upload</button>
-                                <p class="pl-1">or drag and drop</p>
+                    
+                    <!-- Hidden file input -->
+                    <input
+                        ref="fileInputRef"
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                        class="hidden"
+                        @change="handleImageUpload"
+                    />
+                    
+                    <!-- Upload area / Preview -->
+                    <div v-if="!imagePreview" class="mt-1">
+                        <div
+                            @click="triggerFileInput"
+                            class="flex cursor-pointer justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 hover:border-teal-400 transition-colors"
+                        >
+                            <div class="text-center">
+                                <UploadCloud :size="48" class="mx-auto text-teal-500" />
+                                <div class="mt-4 flex text-sm text-gray-600">
+                                    <span class="font-medium text-teal-600 hover:text-teal-500">Click to upload</span>
+                                    <p class="pl-1">or drag and drop</p>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP (max 2MB)</p>
                             </div>
-                            <p class="text-xs text-gray-500">JPG, JPEG, PNG less than 1MB (max 1280*720 px)</p>
                         </div>
                     </div>
-                    <div class="mt-3 flex items-center gap-2">
-                        <button
-                            type="button"
-                            @click="openAttachments"
-                            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-teal-200 hover:text-teal-700"
-                        >
-                            <Paperclip :size="18" />
-                            Upload & Attach files
-                        </button>
-                        <p class="text-xs text-gray-500">Attach briefs, references, or supporting docs.</p>
+                    
+                    <!-- Image preview with remove option -->
+                    <div v-else class="mt-1 relative">
+                        <div class="relative rounded-lg overflow-hidden border border-gray-200">
+                            <img
+                                :src="imagePreview"
+                                alt="Course thumbnail preview"
+                                class="w-full h-48 object-cover"
+                            />
+                            <!-- Upload progress overlay -->
+                            <div v-if="imageUploading" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <div class="text-center text-white">
+                                    <Loader2 :size="32" class="animate-spin mx-auto" />
+                                    <p class="mt-2 text-sm">Uploading...</p>
+                                </div>
+                            </div>
+                            <!-- Remove button -->
+                            <button
+                                v-if="!imageUploading"
+                                type="button"
+                                @click="removeImage"
+                                class="absolute top-2 right-2 rounded-full bg-red-500 p-2 text-white hover:bg-red-600 shadow-lg"
+                                title="Remove image"
+                            >
+                                <Trash2 :size="16" />
+                            </button>
+                        </div>
+                        <p v-if="imageUrl" class="mt-2 text-xs text-green-600 flex items-center gap-1">
+                            <CheckCircle2 :size="14" />
+                            Image uploaded successfully
+                        </p>
                     </div>
                 </div>
 
