@@ -51,7 +51,7 @@ const navigationItems = [
     },
     {
         name: "Settings",
-        path: "/trainer/settings",
+        path: "/me/profile",
         icon: Settings,
     },
 ];

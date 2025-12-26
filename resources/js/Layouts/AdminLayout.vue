@@ -63,7 +63,7 @@ const navigationItems = [
     },
     {
         name: "Settings",
-        path: "/admin/settings",
+        path: "/me/profile",
         icon: Settings,
     },
 ];
