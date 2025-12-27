@@ -4,6 +4,7 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
+import StudentLayout from '@/Layouts/StudentLayout.vue';
 import { Bell, ShieldCheck, Settings, Camera } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -20,9 +21,11 @@ const roleName = computed(() =>
     props.user.role || page.props.auth?.user?.role?.name || page.props.auth?.user?.role || 'user'
 );
 
-const LayoutComponent = computed(() =>
-    roleName.value === 'admin' ? AdminLayout : TrainerLayout
-);
+const LayoutComponent = computed(() => {
+    if (roleName.value === 'admin') return AdminLayout;
+    if (roleName.value === 'student') return StudentLayout;
+    return TrainerLayout;
+});
 
 const activeTab = ref('profile');
 const showAccountSettings = ref(false);

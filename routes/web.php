@@ -33,6 +33,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/me/profile', [ProfileController::class, 'showMyProfile'])->name('me.profile');
     Route::put('/me/profile', [ProfileController::class, 'updateMyProfile'])->name('me.profile.update');
+    Route::get('/me/enrollments', function () {
+        return Inertia::render('Student/Enrollments/Index');
+    })->name('me.enrollments');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -167,7 +170,19 @@ Route::middleware(['auth', 'role:student'])->group(function () {
             'programs' => []
         ]);
     })->name('student.programs.index');
+
+    Route::get('/programs', function () {
+        return Inertia::render('Student/Programs/Index', [
+            'programs' => []
+        ]);
+    })->name('programs.index');
 });
+
+Route::get('/programs/{id}', function ($id) {
+    return Inertia::render('Student/Programs/Show', [
+        'programId' => $id,
+    ]);
+})->name('programs.show');
 
 
 require __DIR__.'/auth.php';
