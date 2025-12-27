@@ -17,17 +17,6 @@ const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
 const page = usePage();
 
-// Get user initials for avatar
-const userInitials = computed(() => {
-    const name = page.props.auth?.user?.name || "";
-    return name
-        .split(" ")
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase()
-        .substring(0, 2);
-});
-
 const currentPath = computed(() => page.url);
 
 const navigationItems = [
@@ -142,10 +131,13 @@ const isActive = (path) => {
                     <div class="flex items-center gap-3">
                         <!-- Avatar with online indicator -->
                         <div class="relative">
-                            <div
-                                class="flex items-center justify-center w-10 h-10 rounded-full bg-[#2F837D] text-white font-semibold text-sm"
-                            >
-                                {{ userInitials }}
+                            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
+                                <img
+                                    :src="`/api/me/avatar?t=${Date.now()}`"
+                                    alt="Avatar"
+                                    class="w-full h-full object-cover"
+                                    @error="$event.target.src = '/default-avatar.svg'"
+                                />
                             </div>
                             <!-- Online indicator dot -->
                             <div

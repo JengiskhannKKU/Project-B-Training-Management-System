@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
@@ -19,7 +19,10 @@ const props = defineProps({
 });
 
 const isLoadingProfile = ref(false);
-const apiUser = ref(null);
+const apiUser = ref({
+    ...props.user,
+    avatar_present: props.user.profile?.has_avatar || false,
+});
 
 const roleName = computed(() => {
     const role = apiUser.value?.role?.name || props.user.role || page.props.auth?.user?.role?.name || page.props.auth?.user?.role || 'user';
@@ -54,17 +57,6 @@ const passwordForm = useForm({
     password_confirmation: '',
 });
 
-const userInitials = computed(() => {
-    const name = apiUser.value?.name || props.user.name || '';
-    return name
-        .split(' ')
-        .filter(Boolean)
-        .map((word) => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'U';
-});
-
 const avatarUrl = computed(() => {
     if (avatarPreview.value) return avatarPreview.value;
     if (apiUser.value?.avatar_present) {
@@ -93,10 +85,11 @@ const loadProfile = async () => {
             },
         });
 
-        console.log('✅ Profile loaded:', data.user.name);
-
-        apiUser.value = data.user;
-        apiUser.value.avatar_present = data.avatar_present;
+        // Set apiUser with avatar_present included
+        apiUser.value = {
+            ...data.user,
+            avatar_present: data.avatar_present,
+        };
 
         // Map API response to form: name, phone, bio, etc.
         form.name = data.user.name || '';
@@ -106,8 +99,6 @@ const loadProfile = async () => {
         form.organization = data.profile?.organization || '';
         form.department = data.profile?.department || '';
         form.bio = data.profile?.bio || '';
-
-        console.log('✅ Form updated, name =', form.name);
     } catch (error) {
         toast.error('Failed to load profile data');
         console.error('Profile load error:', error.response || error);
@@ -153,6 +144,9 @@ const submitProfileForm = async () => {
         // Refresh CSRF token first, then reload
         await axios.get('/sanctum/csrf-cookie');
         await loadProfile();
+
+        // Reload Inertia props to update header/navbar across all pages
+        router.reload({ only: ['auth'] });
 
         // Close the account settings popup to show the updated data
         showAccountSettings.value = false;
@@ -235,6 +229,9 @@ const onAvatarSelected = async (event) => {
 
         // Reload profile to update avatar_present flag
         await loadProfile();
+
+        // Reload Inertia props to update header/navbar avatar
+        router.reload({ only: ['auth'] });
 
         toast.success('Avatar updated successfully');
     } catch (error) {

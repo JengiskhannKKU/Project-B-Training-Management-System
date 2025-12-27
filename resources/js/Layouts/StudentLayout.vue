@@ -8,17 +8,6 @@ const page = usePage();
 
 const currentUser = computed(() => page.props.auth?.user || null);
 
-const userInitials = computed(() => {
-    const name = currentUser.value?.name || "";
-    return name
-        .split(" ")
-        .filter(Boolean)
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase()
-        .substring(0, 2);
-});
-
 const currentPath = computed(() => page.url);
 
 const navigationItems = [
@@ -116,10 +105,13 @@ const isActive = (path) => {
                 <div class="px-8 py-4 flex justify-end items-center">
                     <div class="flex items-center gap-3">
                         <div class="relative">
-                            <div
-                                class="flex items-center justify-center w-10 h-10 rounded-full bg-[#2F837D] text-white font-semibold text-sm"
-                            >
-                                {{ userInitials }}
+                            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
+                                <img
+                                    :src="`/api/me/avatar?t=${Date.now()}`"
+                                    alt="Avatar"
+                                    class="w-full h-full object-cover"
+                                    @error="$event.target.src = '/default-avatar.svg'"
+                                />
                             </div>
                             <div
                                 class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
