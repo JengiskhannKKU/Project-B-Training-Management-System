@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
+import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import StudentLayout from '@/Layouts/StudentLayout.vue';
@@ -17,9 +18,13 @@ const props = defineProps({
     },
 });
 
-const roleName = computed(() =>
-    props.user.role || page.props.auth?.user?.role?.name || page.props.auth?.user?.role || 'user'
-);
+const isLoadingProfile = ref(false);
+const apiUser = ref(null);
+
+const roleName = computed(() => {
+    const role = apiUser.value?.role?.name || props.user.role || page.props.auth?.user?.role?.name || page.props.auth?.user?.role || 'user';
+    return role;
+});
 
 const LayoutComponent = computed(() => {
     if (roleName.value === 'admin') return AdminLayout;
@@ -34,13 +39,13 @@ const avatarVersion = ref(Date.now());
 const isUploadingAvatar = ref(false);
 
 const form = useForm({
-    name: props.user.name || '',
-    phone: props.user.profile?.phone || '',
-    date_of_birth: props.user.profile?.date_of_birth || '',
-    gender: props.user.profile?.gender || '',
-    organization: props.user.profile?.organization || '',
-    department: props.user.profile?.department || '',
-    bio: props.user.profile?.bio || '',
+    name: '',
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    organization: '',
+    department: '',
+    bio: '',
 });
 
 const passwordForm = useForm({
@@ -50,7 +55,7 @@ const passwordForm = useForm({
 });
 
 const userInitials = computed(() => {
-    const name = props.user.name || '';
+    const name = apiUser.value?.name || props.user.name || '';
     return name
         .split(' ')
         .filter(Boolean)
@@ -62,19 +67,110 @@ const userInitials = computed(() => {
 
 const avatarUrl = computed(() => {
     if (avatarPreview.value) return avatarPreview.value;
-    if (props.user.profile?.has_avatar) {
+    if (apiUser.value?.avatar_present) {
         return `/api/me/avatar?t=${avatarVersion.value}`;
     }
-    return null;
+    // Return default avatar when no avatar is present
+    return '/default-avatar.svg';
 });
 
-const submitProfileForm = () => {
-    form.put(route('me.profile.update'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            toast.success('Profile updated successfully.');
-        },
-    });
+const loadProfile = async () => {
+    isLoadingProfile.value = true;
+    try {
+        // Initialize CSRF cookie for Sanctum
+        await axios.get('/sanctum/csrf-cookie');
+
+        // Extract XSRF token from cookie and send as header
+        const token = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        // Load profile from GET /api/me
+        const { data } = await axios.get('/api/me', {
+            headers: {
+                'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+            },
+        });
+
+        console.log('✅ Profile loaded:', data.user.name);
+
+        apiUser.value = data.user;
+        apiUser.value.avatar_present = data.avatar_present;
+
+        // Map API response to form: name, phone, bio, etc.
+        form.name = data.user.name || '';
+        form.phone = data.profile?.phone || '';
+        form.date_of_birth = data.profile?.date_of_birth || '';
+        form.gender = data.profile?.gender || '';
+        form.organization = data.profile?.organization || '';
+        form.department = data.profile?.department || '';
+        form.bio = data.profile?.bio || '';
+
+        console.log('✅ Form updated, name =', form.name);
+    } catch (error) {
+        toast.error('Failed to load profile data');
+        console.error('Profile load error:', error.response || error);
+    } finally {
+        isLoadingProfile.value = false;
+    }
+};
+
+onMounted(() => {
+    loadProfile();
+});
+
+const submitProfileForm = async () => {
+    // Clear previous errors
+    form.clearErrors();
+    form.processing = true;
+
+    try {
+        // Extract XSRF token from cookie
+        const token = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        // Submit to PUT /api/me/profile
+        await axios.put('/api/me/profile', {
+            name: form.name,
+            phone: form.phone,
+            date_of_birth: form.date_of_birth,
+            gender: form.gender,
+            organization: form.organization,
+            department: form.department,
+            bio: form.bio,
+        }, {
+            headers: {
+                'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+            },
+        });
+
+        toast.success('Profile updated successfully.');
+
+        // Reload profile data to get fresh data from server
+        // Refresh CSRF token first, then reload
+        await axios.get('/sanctum/csrf-cookie');
+        await loadProfile();
+
+        // Close the account settings popup to show the updated data
+        showAccountSettings.value = false;
+    } catch (error) {
+        // Handle validation errors
+        if (error.response && error.response.status === 422) {
+            const errors = error.response.data.errors || {};
+            Object.keys(errors).forEach(key => {
+                form.setError(key, errors[key][0]);
+            });
+            toast.error('Please check the form for errors.');
+        } else {
+            toast.error('Failed to update profile.');
+        }
+        console.error('Profile update error:', error.response || error);
+    } finally {
+        form.processing = false;
+    }
 };
 
 const cancelProfileEdit = () => {
@@ -101,6 +197,7 @@ const onAvatarSelected = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
         avatarPreview.value = e.target.result;
@@ -109,33 +206,41 @@ const onAvatarSelected = async (event) => {
 
     isUploadingAvatar.value = true;
 
-    const formData = new FormData();
-    formData.append('avatar', file);
-
     try {
-        const response = await fetch('/api/me/avatar', {
-            method: 'POST',
+        // Get CSRF cookie first
+        await axios.get('/sanctum/csrf-cookie');
+
+        // Extract XSRF token from cookie
+        const token = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        // Create FormData and append file
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        // Call POST /api/me/avatar
+        await axios.post('/api/me/avatar', formData, {
             headers: {
-                'X-CSRF-TOKEN':
-                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                Accept: 'application/json',
+                'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                'Content-Type': 'multipart/form-data',
             },
-            body: formData,
-            credentials: 'same-origin',
         });
 
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            const message = data?.message || 'Failed to upload avatar.';
-            throw new Error(message);
-        }
-
+        // Update avatar version to bust cache
         avatarVersion.value = Date.now();
         avatarPreview.value = null;
         event.target.value = '';
+
+        // Reload profile to update avatar_present flag
+        await loadProfile();
+
         toast.success('Avatar updated successfully');
     } catch (error) {
-        toast.error(error?.message || 'Failed to upload avatar.');
+        const message = error.response?.data?.message || 'Failed to upload avatar.';
+        toast.error(message);
+        console.error('Avatar upload error:', error.response || error);
     } finally {
         isUploadingAvatar.value = false;
     }
@@ -203,7 +308,7 @@ const onAvatarSelected = async (event) => {
                                     <label class="text-xs font-medium text-gray-500">Email</label>
                                     <input
                                         type="email"
-                                        :value="props.user.email"
+                                        :value="apiUser?.email || props.user.email"
                                         class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
                                         disabled
                                     />
@@ -301,17 +406,10 @@ const onAvatarSelected = async (event) => {
                                 <div class="relative">
                                     <div class="h-24 w-24 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
                                         <img
-                                            v-if="avatarUrl"
                                             :src="avatarUrl"
                                             alt="Avatar"
                                             class="h-full w-full object-cover"
                                         />
-                                        <div
-                                            v-else
-                                            class="flex h-full w-full items-center justify-center text-lg font-semibold text-gray-600"
-                                        >
-                                            {{ userInitials }}
-                                        </div>
                                     </div>
                                     <label
                                         class="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#2f837d] text-white shadow"
@@ -355,7 +453,7 @@ const onAvatarSelected = async (event) => {
                                 <div>
                                     <label class="text-sm font-medium text-gray-700">Email</label>
                                     <input
-                                        :value="props.user.email"
+                                        :value="apiUser?.email || props.user.email"
                                         type="email"
                                         class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
                                         disabled
