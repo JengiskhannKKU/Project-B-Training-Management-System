@@ -4,6 +4,7 @@ import { Head } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
+import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import {
     BookOpen,
     GraduationCap,
@@ -214,8 +215,8 @@ onMounted(fetchEnrollments);
                 </div>
             </div>
 
-            <div v-if="isLoading" class="py-16 text-center text-sm text-gray-500">
-                Loading enrollments...
+            <div v-if="isLoading" class="py-16">
+                <LoadingSpinner size="lg" text="Loading enrollments..." />
             </div>
 
             <div v-else-if="visibleEnrollments.length === 0" class="py-24 text-center">
@@ -322,7 +323,13 @@ onMounted(fetchEnrollments);
                                     :disabled="cancellingId === enrollment.id"
                                     @click="cancelEnrollment(enrollment)"
                                 >
-                                    {{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}
+                                    <LoadingSpinner
+                                        v-if="cancellingId === enrollment.id"
+                                        size="sm"
+                                        color="gray"
+                                        inline
+                                    />
+                                    <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
                                 </button>
                             </div>
                         </div>

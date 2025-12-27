@@ -4,6 +4,8 @@ import { Head, Link, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
+import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import ErrorBanner from "@/Components/ErrorBanner.vue";
 import {
     Calendar,
     Clock,
@@ -28,6 +30,8 @@ const program = ref(null);
 const sessions = ref([]);
 const isLoadingProgram = ref(false);
 const isLoadingSessions = ref(false);
+const programError = ref(null);
+const sessionsError = ref(null);
 const showConfirm = ref(false);
 const showSuccess = ref(false);
 const selectedSession = ref(null);
@@ -83,13 +87,20 @@ const whoShouldAttend = computed(() => [
 
 const fetchProgram = async () => {
     isLoadingProgram.value = true;
+    programError.value = null;
     try {
         const { data } = await axios.get("/api/catalog/programs");
         const list = data || [];
         const match = list.find((item) => String(item.id) === String(props.programId));
         program.value = match || null;
+        if (!match) {
+            programError.value = "Program not found.";
+        }
     } catch (error) {
         program.value = null;
+        const message = error?.response?.data?.message || "Unable to load program details.";
+        programError.value = message;
+        toast.error(message);
     } finally {
         isLoadingProgram.value = false;
     }
@@ -97,6 +108,7 @@ const fetchProgram = async () => {
 
 const fetchSessions = async () => {
     isLoadingSessions.value = true;
+    sessionsError.value = null;
     try {
         const { data } = await axios.get(
             `/api/catalog/programs/${props.programId}/sessions`
@@ -104,6 +116,9 @@ const fetchSessions = async () => {
         sessions.value = data || [];
     } catch (error) {
         sessions.value = [];
+        const message = error?.response?.data?.message || "Unable to load sessions.";
+        sessionsError.value = message;
+        toast.error(message);
     } finally {
         isLoadingSessions.value = false;
     }
@@ -182,6 +197,12 @@ onMounted(() => {
                 {{ backLinkText }}
             </Link>
 
+            <ErrorBanner
+                :show="programError !== null"
+                :message="programError"
+                @dismiss="programError = null"
+            />
+
             <div class="rounded-2xl overflow-hidden">
                     <img
                         v-if="program?.image_url"
@@ -258,9 +279,17 @@ onMounted(() => {
 
                         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                             <h2 class="text-lg font-semibold text-gray-900">Select Session</h2>
-                            <div v-if="isLoadingSessions" class="mt-4 text-sm text-gray-500">
-                                Loading sessions...
-                            </div>
+
+                            <ErrorBanner
+                                v-if="sessionsError"
+                                :show="sessionsError !== null"
+                                :message="sessionsError"
+                                @dismiss="sessionsError = null"
+                                class="mt-4"
+                            />
+
+                            <LoadingSpinner v-if="isLoadingSessions" text="Loading sessions..." class="mt-4" />
+
                             <div v-else class="mt-4 space-y-4">
                             <div
                                 v-for="session in openSessions"
@@ -464,7 +493,8 @@ onMounted(() => {
                     :disabled="enrollLoading"
                     @click="confirmEnroll"
                 >
-                    {{ enrollLoading ? "Registering..." : "Confirm register" }}
+                    <LoadingSpinner v-if="enrollLoading" size="sm" color="white" inline />
+                    <span>{{ enrollLoading ? "Registering..." : "Confirm register" }}</span>
                 </button>
             </div>
         </div>
