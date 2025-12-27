@@ -15,11 +15,11 @@ interface Props {
     courseId: number;
     courseName: string;
     sessions: Session[];
-    baseUrl?: string;
+    role?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    baseUrl: '/admin/attendance'
+    role: 'admin'
 });
 
 const emit = defineEmits<{
@@ -64,7 +64,7 @@ const handleClose = () => {
                     <Link
                         v-for="session in sessions"
                         :key="session.id"
-                        :href="`${props.baseUrl}/${courseId}/${session.id}`"
+                        :href="`/${props.role}/${courseId}/sessions/${session.id}/attendance`"
                         class="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-[#2f837d] transition-all cursor-pointer"
                     >
                         <h3 class="text-lg font-semibold text-gray-900 mb-3">

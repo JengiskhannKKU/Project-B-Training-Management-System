@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Head } from "@inertiajs/vue3";
+import axios from "axios";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import AttendanceCourseCard from "@/Components/AttendanceCourseCard.vue";
 import {
@@ -16,229 +17,70 @@ import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 import SessionsModal from "@/Components/SessionsModal.vue";
 
-const courses = ref([
-    {
-        id: 1,
-        name: "Advanced Laravel Development",
-        image_url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800",
-        rating: 4.8,
-        level: "Advanced",
-        students_count: 45,
-        price: "RM 1,200",
-        date: "Dec 15-20, 2025",
-        time: "10:00 AM - 12:00 PM",
-        location: "Room A101",
-        instructor: "John Smith",
-        department: "IT",
-        status: "Active",
-        sessions: [
-            {
-                id: 1,
-                name: "Session 1: Introduction to Laravel",
-                date: "Dec 15, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 2,
-                name: "Session 2: Eloquent ORM",
-                date: "Dec 16, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 3,
-                name: "Session 3: Advanced Routing",
-                date: "Dec 17, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 4,
-                name: "Session 4: Authentication & Authorization",
-                date: "Dec 18, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-        ],
-    },
-    {
-        id: 2,
-        name: "Vue.js Masterclass",
-        image_url: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
-        rating: 4.9,
-        level: "Intermediate",
-        students_count: 32,
-        price: "RM 1,000",
-        date: "Dec 18-22, 2025",
-        time: "2:00 PM - 4:00 PM",
-        location: "Room B205",
-        instructor: "Sarah Johnson",
-        department: "IT",
-        status: "Active",
-        sessions: [
-            {
-                id: 5,
-                name: "Session 1: Vue Fundamentals",
-                date: "Dec 18, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-            {
-                id: 6,
-                name: "Session 2: Component Design",
-                date: "Dec 19, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-            {
-                id: 7,
-                name: "Session 3: State Management",
-                date: "Dec 20, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-        ],
-    },
-    {
-        id: 3,
-        name: "UI/UX Design Principles",
-        image_url: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800",
-        rating: 4.7,
-        level: "Beginner",
-        students_count: 28,
-        price: "RM 800",
-        date: "Dec 20-25, 2025",
-        time: "9:00 AM - 11:00 AM",
-        location: "Design Lab",
-        instructor: "Mike Davis",
-        department: "Design",
-        status: "Active",
-        sessions: [
-            {
-                id: 8,
-                name: "Session 1: Design Thinking",
-                date: "Dec 20, 2025",
-                time: "9:00 AM - 11:00 AM",
-                location: "Design Lab",
-            },
-            {
-                id: 9,
-                name: "Session 2: User Research",
-                date: "Dec 21, 2025",
-                time: "9:00 AM - 11:00 AM",
-                location: "Design Lab",
-            },
-        ],
-    },
-    {
-        id: 4,
-        name: "Digital Marketing Strategy",
-        image_url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800",
-        rating: 4.6,
-        level: "Intermediate",
-        students_count: 56,
-        price: "RM 1,500",
-        date: "Jan 5-10, 2026",
-        time: "1:00 PM - 3:00 PM",
-        location: "Marketing Hub",
-        instructor: "Emily Brown",
-        department: "Marketing",
-        status: "Active",
-        sessions: [
-            {
-                id: 10,
-                name: "Session 1: Digital Marketing Overview",
-                date: "Jan 5, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-            {
-                id: 11,
-                name: "Session 2: SEO & SEM",
-                date: "Jan 6, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-            {
-                id: 12,
-                name: "Session 3: Social Media Marketing",
-                date: "Jan 7, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-        ],
-    },
-    {
-        id: 5,
-        name: "Python for Data Science",
-        image_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800",
-        rating: 4.9,
-        level: "Advanced",
-        students_count: 38,
-        price: "RM 1,300",
-        date: "Jan 8-15, 2026",
-        time: "10:00 AM - 1:00 PM",
-        location: "Data Lab",
-        instructor: "David Lee",
-        department: "IT",
-        status: "Upcoming",
-        sessions: [
-            {
-                id: 13,
-                name: "Session 1: Python Basics for Data Science",
-                date: "Jan 8, 2026",
-                time: "10:00 AM - 1:00 PM",
-                location: "Data Lab",
-            },
-            {
-                id: 14,
-                name: "Session 2: NumPy and Pandas",
-                date: "Jan 9, 2026",
-                time: "10:00 AM - 1:00 PM",
-                location: "Data Lab",
-            },
-        ],
-    },
-    {
-        id: 6,
-        name: "Mobile App Development",
-        image_url: "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=800",
-        rating: 4.5,
-        level: "Intermediate",
-        students_count: 42,
-        price: "RM 1,100",
-        date: "Jan 12-18, 2026",
-        time: "3:00 PM - 5:00 PM",
-        location: "Tech Center",
-        instructor: "Lisa Wang",
-        department: "IT",
-        status: "Upcoming",
-        sessions: [
-            {
-                id: 15,
-                name: "Session 1: Mobile Development Fundamentals",
-                date: "Jan 12, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-            {
-                id: 16,
-                name: "Session 2: React Native Basics",
-                date: "Jan 13, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-            {
-                id: 17,
-                name: "Session 3: Building Your First App",
-                date: "Jan 14, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-        ],
-    },
-]);
+const courses = ref([]);
+const loading = ref(true);
+const error = ref(null);
+
+// Fetch programs with sessions
+const fetchPrograms = async () => {
+    try {
+        loading.value = true;
+        error.value = null;
+        const response = await axios.get('/api/programs');
+
+        if (response.data && response.data.data) {
+            // Map programs to courses format
+            courses.value = await Promise.all(
+                response.data.data.map(async (program) => {
+                    // Fetch sessions for each program
+                    let sessions = [];
+                    try {
+                        const sessionsResponse = await axios.get(`/api/programs/${program.id}/sessions`);
+                        if (sessionsResponse.data && sessionsResponse.data.data) {
+                            sessions = sessionsResponse.data.data.map(session => ({
+                                id: session.id,
+                                name: session.title || session.name || `Session ${session.session_number || ''}`,
+                                date: session.date || "",
+                                time: `${session.start_time || ""} - ${session.end_time || ""}`,
+                                location: session.location || "",
+                            }));
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching sessions for program ${program.id}:`, err);
+                    }
+
+                    return {
+                        id: program.id,
+                        name: program.name || "",
+                        image_url: program.image_url || null,
+                        rating: program.rating || 0,
+                        level: program.level || "",
+                        students_count: program.enrollments_count || 0,
+                        price: program.price ? `RM ${program.price}` : "",
+                        date: program.start_date && program.end_date ?
+                            `${program.start_date} - ${program.end_date}` : "",
+                        time: program.time || "",
+                        location: program.location || "",
+                        instructor: program.trainer?.name || program.trainer_name || "",
+                        department: program.category?.name || program.department || "",
+                        status: program.status || "Active",
+                        sessions: sessions,
+                    };
+                })
+            );
+        }
+    } catch (err) {
+        console.error("Error fetching programs:", err);
+        error.value = "Failed to load courses. Please try again.";
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Fetch data on component mount
+onMounted(() => {
+    fetchPrograms();
+});
 
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
@@ -462,7 +304,25 @@ const selectedCourseName = computed(() => {
                 </div>
             </div>
 
+            <!-- Loading State -->
+            <div v-if="loading" class="bg-white rounded-[25px] shadow-sm p-12 border border-[#dfe5ef] text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2f837d] mx-auto"></div>
+                <p class="mt-4 text-gray-600">Loading courses...</p>
+            </div>
+
+            <!-- Error State -->
+            <div v-if="error && !loading" class="bg-red-50 rounded-[25px] shadow-sm p-6 border border-red-200">
+                <div class="flex items-center gap-3">
+                    <Archive class="h-6 w-6 text-red-600" />
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-900">Error</h3>
+                        <p class="text-sm text-red-700">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Search, Filter, and Export Controls -->
+            <template v-if="!loading && !error">
             <div
                 class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
             >
@@ -716,9 +576,10 @@ const selectedCourseName = computed(() => {
                 :courseId="selectedCourse?.id || 0"
                 :courseName="selectedCourseName"
                 :sessions="selectedCourseSessions"
-                baseUrl="/trainer/attendance"
+                role="trainer"
                 @close="showSessionsModal = false"
             />
+            </template>
         </div>
     </TrainerLayout>
 </template>

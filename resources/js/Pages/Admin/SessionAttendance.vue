@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
+import axios from "axios";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import {
     Search,
@@ -22,90 +23,80 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 
-// Mock data - replace with actual data from backend
-const sessionInfo = ref({
-    id: 1,
-    name: "Session 1: Introduction to Laravel",
-    courseName: "Advanced Laravel Development",
-    date: "Dec 15, 2025",
-    time: "10:00 AM - 12:00 PM",
-    location: "Room A101",
+const props = defineProps({
+    courseId: {
+        type: [Number, String],
+        required: true,
+    },
+    sessionId: {
+        type: [Number, String],
+        required: true,
+    },
 });
 
-const trainees = ref([
-    {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        contact: "0123456789",
-        department: "IT",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        contact: "0123456791",
-        department: "HR",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 3,
-        name: "Bob Johnson",
-        email: "bob@example.com",
-        contact: "0123456792",
-        department: "Engineering",
-        status: "absent",
-        checked: false,
-    },
-    {
-        id: 4,
-        name: "Alice Williams",
-        email: "alice@example.com",
-        contact: "0123456793",
-        department: "Marketing",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 5,
-        name: "Charlie Brown",
-        email: "charlie@example.com",
-        contact: "0123456794",
-        department: "IT",
-        status: "absent",
-        checked: false,
-    },
-    {
-        id: 6,
-        name: "Diana Prince",
-        email: "diana@example.com",
-        contact: "0123456795",
-        department: "Design",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 7,
-        name: "Edward Norton",
-        email: "edward@example.com",
-        contact: "0123456796",
-        department: "IT",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 8,
-        name: "Fiona Green",
-        email: "fiona@example.com",
-        contact: "0123456797",
-        department: "Marketing",
-        status: "absent",
-        checked: false,
-    },
-]);
+const sessionInfo = ref({
+    id: null,
+    name: "",
+    courseName: "",
+    date: "",
+    time: "",
+    location: "",
+});
+
+const trainees = ref([]);
+const loading = ref(true);
+const error = ref(null);
+
+// Fetch enrollments for attendance
+const fetchEnrollments = async () => {
+    try {
+        loading.value = true;
+        error.value = null;
+        const response = await axios.get(`/api/sessions/${props.sessionId}/enrollments-for-attendance`);
+
+        // Map the API response to trainees
+        if (response.data && response.data.data) {
+            const data = response.data.data;
+
+            // Set session info
+            if (data.session) {
+                sessionInfo.value = {
+                    id: data.session.id,
+                    name: data.session.title || data.session.name || `Session ${data.session.session_number || ''}`,
+                    courseName: data.session.program?.name || "",
+                    date: data.session.date || "",
+                    time: `${data.session.start_time || ""} - ${data.session.end_time || ""}`,
+                    location: data.session.location || "",
+                };
+            }
+
+            // Set trainees from enrollments
+            if (data.enrollments && Array.isArray(data.enrollments)) {
+                trainees.value = data.enrollments.map(enrollment => ({
+                    id: enrollment.user?.id || enrollment.id,
+                    enrollmentId: enrollment.id,
+                    name: enrollment.user?.name || "",
+                    email: enrollment.user?.email || "",
+                    contact: enrollment.user?.phone || "",
+                    department: enrollment.user?.department || "",
+                    status: enrollment.attendance?.status || "absent",
+                    checked: enrollment.attendance?.status === "present",
+                    attendanceId: enrollment.attendance?.id || null,
+                }));
+            }
+        }
+    } catch (err) {
+        console.error("Error fetching enrollments:", err);
+        error.value = "Failed to load attendance data. Please try again.";
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Fetch data on component mount
+onMounted(() => {
+    fetchEnrollments();
+});
 
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
@@ -336,6 +327,25 @@ const resetSort = () => {
                     </p>
                 </div>
             </div>
+
+            <!-- Loading State -->
+            <div v-if="loading" class="bg-white rounded-[25px] shadow-sm p-12 border border-[#dfe5ef] text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2f837d] mx-auto"></div>
+                <p class="mt-4 text-gray-600">Loading attendance data...</p>
+            </div>
+
+            <!-- Error State -->
+            <div v-if="error && !loading" class="bg-red-50 rounded-[25px] shadow-sm p-6 border border-red-200">
+                <div class="flex items-center gap-3">
+                    <XCircle class="h-6 w-6 text-red-600" />
+                    <div>
+                        <h3 class="text-lg font-semibold text-red-900">Error</h3>
+                        <p class="text-sm text-red-700">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <template v-if="!loading && !error">
 
             <!-- Session Info Card -->
             <div
@@ -788,6 +798,7 @@ const resetSort = () => {
                 @sort="applySort"
                 @reset="resetSort"
             />
+            </template>
         </div>
     </AdminLayout>
 </template>
