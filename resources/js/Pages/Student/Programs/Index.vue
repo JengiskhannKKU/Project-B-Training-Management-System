@@ -2,21 +2,31 @@
 import { ref, computed, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
+import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
+import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import ErrorBanner from "@/Components/ErrorBanner.vue";
 import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen } from "lucide-vue-next";
+
+const toast = useToast();
 
 const programs = ref([]);
 const isLoading = ref(false);
+const errorMessage = ref(null);
 const searchQuery = ref("");
 const selectedCategory = ref("all");
 
 const fetchPrograms = async () => {
     isLoading.value = true;
+    errorMessage.value = null;
     try {
         const { data } = await axios.get("/api/catalog/programs");
         programs.value = data || [];
     } catch (error) {
         programs.value = [];
+        const message = error?.response?.data?.message || "Unable to load courses. Please try again.";
+        errorMessage.value = message;
+        toast.error(message);
     } finally {
         isLoading.value = false;
     }
@@ -132,11 +142,15 @@ const categoryClass = (category) => {
                     <span>All Courses ({{ filteredPrograms.length }})</span>
                 </div>
 
-                <div
-                    v-if="isLoading"
-                    class="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-6 py-10 text-center text-sm text-gray-500"
-                >
-                    Loading courses...
+                <ErrorBanner
+                    :show="errorMessage !== null"
+                    :message="errorMessage"
+                    @dismiss="errorMessage = null"
+                    class="mt-4"
+                />
+
+                <div v-if="isLoading" class="mt-6 py-16">
+                    <LoadingSpinner size="lg" text="Loading courses..." />
                 </div>
 
                 <div

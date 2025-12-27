@@ -6,6 +6,7 @@ import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import StudentLayout from '@/Layouts/StudentLayout.vue';
+import LoadingSpinner from '@/Components/LoadingSpinner.vue';
 import { Bell, ShieldCheck, Settings, Camera } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -408,6 +409,13 @@ const onAvatarSelected = async (event) => {
                                             class="h-full w-full object-cover"
                                         />
                                     </div>
+                                    <div v-if="isUploadingAvatar" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                                        <LoadingSpinner
+                                            variant="icon"
+                                            size="md"
+                                            color="white"
+                                        />
+                                    </div>
                                     <label
                                         class="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#2f837d] text-white shadow"
                                         :class="{ 'opacity-70': isUploadingAvatar }"
@@ -526,5 +534,12 @@ const onAvatarSelected = async (event) => {
                 </div>
             </div>
         </div>
+
+        <LoadingSpinner
+            :show="isLoadingProfile"
+            overlay
+            size="xl"
+            text="Loading profile..."
+        />
     </component>
 </template>
