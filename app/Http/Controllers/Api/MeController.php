@@ -38,7 +38,7 @@ class MeController extends Controller
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[0-9]+$/'],
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'string', 'max:50'],
             'organization' => ['nullable', 'string', 'max:255'],
@@ -105,6 +105,31 @@ class MeController extends Controller
         return response($profile->avatar_image, 200, [
             'Content-Type' => $mime,
             'Content-Length' => strlen($profile->avatar_image),
+        ]);
+    }
+
+    /**
+     * Delete the current user's avatar.
+     */
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user()->load('profile');
+        $profile = $user->profile;
+
+        if (!$profile || !$profile->avatar_image) {
+            return response()->json([
+                'message' => 'No avatar to delete.',
+            ], 404);
+        }
+
+        $profile->update([
+            'avatar_image' => null,
+            'avatar_mime_type' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Avatar deleted successfully.',
         ]);
     }
 

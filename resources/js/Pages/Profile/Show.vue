@@ -7,7 +7,9 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import StudentLayout from '@/Layouts/StudentLayout.vue';
 import LoadingSpinner from '@/Components/LoadingSpinner.vue';
-import { Bell, ShieldCheck, Settings, Camera } from 'lucide-vue-next';
+import ConfirmationDialog from '@/Components/ConfirmationDialog.vue';
+import ImagePreviewModal from '@/Components/ImagePreviewModal.vue';
+import { Bell, ShieldCheck, Settings, Camera, Trash2, X } from 'lucide-vue-next';
 
 const toast = useToast();
 const page = usePage();
@@ -52,11 +54,47 @@ const form = useForm({
     bio: '',
 });
 
+// Store original form data for comparison
+const originalFormData = ref({
+    name: '',
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    organization: '',
+    department: '',
+    bio: '',
+});
+
+// Check if form has changes
+const hasFormChanges = computed(() => {
+    return form.name !== originalFormData.value.name ||
+        form.phone !== originalFormData.value.phone ||
+        form.date_of_birth !== originalFormData.value.date_of_birth ||
+        form.gender !== originalFormData.value.gender ||
+        form.organization !== originalFormData.value.organization ||
+        form.department !== originalFormData.value.department ||
+        form.bio !== originalFormData.value.bio;
+});
+
 const passwordForm = useForm({
     current_password: '',
     password: '',
     password_confirmation: '',
 });
+
+// Confirmation dialog state
+const showConfirmDialog = ref(false);
+const confirmDialogConfig = ref({
+    title: '',
+    message: '',
+    confirmText: 'ยืนยัน',
+    cancelText: 'ยกเลิก',
+    confirmButtonClass: 'bg-[#2f837d] hover:bg-[#266a66]',
+    onConfirm: () => {},
+});
+
+// Image preview state
+const showImagePreview = ref(false);
 
 const avatarUrl = computed(() => {
     if (avatarPreview.value) return avatarPreview.value;
@@ -100,6 +138,17 @@ const loadProfile = async () => {
         form.organization = data.profile?.organization || '';
         form.department = data.profile?.department || '';
         form.bio = data.profile?.bio || '';
+
+        // Store original data for comparison
+        originalFormData.value = {
+            name: data.user.name || '',
+            phone: data.profile?.phone || '',
+            date_of_birth: data.profile?.date_of_birth || '',
+            gender: data.profile?.gender || '',
+            organization: data.profile?.organization || '',
+            department: data.profile?.department || '',
+            bio: data.profile?.bio || '',
+        };
     } catch (error) {
         toast.error('Failed to load profile data');
         console.error('Profile load error:', error.response || error);
@@ -169,9 +218,84 @@ const submitProfileForm = async () => {
 };
 
 const cancelProfileEdit = () => {
-    form.reset();
+    // Check if there are unsaved changes
+    if (hasFormChanges.value) {
+        confirmDialogConfig.value = {
+            title: 'ละทิ้งการเปลี่ยนแปลง?',
+            message: 'คุณมีการแก้ไขที่ยังไม่ได้บันทึก คุณต้องการละทิ้งการเปลี่ยนแปลงหรือไม่?',
+            confirmText: 'ละทิ้ง',
+            cancelText: 'ยกเลิก',
+            confirmButtonClass: 'bg-red-500 hover:bg-red-600',
+            onConfirm: () => {
+                // Reset form to original data
+                form.name = originalFormData.value.name;
+                form.phone = originalFormData.value.phone;
+                form.date_of_birth = originalFormData.value.date_of_birth;
+                form.gender = originalFormData.value.gender;
+                form.organization = originalFormData.value.organization;
+                form.department = originalFormData.value.department;
+                form.bio = originalFormData.value.bio;
+
+                // Clear errors and preview
+                form.clearErrors();
+                avatarPreview.value = null;
+                showAccountSettings.value = false;
+            },
+        };
+        showConfirmDialog.value = true;
+        return;
+    }
+
+    // No changes, just close
+    form.clearErrors();
     avatarPreview.value = null;
     showAccountSettings.value = false;
+};
+
+const deleteAvatar = () => {
+    confirmDialogConfig.value = {
+        title: 'ลบรูปโปรไฟล์?',
+        message: 'คุณต้องการลบรูปโปรไฟล์และกลับไปใช้รูปเริ่มต้นหรือไม่?',
+        confirmText: 'ลบรูป',
+        cancelText: 'ยกเลิก',
+        confirmButtonClass: 'bg-red-500 hover:bg-red-600',
+        onConfirm: async () => {
+            try {
+                // Get CSRF cookie first
+                await axios.get('/sanctum/csrf-cookie');
+
+                // Extract XSRF token from cookie
+                const token = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('XSRF-TOKEN='))
+                    ?.split('=')[1];
+
+                // Call DELETE /api/me/avatar
+                await axios.delete('/api/me/avatar', {
+                    headers: {
+                        'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                    },
+                });
+
+                // Update avatar version and clear preview
+                avatarVersion.value = Date.now();
+                avatarPreview.value = null;
+
+                // Reload profile to update avatar_present flag
+                await loadProfile();
+
+                // Reload Inertia props to update header/navbar avatar
+                router.reload({ only: ['auth'] });
+
+                toast.success('ลบรูปโปรไฟล์สำเร็จ');
+            } catch (error) {
+                const message = error.response?.data?.message || 'Failed to delete avatar.';
+                toast.error(message);
+                console.error('Avatar delete error:', error.response || error);
+            }
+        },
+    };
+    showConfirmDialog.value = true;
 };
 
 const submitPasswordForm = () => {
@@ -369,9 +493,18 @@ const onAvatarSelected = async (event) => {
                     class="absolute inset-x-0 top-16 flex justify-center px-4 sm:px-0"
                 >
                     <div class="w-full max-w-3xl rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
-                        <h3 class="text-center text-2xl font-semibold text-gray-900">
-                            Account Settings
-                        </h3>
+                        <div class="relative">
+                            <h3 class="text-center text-2xl font-semibold text-gray-900">
+                                Account Settings
+                            </h3>
+                            <button
+                                type="button"
+                                @click="cancelProfileEdit"
+                                class="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <X class="h-5 w-5" />
+                            </button>
+                        </div>
                         <div class="mt-6 flex items-center justify-center gap-10 border-b border-gray-200 text-sm font-semibold">
                             <button
                                 type="button"
@@ -402,12 +535,20 @@ const onAvatarSelected = async (event) => {
                         <div v-if="activeTab === 'profile'" class="mt-6">
                             <div class="flex flex-col items-center">
                                 <div class="relative">
-                                    <div class="h-24 w-24 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
+                                    <div
+                                        class="h-24 w-24 overflow-hidden rounded-full border border-gray-200 bg-gray-100 cursor-pointer group"
+                                        @click="showImagePreview = true"
+                                    >
                                         <img
                                             :src="avatarUrl"
                                             alt="Avatar"
-                                            class="h-full w-full object-cover"
+                                            class="h-full w-full object-cover transition-transform group-hover:scale-110"
                                         />
+                                        <div class="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 transition-all group-hover:bg-black/30">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                     <div v-if="isUploadingAvatar" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
                                         <LoadingSpinner
@@ -429,6 +570,15 @@ const onAvatarSelected = async (event) => {
                                             @change="onAvatarSelected"
                                         />
                                     </label>
+                                    <button
+                                        v-if="apiUser?.avatar_present"
+                                        type="button"
+                                        @click="deleteAvatar"
+                                        class="absolute -top-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+                                        :disabled="isUploadingAvatar"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </button>
                                 </div>
                             </div>
 
@@ -448,7 +598,11 @@ const onAvatarSelected = async (event) => {
                                     <label class="text-sm font-medium text-gray-700">Contact Phone</label>
                                     <input
                                         v-model="form.phone"
-                                        type="text"
+                                        type="tel"
+                                        inputmode="numeric"
+                                        pattern="[0-9]*"
+                                        placeholder="0812345678"
+                                        @input="form.phone = form.phone.replace(/[^0-9]/g, '')"
                                         class="mt-2 w-full rounded-xl border border-gray-200 px-4 py-2 text-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
                                     />
                                     <p v-if="form.errors.phone" class="mt-1 text-xs text-red-600">
@@ -540,6 +694,25 @@ const onAvatarSelected = async (event) => {
             overlay
             size="xl"
             text="Loading profile..."
+        />
+
+        <ConfirmationDialog
+            :show="showConfirmDialog"
+            :title="confirmDialogConfig.title"
+            :message="confirmDialogConfig.message"
+            :confirm-text="confirmDialogConfig.confirmText"
+            :cancel-text="confirmDialogConfig.cancelText"
+            :confirm-button-class="confirmDialogConfig.confirmButtonClass"
+            @confirm="confirmDialogConfig.onConfirm"
+            @cancel="() => {}"
+            @close="showConfirmDialog = false"
+        />
+
+        <ImagePreviewModal
+            :show="showImagePreview"
+            :image-url="avatarUrl"
+            alt-text="Profile Avatar"
+            @close="showImagePreview = false"
         />
     </component>
 </template>

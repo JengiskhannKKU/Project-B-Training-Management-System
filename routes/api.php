@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('me/profile', [MeController::class, 'updateProfile']);
     Route::post('me/avatar', [MeController::class, 'uploadAvatar']);
     Route::get('me/avatar', [MeController::class, 'showAvatar']);
+    Route::delete('me/avatar', [MeController::class, 'deleteAvatar']);
     Route::get('me/enrollments', [EnrollmentController::class, 'myEnrollments']);
     Route::post('enrollments', [EnrollmentController::class, 'store']);
     Route::put('enrollments/{enrollment}/cancel', [EnrollmentController::class, 'cancel']);
