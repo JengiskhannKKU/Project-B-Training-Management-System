@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, useForm, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import axios from 'axios';
@@ -9,7 +9,7 @@ import StudentLayout from '@/Layouts/StudentLayout.vue';
 import LoadingSpinner from '@/Components/LoadingSpinner.vue';
 import ConfirmationDialog from '@/Components/ConfirmationDialog.vue';
 import ImagePreviewModal from '@/Components/ImagePreviewModal.vue';
-import { Bell, ShieldCheck, Settings, Camera, Trash2, X } from 'lucide-vue-next';
+import { Bell, ShieldCheck, Settings, Trash2, X, Edit, Upload } from 'lucide-vue-next';
 
 const toast = useToast();
 const page = usePage();
@@ -43,6 +43,7 @@ const showAccountSettings = ref(false);
 const avatarPreview = ref(null);
 const avatarVersion = ref(Date.now());
 const isUploadingAvatar = ref(false);
+const showAvatarMenu = ref(false);
 
 const form = useForm({
     name: '',
@@ -157,8 +158,23 @@ const loadProfile = async () => {
     }
 };
 
+// Close avatar menu when clicking outside
+const handleClickOutside = (event) => {
+    if (showAvatarMenu.value) {
+        const menu = event.target.closest('.avatar-menu-container');
+        if (!menu) {
+            showAvatarMenu.value = false;
+        }
+    }
+};
+
 onMounted(() => {
     loadProfile();
+    document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
 });
 
 const submitProfileForm = async () => {
@@ -310,6 +326,23 @@ const submitPasswordForm = () => {
 
 const toggleAccountSettings = () => {
     showAccountSettings.value = !showAccountSettings.value;
+};
+
+const toggleAvatarMenu = () => {
+    showAvatarMenu.value = !showAvatarMenu.value;
+};
+
+const triggerFileUpload = () => {
+    showAvatarMenu.value = false;
+    const fileInput = document.getElementById('avatar-upload-input');
+    if (fileInput) {
+        fileInput.click();
+    }
+};
+
+const handleDeleteAvatar = () => {
+    showAvatarMenu.value = false;
+    deleteAvatar();
 };
 
 const onAvatarSelected = async (event) => {
@@ -557,35 +590,53 @@ const onAvatarSelected = async (event) => {
                                             color="white"
                                         />
                                     </div>
-                                    <div v-if="isUploadingAvatar" class="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
-                                        <LoadingSpinner
-                                            variant="icon"
-                                            size="md"
-                                            color="white"
-                                        />
-                                    </div>
-                                    <label
-                                        class="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#2f837d] text-white shadow"
-                                        :class="{ 'opacity-70': isUploadingAvatar }"
-                                    >
-                                        <Camera class="h-4 w-4" />
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            class="hidden"
-                                            :disabled="isUploadingAvatar"
-                                            @change="onAvatarSelected"
-                                        />
-                                    </label>
-                                    <button
-                                        v-if="apiUser?.avatar_present"
-                                        type="button"
-                                        @click="deleteAvatar"
-                                        class="absolute -top-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+
+                                    <!-- Hidden file input -->
+                                    <input
+                                        id="avatar-upload-input"
+                                        type="file"
+                                        accept="image/*"
+                                        class="hidden"
                                         :disabled="isUploadingAvatar"
-                                    >
-                                        <Trash2 class="h-4 w-4" />
-                                    </button>
+                                        @change="onAvatarSelected"
+                                    />
+
+                                    <!-- Edit button with dropdown menu -->
+                                    <div class="absolute -bottom-1 -right-1 avatar-menu-container">
+                                        <button
+                                            type="button"
+                                            @click="toggleAvatarMenu"
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#2f837d] text-white shadow hover:bg-[#266a66]"
+                                            :class="{ 'opacity-70': isUploadingAvatar }"
+                                            :disabled="isUploadingAvatar"
+                                        >
+                                            <Edit class="h-4 w-4" />
+                                        </button>
+
+                                        <!-- Dropdown menu -->
+                                        <div
+                                            v-if="showAvatarMenu"
+                                            class="absolute right-0 top-10 z-50 w-48 rounded-xl border border-gray-200 bg-white shadow-lg"
+                                        >
+                                            <button
+                                                type="button"
+                                                @click="triggerFileUpload"
+                                                class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-xl"
+                                            >
+                                                <Upload class="h-4 w-4 text-[#2f837d]" />
+                                                <span>Upload Avatar</span>
+                                            </button>
+                                            <button
+                                                v-if="apiUser?.avatar_present"
+                                                type="button"
+                                                @click="handleDeleteAvatar"
+                                                class="flex w-full items-center gap-2 border-t border-gray-100 px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-xl"
+                                            >
+                                                <Trash2 class="h-4 w-4" />
+                                                <span>Delete Avatar</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
