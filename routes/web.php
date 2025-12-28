@@ -91,7 +91,7 @@ Route::get('/admin/my-courses/{id}', function ($id) {
         return Inertia::render('Admin/Attendance');
     })->name('admin.attendance');
 
-    Route::get('/admin/attendance/{courseId}/{sessionId}', function ($courseId, $sessionId) {
+    Route::get('/admin/{courseId}/sessions/{sessionId}/attendance', function ($courseId, $sessionId) {
         return Inertia::render('Admin/SessionAttendance', [
             'courseId' => $courseId,
             'sessionId' => $sessionId
@@ -143,7 +143,7 @@ Route::get('/trainer/programs/{id}', function ($id) {
         return Inertia::render('Trainer/Attendance');
     })->name('trainer.attendance');
 
-    Route::get('/trainer/attendance/{courseId}/{sessionId}', function ($courseId, $sessionId) {
+    Route::get('/trainer/{courseId}/sessions/{sessionId}/attendance', function ($courseId, $sessionId) {
         return Inertia::render('Trainer/SessionAttendance', [
             'courseId' => $courseId,
             'sessionId' => $sessionId

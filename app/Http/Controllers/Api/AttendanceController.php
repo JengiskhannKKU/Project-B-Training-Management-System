@@ -138,4 +138,24 @@ class AttendanceController extends Controller
 
         return $this->successResponse($attendances, 'Attendances retrieved successfully');
     }
+
+    public function attendanceSummary(TrainingSession $session)
+    {
+        $totalEnrollments = $session->enrollments()
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->count();
+
+        $attendances = Attendance::where('session_id', $session->id)->get();
+
+        $summary = [
+            'total' => $totalEnrollments,
+            'present' => $attendances->where('status', 'present')->count(),
+            'absent' => $attendances->where('status', 'absent')->count(),
+            'late' => $attendances->where('status', 'late')->count(),
+            'leave_early' => $attendances->where('status', 'leave_early')->count(),
+            'not_marked' => $totalEnrollments - $attendances->count(),
+        ];
+
+        return $this->successResponse($summary, 'Attendance summary retrieved successfully');
+    }
 }

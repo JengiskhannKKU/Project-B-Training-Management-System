@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:trainer,admin')->group(function () {
         Route::get('sessions/{session}/enrollments-for-attendance', [AttendanceController::class, 'enrollmentsForAttendance']);
         Route::get('sessions/{session}/attendances', [AttendanceController::class, 'sessionAttendances']);
+        Route::get('sessions/{session}/attendance-summary', [AttendanceController::class, 'attendanceSummary']);
         Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);
         Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
         Route::post('attendances', [AttendanceController::class, 'store']);

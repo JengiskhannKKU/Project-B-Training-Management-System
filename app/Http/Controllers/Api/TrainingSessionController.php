@@ -60,6 +60,7 @@ class TrainingSessionController extends Controller
      */
     public function show(TrainingSession $session)
     {
+        $session->load('program');
         return $this->successResponse($session, 'Session retrieved successfully');
     }
 
