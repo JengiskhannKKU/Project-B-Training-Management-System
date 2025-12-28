@@ -3,7 +3,7 @@
 Complete API Reference for Training Management System
 
 **Version:** 1.0.0
-**Last Updated:** December 12, 2025
+**Last Updated:** December 28, 2025
 **Base URL:** `/api`
 
 ---
@@ -12,10 +12,15 @@ Complete API Reference for Training Management System
 
 1. [Overview](#overview)
 2. [Authentication](#authentication)
-3. [Programs](#programs)
-4. [Training Sessions](#training-sessions)
-5. [Admin - User Management](#admin---user-management)
-6. [Error Responses](#error-responses)
+3. [Profile & Avatar Management](#profile--avatar-management)
+4. [Programs](#programs)
+5. [Training Sessions](#training-sessions)
+6. [Public Catalog](#public-catalog)
+7. [Enrollments](#enrollments)
+8. [Admin - User Management](#admin---user-management)
+9. [Error Responses](#error-responses)
+10. [Quick Reference](#quick-reference)
+11. [Implementation Notes](#implementation-notes)
 
 ---
 
@@ -30,25 +35,30 @@ Complete API Reference for Training Management System
 
 ### Response Format
 
-All endpoints return JSON with this structure:
+All API endpoints return JSON responses. Most endpoints use a consistent structure:
 
-**Success:**
+**Success Response:**
 ```json
 {
-  "success": true,
   "message": "Operation completed successfully",
   "data": { ... }
 }
 ```
 
-**Error:**
+**Error Response:**
 ```json
 {
-  "success": false,
   "message": "Error description",
-  "errors": { "field": ["Error message"] }
+  "errors": {
+    "field": ["Error message"]
+  }
 }
 ```
+
+**Notes:**
+- Public catalog endpoints (`/catalog/*`) return arrays directly without wrapper
+- Some endpoints may return data directly without message wrapper
+- Validation errors (422) always include both `message` and `errors` fields
 
 ### Authentication
 
@@ -101,7 +111,6 @@ Register a new user. New users are automatically assigned the `student` role.
 **Response (201):**
 ```json
 {
-  "success": true,
   "message": "Registered successfully",
   "data": {
     "token": "1|AbC123...",
@@ -111,7 +120,9 @@ Register a new user. New users are automatically assigned the `student` role.
       "email": "john@example.com",
       "role_id": 3,
       "status": "active",
-      "created_at": "2025-01-01T00:00:00Z"
+      "email_verified_at": "2025-01-01T00:00:00Z",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
     }
   }
 }
@@ -126,6 +137,288 @@ Register a new user. New users are automatically assigned the `student` role.
   }
 }
 ```
+
+---
+
+### POST /auth/login
+
+Login with email and password to receive an API token.
+
+**Authentication:** Not required
+
+**Request:**
+```json
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+
+**Validation:**
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| email | string | Yes | Valid email format |
+| password | string | Yes | Required |
+
+**Response (200):**
+```json
+{
+  "message": "Logged in successfully",
+  "data": {
+    "token": "2|XyZ789...",
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role_id": 3,
+      "status": "active",
+      "email_verified_at": "2025-01-01T00:00:00Z",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+**Error (422) - Invalid Credentials:**
+```json
+{
+  "message": "The provided credentials are incorrect.",
+  "errors": {
+    "email": ["The provided credentials are incorrect."]
+  }
+}
+```
+
+**Notes:**
+- Returns a new Sanctum API token on each login
+- User's status must be 'active' to login
+- Password is verified using Laravel's Hash::check()
+
+---
+
+## Profile & Avatar Management
+
+### GET /me
+
+Get current authenticated user's profile information.
+
+**Authentication:** Required
+
+**Response (200):**
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role_id": 3,
+    "status": "active",
+    "role": {
+      "id": 3,
+      "name": "student",
+      "label": "Student"
+    }
+  },
+  "profile": {
+    "id": 1,
+    "user_id": 1,
+    "phone": "0812345678",
+    "date_of_birth": "1990-01-15",
+    "gender": "male",
+    "organization": "ABC Company",
+    "department": "IT",
+    "bio": "Software developer passionate about learning"
+  },
+  "avatar_present": true
+}
+```
+
+**Notes:**
+- Returns `profile: null` if user hasn't created a profile yet
+- `avatar_present` indicates whether user has uploaded an avatar image
+
+---
+
+### PUT /me/profile
+
+Update current user's profile information.
+
+**Authentication:** Required
+
+**Request:**
+```json
+{
+  "name": "John Smith",
+  "phone": "0899999999",
+  "date_of_birth": "1990-01-15",
+  "gender": "male",
+  "organization": "XYZ Corp",
+  "department": "Engineering",
+  "bio": "Full-stack developer"
+}
+```
+
+**Validation:**
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| name | string | No | Max 255 chars (updates users.name) |
+| phone | string | No | Max 50 chars, numeric only |
+| date_of_birth | date | No | Valid date (YYYY-MM-DD) |
+| gender | string | No | Max 50 chars |
+| organization | string | No | Max 255 chars |
+| department | string | No | Max 255 chars |
+| bio | text | No | Any length |
+
+**Response (200):**
+```json
+{
+  "message": "Profile updated successfully.",
+  "user": {
+    "id": 1,
+    "name": "John Smith",
+    "email": "john@example.com",
+    "profile": {
+      "phone": "0899999999",
+      "date_of_birth": "1990-01-15",
+      "gender": "male",
+      "organization": "XYZ Corp",
+      "department": "Engineering",
+      "bio": "Full-stack developer"
+    },
+    "role": {
+      "id": 3,
+      "name": "student"
+    }
+  }
+}
+```
+
+**Error (422) - Validation:**
+```json
+{
+  "message": "The phone must only contain numbers.",
+  "errors": {
+    "phone": ["The phone must match the format ^[0-9]+$."]
+  }
+}
+```
+
+---
+
+### POST /me/avatar
+
+Upload user avatar image (stored as BLOB in database).
+
+**Authentication:** Required
+
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+```
+POST /api/me/avatar
+Content-Type: multipart/form-data
+
+avatar: [binary file data]
+```
+
+**Validation:**
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| avatar | file | Yes | Image (jpeg, png, jpg, gif), max 2MB |
+
+**Response (200):**
+```json
+{
+  "message": "Avatar updated successfully."
+}
+```
+
+**Error (422) - Invalid File:**
+```json
+{
+  "message": "The avatar field must be an image.",
+  "errors": {
+    "avatar": ["The avatar field must be an image."]
+  }
+}
+```
+
+**Error (422) - File Too Large:**
+```json
+{
+  "message": "The avatar field must not be greater than 2048 kilobytes.",
+  "errors": {
+    "avatar": ["The avatar field must not be greater than 2048 kilobytes."]
+  }
+}
+```
+
+**Notes:**
+- Avatar is stored as binary (BLOB) in `profiles.avatar_image`
+- MIME type is stored in `profiles.avatar_mime_type`
+- No URL is stored; avatar is retrieved via `GET /api/me/avatar`
+
+---
+
+### GET /me/avatar
+
+Retrieve current user's avatar image.
+
+**Authentication:** Required
+
+**Response (200):**
+- **Content-Type:** `image/jpeg`, `image/png`, `image/gif`, etc. (based on uploaded file)
+- **Body:** Binary image data
+
+**Response Headers:**
+```http
+Content-Type: image/jpeg
+Content-Length: 52341
+```
+
+**Error (404):**
+```json
+{
+  "message": "Avatar not found"
+}
+```
+
+**Usage Example (HTML):**
+```html
+<img src="/api/me/avatar" alt="My Avatar" />
+```
+
+**Notes:**
+- Returns image directly (not JSON)
+- Can be used in `<img>` tags
+- Add query param `?t=timestamp` to bust cache after upload
+
+---
+
+### DELETE /me/avatar
+
+Delete current user's avatar image.
+
+**Authentication:** Required
+
+**Response (200):**
+```json
+{
+  "message": "Avatar deleted successfully."
+}
+```
+
+**Error (404) - No Avatar:**
+```json
+{
+  "message": "No avatar to delete."
+}
+```
+
+**Notes:**
+- Sets `avatar_image` and `avatar_mime_type` to `null`
+- User will see default avatar after deletion
 
 ---
 
@@ -496,6 +789,294 @@ Delete a session (hard delete).
 
 ---
 
+## Public Catalog
+
+Public APIs for browsing approved programs and sessions (no authentication required for GET endpoints).
+
+### GET /catalog/programs
+
+Get all approved and active programs (public access).
+
+**Authentication:** Not required
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "code": "LAR-ADV-001",
+    "name": "Laravel Advanced Course",
+    "description": "Learn advanced Laravel concepts",
+    "category_id": 1,
+    "level": "advanced",
+    "duration_hours": 40,
+    "created_by": 2,
+    "approved_by": 1,
+    "approval_status": "approved",
+    "status": "active",
+    "image_url": "https://example.com/image.jpg",
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-02T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "code": "VUE-FUND-001",
+    "name": "Vue.js Fundamentals",
+    "description": "Learn Vue.js from scratch",
+    "category_id": 2,
+    "level": "beginner",
+    "duration_hours": 30,
+    "approval_status": "approved",
+    "status": "active",
+    "created_at": "2025-01-03T00:00:00Z"
+  }
+]
+```
+
+**Notes:**
+- Only returns programs where `approval_status = 'approved'` AND `status = 'active'`
+- Sorted by latest first
+- No pagination (returns all matching programs)
+
+---
+
+### GET /catalog/programs/{program}/sessions
+
+Get all approved and open sessions for a specific program (public access).
+
+**Authentication:** Not required
+
+**URL Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| program | integer | Program ID |
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "program_id": 1,
+    "title": "Laravel Advanced - Batch 1",
+    "description": "First batch of Laravel advanced training",
+    "start_date": "2025-02-01",
+    "end_date": "2025-02-28",
+    "start_time": "09:00:00",
+    "end_time": "17:00:00",
+    "location": "Room A101",
+    "capacity": 30,
+    "trainer_id": 2,
+    "approved_by": 1,
+    "approval_status": "approved",
+    "status": "open",
+    "created_at": "2025-01-05T00:00:00Z",
+    "updated_at": "2025-01-06T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "program_id": 1,
+    "title": "Laravel Advanced - Batch 2",
+    "start_date": "2025-03-01",
+    "end_date": "2025-03-31",
+    "capacity": 25,
+    "approval_status": "approved",
+    "status": "open",
+    "created_at": "2025-01-07T00:00:00Z"
+  }
+]
+```
+
+**Error (404) - Program Not Found:**
+```json
+{
+  "message": "No query results for model [App\\Models\\Program] 999"
+}
+```
+
+**Notes:**
+- Only returns sessions where `approval_status = 'approved'` AND `status = 'open'`
+- Sorted by `start_date DESC, start_time DESC`
+- Shows sessions available for enrollment
+
+---
+
+## Enrollments
+
+### POST /enrollments
+
+Create a new enrollment for the authenticated user.
+
+**Authentication:** Required
+
+**Request:**
+```json
+{
+  "session_id": 1
+}
+```
+
+**Validation:**
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| session_id | integer | Yes | Must exist in training_sessions table |
+
+**Response (201):**
+```json
+{
+  "message": "Enrollment created successfully.",
+  "data": {
+    "id": 1,
+    "user_id": 3,
+    "session_id": 1,
+    "status": "confirmed",
+    "enrolled_at": "2025-01-10T10:30:00Z",
+    "created_at": "2025-01-10T10:30:00Z",
+    "updated_at": "2025-01-10T10:30:00Z"
+  }
+}
+```
+
+**Error (422) - Session Not Open:**
+```json
+{
+  "message": "Cannot enroll: Session is closed or not open for registration."
+}
+```
+
+**Error (422) - Session Full:**
+```json
+{
+  "message": "Cannot enroll: Session capacity is full."
+}
+```
+
+**Error (422) - Already Enrolled:**
+```json
+{
+  "message": "You are already enrolled in this session."
+}
+```
+
+**Business Rules:**
+- User can only enroll in sessions with `approval_status = 'approved'` AND `status = 'open'`
+- Session must have available capacity
+- User cannot enroll twice in the same session
+- Enrollment status is automatically set to `confirmed`
+
+---
+
+### PUT /enrollments/{enrollment}/cancel
+
+Cancel an existing enrollment (before session starts).
+
+**Authentication:** Required
+
+**URL Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| enrollment | integer | Enrollment ID |
+
+**Response (200):**
+```json
+{
+  "message": "Enrollment cancelled successfully.",
+  "data": {
+    "id": 1,
+    "user_id": 3,
+    "session_id": 1,
+    "status": "cancelled",
+    "enrolled_at": "2025-01-10T10:30:00Z",
+    "updated_at": "2025-01-15T14:20:00Z"
+  }
+}
+```
+
+**Error (403) - Unauthorized:**
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+**Error (422) - Cannot Cancel (Session Started):**
+```json
+{
+  "message": "Cannot cancel on or after the start date."
+}
+```
+
+**Error (200) - Already Cancelled:**
+```json
+{
+  "message": "Enrollment already cancelled."
+}
+```
+
+**Business Rules:**
+- Only the enrolled user can cancel their own enrollment
+- Cannot cancel on or after the session's `start_date`
+- If already cancelled, returns success (idempotent)
+
+---
+
+### GET /me/enrollments
+
+List all enrollments for the authenticated user.
+
+**Authentication:** Required
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 3,
+    "session_id": 1,
+    "status": "confirmed",
+    "enrolled_at": "2025-01-10T10:30:00Z",
+    "created_at": "2025-01-10T10:30:00Z",
+    "updated_at": "2025-01-10T10:30:00Z",
+    "session": {
+      "id": 1,
+      "program_id": 1,
+      "title": "Laravel Advanced - Batch 1",
+      "start_date": "2025-02-01",
+      "end_date": "2025-02-28",
+      "location": "Room A101",
+      "status": "open",
+      "program": {
+        "id": 1,
+        "code": "LAR-ADV-001",
+        "name": "Laravel Advanced Course",
+        "category_id": 1,
+        "level": "advanced"
+      }
+    }
+  },
+  {
+    "id": 2,
+    "user_id": 3,
+    "session_id": 2,
+    "status": "cancelled",
+    "enrolled_at": "2025-01-08T09:00:00Z",
+    "session": {
+      "id": 2,
+      "title": "Laravel Advanced - Batch 2",
+      "program": {
+        "name": "Laravel Advanced Course"
+      }
+    }
+  }
+]
+```
+
+**Notes:**
+- Returns all enrollments (confirmed, cancelled, etc.)
+- Includes nested `session` and `program` data
+- Sorted by latest first
+
+---
+
 ## Admin - User Management
 
 ### GET /admin/users
@@ -521,7 +1102,6 @@ GET /admin/users?status=active&per_page=20
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "Users retrieved successfully",
   "data": {
     "current_page": 1,
@@ -531,17 +1111,27 @@ GET /admin/users?status=active&per_page=20
         "name": "John Doe",
         "email": "john@example.com",
         "status": "active",
+        "email_verified_at": "2025-01-01T00:00:00Z",
+        "created_at": "2025-01-01T00:00:00Z",
+        "updated_at": "2025-01-01T00:00:00Z",
+        "role_id": 1,
         "role": {
           "id": 1,
           "name": "admin",
           "label": "Admin"
-        },
-        "created_at": "2025-01-01T00:00:00Z"
+        }
       }
     ],
-    "total": 50,
+    "first_page_url": "http://localhost:8000/api/admin/users?page=1",
+    "from": 1,
+    "last_page": 4,
+    "last_page_url": "http://localhost:8000/api/admin/users?page=4",
+    "next_page_url": "http://localhost:8000/api/admin/users?page=2",
+    "path": "http://localhost:8000/api/admin/users",
     "per_page": 15,
-    "last_page": 4
+    "prev_page_url": null,
+    "to": 15,
+    "total": 50
   }
 }
 ```
@@ -575,14 +1165,16 @@ Create a new user with specified role. Admin only.
 **Response (201):**
 ```json
 {
-  "success": true,
   "message": "User created successfully",
   "data": {
     "id": 2,
     "name": "Jane Smith",
     "email": "jane@example.com",
-    "status": "active",
+    "password": "$2y$12$hashed_password_here",
     "role_id": 2,
+    "status": "active",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T00:00:00Z",
     "created_at": "2025-01-02T00:00:00Z"
   }
 }
@@ -616,13 +1208,17 @@ Update user information. Admin only.
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "User updated successfully",
   "data": {
     "id": 2,
     "name": "Jane Smith (Updated)",
     "email": "jane@example.com",
+    "password": "$2y$12$hashed_password_here",
+    "role_id": 1,
     "status": "inactive",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "created_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T10:00:00Z",
     "role": {
       "id": 1,
       "name": "admin",
@@ -643,11 +1239,17 @@ Deactivate a user (soft delete - sets status to inactive). Admin only.
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "User deactivated successfully",
   "data": {
     "id": 2,
-    "status": "inactive"
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "password": "$2y$12$hashed_password_here",
+    "role_id": 2,
+    "status": "inactive",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "created_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T11:00:00Z"
   }
 }
 ```
@@ -676,7 +1278,6 @@ Valid token but insufficient permissions.
 
 ```json
 {
-  "success": false,
   "message": "Forbidden"
 }
 ```
@@ -737,25 +1338,147 @@ Internal server error.
 
 ### Endpoints Summary
 
+#### Authentication
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | POST | /auth/register | Register user | No |
+| POST | /auth/login | Login user | No |
+
+#### Profile & Avatar
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /me | Get current user | Yes |
+| PUT | /me/profile | Update profile | Yes |
+| POST | /me/avatar | Upload avatar | Yes |
+| GET | /me/avatar | Get avatar image | Yes |
+| DELETE | /me/avatar | Delete avatar | Yes |
+
+#### Public Catalog
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | /catalog/programs | List public programs | No |
+| GET | /catalog/programs/{id}/sessions | List program sessions | No |
+
+#### Enrollments
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | /enrollments | Create enrollment | Yes |
+| PUT | /enrollments/{id}/cancel | Cancel enrollment | Yes |
+| GET | /me/enrollments | List my enrollments | Yes |
+
+#### Programs
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
 | GET | /programs | List programs | Yes |
 | GET | /programs/{id} | Get program | Yes |
 | POST | /programs | Create program | Yes |
 | PUT | /programs/{id} | Update program | Yes |
 | DELETE | /programs/{id} | Delete program | Yes |
+
+#### Training Sessions
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
 | GET | /sessions | List sessions | Yes |
 | GET | /sessions/{id} | Get session | Yes |
 | POST | /sessions | Create session | Yes |
 | PUT | /sessions/{id} | Update session | Yes |
 | DELETE | /sessions/{id} | Delete session | Yes |
+
+#### Admin - User Management
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
 | GET | /admin/users | List users | Admin |
 | POST | /admin/users | Create user | Admin |
 | PUT | /admin/users/{id} | Update user | Admin |
 | DELETE | /admin/users/{id} | Deactivate user | Admin |
+| PUT | /admin/users/{id}/deactivate | Deactivate user | Admin |
 
 ---
 
-**Last Updated:** December 12, 2025
+## Implementation Notes
+
+### Response Format Variations
+
+While most endpoints follow the standard `{message, data}` format, some endpoints have variations:
+
+1. **Public Catalog Endpoints** (`GET /catalog/programs`, `GET /catalog/programs/{id}/sessions`)
+   - Return arrays directly without wrapper
+   - Example: `[{program1}, {program2}]`
+
+2. **Enrollment Endpoints** - Use custom response format:
+   - `POST /enrollments`: Returns `{message, data}` with 201 status
+   - `PUT /enrollments/{id}/cancel`: Returns `{message, data}` with 200 status
+   - `GET /me/enrollments`: Returns array directly `[{enrollment1}]`
+
+3. **Profile Endpoints**:
+   - `GET /me`: Returns `{user, profile, avatar_present}` (no message wrapper)
+   - `PUT /me/profile`: Returns `{message, user}` (user includes nested profile)
+   - `POST /me/avatar`: Returns `{message}` only
+   - `GET /me/avatar`: Returns binary image data (not JSON)
+   - `DELETE /me/avatar`: Returns `{message}` or 404 with `{message}`
+
+### Business Logic Highlights
+
+1. **Registration**:
+   - All new users automatically verified (`email_verified_at` set to now)
+   - Default role is `student`
+   - Status automatically set to `active`
+
+2. **Enrollment**:
+   - Uses database transactions for capacity checking
+   - Counts only non-cancelled enrollments against capacity
+   - Cannot enroll if session is not both 'approved' AND 'open'
+   - Duplicate enrollment check per user-session pair
+
+3. **Cancellation**:
+   - Cannot cancel on or after session `start_date`
+   - Idempotent: Cancelling already-cancelled enrollment returns 200
+   - Only the enrollment owner can cancel
+
+4. **Avatar Storage**:
+   - Stored as BLOB in database (not file system)
+   - MIME type stored separately for correct Content-Type header
+   - Max size: 2MB
+   - Supported formats: jpeg, png, jpg, gif
+
+### Authentication Flow
+
+1. **Token Generation**:
+   - Both register and login create new Sanctum tokens
+   - Token name: `api-token`
+   - Tokens don't expire by default (configure in sanctum config if needed)
+
+2. **Token Usage**:
+   - Include in header: `Authorization: Bearer {token}`
+   - Required for all endpoints except:
+     - `POST /auth/register`
+     - `POST /auth/login`
+     - `GET /catalog/programs`
+     - `GET /catalog/programs/{id}/sessions`
+
+3. **Role-Based Access**:
+   - Admin endpoints: Require `role.name = 'admin'`
+   - Trainer endpoints: Require `role.name IN ('trainer', 'admin')`
+   - Student endpoints: Any authenticated user
+
+### Pagination
+
+- Default per_page: 15
+- Max per_page: 100
+- Laravel pagination format includes:
+  - `current_page`, `last_page`, `total`, `per_page`
+  - `first_page_url`, `last_page_url`, `next_page_url`, `prev_page_url`
+  - `from`, `to` (record numbers)
+  - `path` (base URL)
+
+### Error Handling
+
+- Validation errors (422) use Laravel's default format
+- Model not found errors (404) return Laravel's default message
+- Business logic errors (422) return custom message strings
+- Unauthorized/Forbidden errors return simple `{message}` format
+
+---
+
+**Last Updated:** December 28, 2025
 **Version:** 1.0.0

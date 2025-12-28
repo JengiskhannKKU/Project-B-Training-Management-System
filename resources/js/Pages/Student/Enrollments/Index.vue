@@ -51,6 +51,27 @@ const formatTime = (session) => {
     return `${start} - ${end}`;
 };
 
+const getEnrollmentStatusBadge = (status) => {
+    const badges = {
+        pending: { text: "Pending", class: "bg-yellow-600" },
+        confirmed: { text: "Confirmed", class: "bg-emerald-600" },
+        completed: { text: "Completed", class: "bg-blue-600" },
+        cancelled: { text: "Cancelled", class: "bg-gray-600" },
+    };
+    return badges[status] || { text: "Registered", class: "bg-emerald-600" };
+};
+
+const getSessionStatusBadge = (status) => {
+    const badges = {
+        upcoming: { text: "Upcoming", class: "bg-indigo-100 text-indigo-700" },
+        open: { text: "Open", class: "bg-green-100 text-green-700" },
+        closed: { text: "Closed", class: "bg-gray-100 text-gray-700" },
+        completed: { text: "Completed", class: "bg-purple-100 text-purple-700" },
+        cancelled: { text: "Cancelled", class: "bg-red-100 text-red-700" },
+    };
+    return badges[status] || { text: status, class: "bg-gray-100 text-gray-700" };
+};
+
 const isUpcoming = (session) => {
     const date = normalizeDate(session?.start_date);
     if (!date) return true;
@@ -247,9 +268,10 @@ onMounted(fetchEnrollments);
                                 Training Management
                             </div>
                             <span
-                                class="absolute left-3 top-3 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+                                :class="getEnrollmentStatusBadge(enrollment.status).class"
+                                class="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold text-white"
                             >
-                                Registered
+                                {{ getEnrollmentStatusBadge(enrollment.status).text }}
                             </span>
                         </div>
 
@@ -278,6 +300,17 @@ onMounted(fetchEnrollments);
                                         <div class="font-semibold text-gray-900">
                                             {{ formatDate(enrollment.session?.start_date) }}
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="text-xs text-gray-400">Session Status</div>
+                                        <span
+                                            :class="getSessionStatusBadge(enrollment.session?.status).class"
+                                            class="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold"
+                                        >
+                                            {{ getSessionStatusBadge(enrollment.session?.status).text }}
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
