@@ -1,31 +1,53 @@
 <script setup>
+import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
+import OverallRating from '@/Components/OverallRating.vue';
+import SentimentOverview from '@/Components/SentimentOverview.vue';
+import CommentsPanel from '@/Components/CommentsPanel.vue';
+import { mockFeedbacks, calculateFeedbackStats, filterFeedbacksByTrainer } from '@/mockData/feedbackData.js';
+
+// Simulating trainer ID - in a real app, this would come from auth
+const trainerId = ref(2);
+
+// Filter feedbacks for this trainer
+const trainerFeedbacks = computed(() => filterFeedbacksByTrainer(mockFeedbacks, trainerId.value));
+
+// Calculate statistics
+const stats = computed(() => calculateFeedbackStats(trainerFeedbacks.value));
 </script>
 
 <template>
-    <Head title="Feedback - Trainer" />
+    <Head title="Feedback & Reviews - Trainer" />
 
     <TrainerLayout>
-        <div class="bg-gray-50 min-h-screen">
+        <div class="space-y-6">
             <!-- Header -->
-            <header class="border-b bg-white px-8 py-6 -m-4 mb-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Feedback</h1>
-                    <p class="mt-1 text-sm text-gray-500">View and manage course feedback from students</p>
-                </div>
-            </header>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Feedback & Reviews</h1>
+                <p class="mt-2 text-sm text-gray-600">Analyze and respond to student feedback for your courses</p>
+            </div>
 
-            <!-- Content -->
-            <div class="p-8">
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">Feedback Management</h3>
-                        <p class="mt-1 text-sm text-gray-500">This page is under development</p>
-                    </div>
+            <!-- Two Column Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column: Analytics Panel (1/3 width) -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Overall Rating Component -->
+                    <OverallRating
+                        :average-rating="stats.averageRating"
+                        :total-reviews="stats.totalReviews"
+                        :distribution-percentages="stats.distributionPercentages"
+                    />
+
+                    <!-- Sentiment Overview Component -->
+                    <SentimentOverview
+                        :sentiment-percentages="stats.sentimentPercentages"
+                    />
+                </div>
+
+                <!-- Right Column: Comments Reader Panel (2/3 width) -->
+                <div class="lg:col-span-2">
+                    <CommentsPanel :reviews="trainerFeedbacks" />
                 </div>
             </div>
         </div>
