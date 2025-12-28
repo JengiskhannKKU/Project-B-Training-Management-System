@@ -36,6 +36,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/me/enrollments', function () {
         return Inertia::render('Student/Enrollments/Index');
     })->name('me.enrollments');
+    Route::get('/me/enrollments/{id}', function ($id) {
+        return Inertia::render('Student/Enrollments/Show', [
+            'enrollmentId' => $id,
+        ]);
+    })->name('me.enrollments.show');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
