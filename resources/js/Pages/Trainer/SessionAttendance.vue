@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
+import axios from "axios";
+import { useToast } from "vue-toastification";
 import {
     Search,
     Archive,
@@ -17,95 +19,54 @@ import {
     ArrowLeft,
     UserRoundCheck,
     UserRoundX,
+    Save,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 
-// Mock data - replace with actual data from backend
-const sessionInfo = ref({
-    id: 1,
-    name: "Session 1: Introduction to Laravel",
-    courseName: "Advanced Laravel Development",
-    date: "Dec 15, 2025",
-    time: "10:00 AM - 12:00 PM",
-    location: "Room A101",
+// Props from route
+const props = defineProps({
+    courseId: {
+        type: [Number, String],
+        required: true
+    },
+    sessionId: {
+        type: [Number, String],
+        required: true
+    }
 });
 
-const trainees = ref([
-    {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        contact: "0123456789",
-        department: "IT",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        contact: "0123456791",
-        department: "HR",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 3,
-        name: "Bob Johnson",
-        email: "bob@example.com",
-        contact: "0123456792",
-        department: "Engineering",
-        status: "absent",
-        checked: false,
-    },
-    {
-        id: 4,
-        name: "Alice Williams",
-        email: "alice@example.com",
-        contact: "0123456793",
-        department: "Marketing",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 5,
-        name: "Charlie Brown",
-        email: "charlie@example.com",
-        contact: "0123456794",
-        department: "IT",
-        status: "absent",
-        checked: false,
-    },
-    {
-        id: 6,
-        name: "Diana Prince",
-        email: "diana@example.com",
-        contact: "0123456795",
-        department: "Design",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 7,
-        name: "Edward Norton",
-        email: "edward@example.com",
-        contact: "0123456796",
-        department: "IT",
-        status: "present",
-        checked: true,
-    },
-    {
-        id: 8,
-        name: "Fiona Green",
-        email: "fiona@example.com",
-        contact: "0123456797",
-        department: "Marketing",
-        status: "absent",
-        checked: false,
-    },
-]);
+// Toast
+const toast = useToast();
+
+// State for save functionality
+const isSaving = ref(false);
+const isLoading = ref(true);
+
+// Data from backend
+const sessionInfo = ref({
+    id: null,
+    title: "",
+    program: null,
+    start_date: "",
+    end_date: "",
+    start_time: "",
+    end_time: "",
+    location: "",
+});
+
+const trainees = ref([]);
+
+// Attendance summary from API
+const attendanceSummary = ref({
+    total: 0,
+    present: 0,
+    absent: 0,
+    late: 0,
+    leave_early: 0,
+    not_marked: 0,
+});
 
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
@@ -131,15 +92,6 @@ const formatPhoneNumber = (phone) => {
 // Get unique departments for filter
 const departments = computed(() => {
     return [...new Set(trainees.value.map((trainee) => trainee.department))];
-});
-
-// Count attendance
-const presentCount = computed(() => {
-    return trainees.value.filter((trainee) => trainee.status === "present").length;
-});
-
-const absentCount = computed(() => {
-    return trainees.value.filter((trainee) => trainee.status === "absent").length;
 });
 
 // Filtered and sorted trainees
@@ -310,6 +262,97 @@ const resetSort = () => {
     sortDirection.value = "asc";
     showSortModal.value = false;
 };
+
+// Fetch session info
+const fetchSessionInfo = async () => {
+    try {
+        const response = await axios.get(`/api/sessions/${props.sessionId}`);
+        sessionInfo.value = response.data.data;
+    } catch (error) {
+        console.error('Error fetching session info:', error);
+        toast.error('Failed to load session information');
+    }
+};
+
+// Fetch attendance summary
+const fetchAttendanceSummary = async () => {
+    try {
+        const response = await axios.get(`/api/sessions/${props.sessionId}/attendance-summary`);
+        attendanceSummary.value = response.data.data;
+    } catch (error) {
+        console.error('Error fetching attendance summary:', error);
+    }
+};
+
+// Fetch enrollments and attendance data
+const fetchAttendanceData = async () => {
+    isLoading.value = true;
+    try {
+        const [enrollmentsResponse] = await Promise.all([
+            axios.get(`/api/sessions/${props.sessionId}/enrollments-for-attendance`),
+            fetchAttendanceSummary(),
+            fetchSessionInfo()
+        ]);
+
+        const enrollments = enrollmentsResponse.data.data;
+
+        // Map enrollments to trainees format
+        trainees.value = enrollments.map(enrollment => {
+            // Get the latest attendance record if exists
+            const latestAttendance = enrollment.attendances?.[0];
+            const status = latestAttendance?.status || 'absent';
+
+            return {
+                id: enrollment.id,
+                enrollmentId: enrollment.id,
+                name: enrollment.user?.name || 'Unknown',
+                email: enrollment.user?.email || '',
+                contact: enrollment.user?.phone_number || '',
+                department: enrollment.user?.department || 'N/A',
+                status: status,
+                checked: status === 'present',
+            };
+        });
+    } catch (error) {
+        console.error('Error fetching attendance data:', error);
+        toast.error('Failed to load attendance data');
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Save attendance
+const saveAttendance = async () => {
+    isSaving.value = true;
+
+    try {
+        // Prepare bulk attendance data
+        const attendanceData = trainees.value.map(trainee => ({
+            enrollment_id: trainee.enrollmentId,
+            status: trainee.status,
+        }));
+
+        // Send to API
+        await axios.post(`/api/sessions/${props.sessionId}/attendances/bulk`, {
+            items: attendanceData
+        });
+
+        toast.success('Attendance saved successfully!');
+
+        // Refresh data
+        await fetchAttendanceData();
+    } catch (error) {
+        console.error('Error saving attendance:', error);
+        toast.error(error.response?.data?.message || 'Failed to save attendance. Please try again.');
+    } finally {
+        isSaving.value = false;
+    }
+};
+
+// Load data on mount
+onMounted(() => {
+    fetchAttendanceData();
+});
 </script>
 
 <template>
@@ -326,7 +369,7 @@ const resetSort = () => {
             </Link>
 
             <!-- Page Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">
                         Session Attendance
@@ -335,47 +378,71 @@ const resetSort = () => {
                         Track attendance for this training session
                     </p>
                 </div>
+                <button
+                    @click="saveAttendance"
+                    :disabled="isSaving || isLoading"
+                    class="inline-flex items-center gap-2 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Save :size="20" />
+                    <span v-if="isSaving">Saving...</span>
+                    <span v-else>Save Attendance</span>
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div v-if="isLoading" class="bg-white rounded-[25px] shadow-sm p-12 border border-[#dfe5ef] text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2f837d] mx-auto mb-4"></div>
+                <p class="text-gray-600">Loading attendance data...</p>
             </div>
 
             <!-- Session Info Card -->
             <div
+                v-else
                 class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
             >
                 <div class="flex items-center gap-3 mb-4">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <h2 class="text-xl font-semibold text-gray-900">
-                        {{ sessionInfo.name }}
+                        {{ sessionInfo.title || 'Untitled Session' }}
                     </h2>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Course</p>
+                        <p class="text-sm text-gray-500 mb-1">Program</p>
                         <p class="text-base font-medium text-gray-900">
-                            {{ sessionInfo.courseName }}
+                            {{ sessionInfo.program?.name || 'Not found' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Date</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Calendar :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.date }}
+                            {{ sessionInfo.start_date || 'Not found' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Time</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Clock :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.time }}
+                            {{ sessionInfo.start_time || 'Not found' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Location</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <MapPin :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.location }}
+                            {{ sessionInfo.location || 'Not found' }}
                         </p>
                     </div>
+                </div>
+
+                <!-- Program Description -->
+                <div class="pt-4 border-t border-gray-200">
+                    <p class="text-sm text-gray-500 mb-2">Description</p>
+                    <p class="text-base text-gray-900">
+                        {{ sessionInfo.program?.description || 'Not found' }}
+                    </p>
                 </div>
 
                 <!-- Attendance Summary -->
@@ -383,19 +450,19 @@ const resetSort = () => {
                     <div class="grid grid-cols-3 gap-4">
                         <div class="text-center">
                             <p class="text-2xl font-bold text-gray-900">
-                                {{ trainees.length }}
+                                {{ attendanceSummary.total }}
                             </p>
                             <p class="text-sm text-gray-500">Total Trainees</p>
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-green-600">
-                                {{ presentCount }}
+                                {{ attendanceSummary.present }}
                             </p>
                             <p class="text-sm text-gray-500">Present</p>
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-red-600">
-                                {{ absentCount }}
+                                {{ attendanceSummary.absent }}
                             </p>
                             <p class="text-sm text-gray-500">Absent</p>
                         </div>
