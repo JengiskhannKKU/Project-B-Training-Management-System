@@ -19,6 +19,8 @@ Complete API Reference for Training Management System
 7. [Enrollments](#enrollments)
 8. [Admin - User Management](#admin---user-management)
 9. [Error Responses](#error-responses)
+10. [Quick Reference](#quick-reference)
+11. [Implementation Notes](#implementation-notes)
 
 ---
 
@@ -33,25 +35,30 @@ Complete API Reference for Training Management System
 
 ### Response Format
 
-All endpoints return JSON with this structure:
+All API endpoints return JSON responses. Most endpoints use a consistent structure:
 
-**Success:**
+**Success Response:**
 ```json
 {
-  "success": true,
   "message": "Operation completed successfully",
   "data": { ... }
 }
 ```
 
-**Error:**
+**Error Response:**
 ```json
 {
-  "success": false,
   "message": "Error description",
-  "errors": { "field": ["Error message"] }
+  "errors": {
+    "field": ["Error message"]
+  }
 }
 ```
+
+**Notes:**
+- Public catalog endpoints (`/catalog/*`) return arrays directly without wrapper
+- Some endpoints may return data directly without message wrapper
+- Validation errors (422) always include both `message` and `errors` fields
 
 ### Authentication
 
@@ -104,7 +111,6 @@ Register a new user. New users are automatically assigned the `student` role.
 **Response (201):**
 ```json
 {
-  "success": true,
   "message": "Registered successfully",
   "data": {
     "token": "1|AbC123...",
@@ -114,7 +120,9 @@ Register a new user. New users are automatically assigned the `student` role.
       "email": "john@example.com",
       "role_id": 3,
       "status": "active",
-      "created_at": "2025-01-01T00:00:00Z"
+      "email_verified_at": "2025-01-01T00:00:00Z",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
     }
   }
 }
@@ -129,6 +137,63 @@ Register a new user. New users are automatically assigned the `student` role.
   }
 }
 ```
+
+---
+
+### POST /auth/login
+
+Login with email and password to receive an API token.
+
+**Authentication:** Not required
+
+**Request:**
+```json
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
+
+**Validation:**
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| email | string | Yes | Valid email format |
+| password | string | Yes | Required |
+
+**Response (200):**
+```json
+{
+  "message": "Logged in successfully",
+  "data": {
+    "token": "2|XyZ789...",
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role_id": 3,
+      "status": "active",
+      "email_verified_at": "2025-01-01T00:00:00Z",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+**Error (422) - Invalid Credentials:**
+```json
+{
+  "message": "The provided credentials are incorrect.",
+  "errors": {
+    "email": ["The provided credentials are incorrect."]
+  }
+}
+```
+
+**Notes:**
+- Returns a new Sanctum API token on each login
+- User's status must be 'active' to login
+- Password is verified using Laravel's Hash::check()
 
 ---
 
@@ -1037,7 +1102,6 @@ GET /admin/users?status=active&per_page=20
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "Users retrieved successfully",
   "data": {
     "current_page": 1,
@@ -1047,17 +1111,27 @@ GET /admin/users?status=active&per_page=20
         "name": "John Doe",
         "email": "john@example.com",
         "status": "active",
+        "email_verified_at": "2025-01-01T00:00:00Z",
+        "created_at": "2025-01-01T00:00:00Z",
+        "updated_at": "2025-01-01T00:00:00Z",
+        "role_id": 1,
         "role": {
           "id": 1,
           "name": "admin",
           "label": "Admin"
-        },
-        "created_at": "2025-01-01T00:00:00Z"
+        }
       }
     ],
-    "total": 50,
+    "first_page_url": "http://localhost:8000/api/admin/users?page=1",
+    "from": 1,
+    "last_page": 4,
+    "last_page_url": "http://localhost:8000/api/admin/users?page=4",
+    "next_page_url": "http://localhost:8000/api/admin/users?page=2",
+    "path": "http://localhost:8000/api/admin/users",
     "per_page": 15,
-    "last_page": 4
+    "prev_page_url": null,
+    "to": 15,
+    "total": 50
   }
 }
 ```
@@ -1091,14 +1165,16 @@ Create a new user with specified role. Admin only.
 **Response (201):**
 ```json
 {
-  "success": true,
   "message": "User created successfully",
   "data": {
     "id": 2,
     "name": "Jane Smith",
     "email": "jane@example.com",
-    "status": "active",
+    "password": "$2y$12$hashed_password_here",
     "role_id": 2,
+    "status": "active",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T00:00:00Z",
     "created_at": "2025-01-02T00:00:00Z"
   }
 }
@@ -1132,13 +1208,17 @@ Update user information. Admin only.
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "User updated successfully",
   "data": {
     "id": 2,
     "name": "Jane Smith (Updated)",
     "email": "jane@example.com",
+    "password": "$2y$12$hashed_password_here",
+    "role_id": 1,
     "status": "inactive",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "created_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T10:00:00Z",
     "role": {
       "id": 1,
       "name": "admin",
@@ -1159,11 +1239,17 @@ Deactivate a user (soft delete - sets status to inactive). Admin only.
 **Response (200):**
 ```json
 {
-  "success": true,
   "message": "User deactivated successfully",
   "data": {
     "id": 2,
-    "status": "inactive"
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "password": "$2y$12$hashed_password_here",
+    "role_id": 2,
+    "status": "inactive",
+    "email_verified_at": "2025-01-02T00:00:00Z",
+    "created_at": "2025-01-02T00:00:00Z",
+    "updated_at": "2025-01-02T11:00:00Z"
   }
 }
 ```
@@ -1192,7 +1278,6 @@ Valid token but insufficient permissions.
 
 ```json
 {
-  "success": false,
   "message": "Forbidden"
 }
 ```
@@ -1307,6 +1392,91 @@ Internal server error.
 | PUT | /admin/users/{id} | Update user | Admin |
 | DELETE | /admin/users/{id} | Deactivate user | Admin |
 | PUT | /admin/users/{id}/deactivate | Deactivate user | Admin |
+
+---
+
+## Implementation Notes
+
+### Response Format Variations
+
+While most endpoints follow the standard `{message, data}` format, some endpoints have variations:
+
+1. **Public Catalog Endpoints** (`GET /catalog/programs`, `GET /catalog/programs/{id}/sessions`)
+   - Return arrays directly without wrapper
+   - Example: `[{program1}, {program2}]`
+
+2. **Enrollment Endpoints** - Use custom response format:
+   - `POST /enrollments`: Returns `{message, data}` with 201 status
+   - `PUT /enrollments/{id}/cancel`: Returns `{message, data}` with 200 status
+   - `GET /me/enrollments`: Returns array directly `[{enrollment1}]`
+
+3. **Profile Endpoints**:
+   - `GET /me`: Returns `{user, profile, avatar_present}` (no message wrapper)
+   - `PUT /me/profile`: Returns `{message, user}` (user includes nested profile)
+   - `POST /me/avatar`: Returns `{message}` only
+   - `GET /me/avatar`: Returns binary image data (not JSON)
+   - `DELETE /me/avatar`: Returns `{message}` or 404 with `{message}`
+
+### Business Logic Highlights
+
+1. **Registration**:
+   - All new users automatically verified (`email_verified_at` set to now)
+   - Default role is `student`
+   - Status automatically set to `active`
+
+2. **Enrollment**:
+   - Uses database transactions for capacity checking
+   - Counts only non-cancelled enrollments against capacity
+   - Cannot enroll if session is not both 'approved' AND 'open'
+   - Duplicate enrollment check per user-session pair
+
+3. **Cancellation**:
+   - Cannot cancel on or after session `start_date`
+   - Idempotent: Cancelling already-cancelled enrollment returns 200
+   - Only the enrollment owner can cancel
+
+4. **Avatar Storage**:
+   - Stored as BLOB in database (not file system)
+   - MIME type stored separately for correct Content-Type header
+   - Max size: 2MB
+   - Supported formats: jpeg, png, jpg, gif
+
+### Authentication Flow
+
+1. **Token Generation**:
+   - Both register and login create new Sanctum tokens
+   - Token name: `api-token`
+   - Tokens don't expire by default (configure in sanctum config if needed)
+
+2. **Token Usage**:
+   - Include in header: `Authorization: Bearer {token}`
+   - Required for all endpoints except:
+     - `POST /auth/register`
+     - `POST /auth/login`
+     - `GET /catalog/programs`
+     - `GET /catalog/programs/{id}/sessions`
+
+3. **Role-Based Access**:
+   - Admin endpoints: Require `role.name = 'admin'`
+   - Trainer endpoints: Require `role.name IN ('trainer', 'admin')`
+   - Student endpoints: Any authenticated user
+
+### Pagination
+
+- Default per_page: 15
+- Max per_page: 100
+- Laravel pagination format includes:
+  - `current_page`, `last_page`, `total`, `per_page`
+  - `first_page_url`, `last_page_url`, `next_page_url`, `prev_page_url`
+  - `from`, `to` (record numbers)
+  - `path` (base URL)
+
+### Error Handling
+
+- Validation errors (422) use Laravel's default format
+- Model not found errors (404) return Laravel's default message
+- Business logic errors (422) return custom message strings
+- Unauthorized/Forbidden errors return simple `{message}` format
 
 ---
 
