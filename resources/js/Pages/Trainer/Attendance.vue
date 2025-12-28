@@ -716,7 +716,7 @@ const selectedCourseName = computed(() => {
                 :courseId="selectedCourse?.id || 0"
                 :courseName="selectedCourseName"
                 :sessions="selectedCourseSessions"
-                baseUrl="/trainer/attendance"
+                baseUrl="/trainer"
                 @close="showSessionsModal = false"
             />
         </div>
