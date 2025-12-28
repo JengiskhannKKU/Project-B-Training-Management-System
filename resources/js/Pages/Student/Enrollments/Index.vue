@@ -58,7 +58,7 @@ const getEnrollmentStatusBadge = (status) => {
         completed: { text: "Completed", class: "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg" },
         cancelled: { text: "Cancelled", class: "bg-gray-600" },
     };
-    return badges[status] || { text: "Registered", class: "bg-emerald-600" };
+    return badges[status] || { text: "Unknown", class: "bg-gray-600" };
 };
 
 const getSessionStatusBadge = (status) => {
@@ -107,13 +107,13 @@ const normalizedEnrollments = computed(() =>
 
 const upcomingEnrollments = computed(() =>
     normalizedEnrollments.value.filter(
-        (item) => isUpcoming(item.session) && item.status !== "cancelled"
+        (item) => item.status !== "completed"
     )
 );
 
 const finishedEnrollments = computed(() =>
     normalizedEnrollments.value.filter(
-        (item) => !isUpcoming(item.session) || item.status === "cancelled"
+        (item) => item.status === "completed"
     )
 );
 
@@ -349,27 +349,33 @@ onMounted(fetchEnrollments);
                             </div>
 
                             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
-                                <Link
-                                    :href="route('me.enrollments.show', enrollment.id)"
-                                    class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
-                                >
-                                    View Details
-                                </Link>
-                                <button
-                                    v-if="activeTab === 'upcoming' && canCancel(enrollment)"
-                                    type="button"
-                                    class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
-                                    :disabled="cancellingId === enrollment.id"
-                                    @click="cancelEnrollment(enrollment)"
-                                >
-                                    <LoadingSpinner
-                                        v-if="cancellingId === enrollment.id"
-                                        size="sm"
-                                        color="gray"
-                                        inline
-                                    />
-                                    <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
-                                </button>
+                                <!-- If status is "pending", show only Cancel button -->
+                                <template v-if="enrollment.status === 'pending'">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
+                                        :disabled="cancellingId === enrollment.id"
+                                        @click="cancelEnrollment(enrollment)"
+                                    >
+                                        <LoadingSpinner
+                                            v-if="cancellingId === enrollment.id"
+                                            size="sm"
+                                            color="gray"
+                                            inline
+                                        />
+                                        <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
+                                    </button>
+                                </template>
+
+                                <!-- For other statuses, show View Details only -->
+                                <template v-else>
+                                    <Link
+                                        :href="route('me.enrollments.show', enrollment.id)"
+                                        class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                                    >
+                                        View Details
+                                    </Link>
+                                </template>
                             </div>
                         </div>
                     </div>
