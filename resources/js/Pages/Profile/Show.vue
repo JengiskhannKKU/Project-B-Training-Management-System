@@ -616,7 +616,7 @@ const onAvatarSelected = async (event) => {
                                         <!-- Dropdown menu -->
                                         <div
                                             v-if="showAvatarMenu"
-                                            class="absolute right-0 top-10 z-50 w-48 rounded-xl border border-gray-200 bg-white shadow-lg"
+                                            class="absolute left-full top-0 ml-2 z-50 w-48 rounded-xl border border-gray-200 bg-white shadow-lg"
                                         >
                                             <button
                                                 type="button"
