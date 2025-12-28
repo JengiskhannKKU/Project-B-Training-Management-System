@@ -58,7 +58,7 @@ const getEnrollmentStatusBadge = (status) => {
         completed: { text: "Completed", class: "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg" },
         cancelled: { text: "Cancelled", class: "bg-gray-600" },
     };
-    return badges[status] || { text: "Unknown", class: "bg-gray-600" };
+    return badges[status] || { text: "Pending", class: "bg-yellow-600" };
 };
 
 const getSessionStatusBadge = (status) => {
