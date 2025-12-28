@@ -30,6 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('enrollments', [EnrollmentController::class, 'store']);
     Route::put('enrollments/{enrollment}/cancel', [EnrollmentController::class, 'cancel']);
 
+    // Students can view their own enrollment attendance
+    Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
+
     Route::apiResource('programs', ProgramController::class);
     Route::apiResource('sessions', TrainingSessionController::class);
 
@@ -38,7 +41,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('sessions/{session}/attendances', [AttendanceController::class, 'sessionAttendances']);
         Route::get('sessions/{session}/attendance-summary', [AttendanceController::class, 'attendanceSummary']);
         Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);
-        Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
         Route::post('attendances', [AttendanceController::class, 'store']);
         Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
     });
