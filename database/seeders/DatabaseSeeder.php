@@ -15,18 +15,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            RoleSeeder::class,
-            UserSeeder::class,
-            ProfileSeeder::class,
-            ProgramSeeder::class,
-            TrainingSessionSeeder::class,
-            EnrollmentSeeder::class,
-            AttendanceSeeder::class,
-            CertificateRequestSeeder::class,
-            CertificateSeeder::class,
-            AdminRequestSeeder::class,
+            AuthLoginSeeder::class,
         ]);
 
-        $this->command->info('All database tables seeded successfully!');
+        $this->command->info('Auth login seed completed.');
     }
 }
