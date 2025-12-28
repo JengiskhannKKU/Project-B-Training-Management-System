@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
@@ -55,7 +55,7 @@ const getEnrollmentStatusBadge = (status) => {
     const badges = {
         pending: { text: "Pending", class: "bg-yellow-600" },
         confirmed: { text: "Confirmed", class: "bg-emerald-600" },
-        completed: { text: "Completed", class: "bg-blue-600" },
+        completed: { text: "Completed", class: "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg" },
         cancelled: { text: "Cancelled", class: "bg-gray-600" },
     };
     return badges[status] || { text: "Registered", class: "bg-emerald-600" };
@@ -349,6 +349,12 @@ onMounted(fetchEnrollments);
                             </div>
 
                             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
+                                <Link
+                                    :href="route('me.enrollments.show', enrollment.id)"
+                                    class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                                >
+                                    View Details
+                                </Link>
                                 <button
                                     v-if="activeTab === 'upcoming' && canCancel(enrollment)"
                                     type="button"
