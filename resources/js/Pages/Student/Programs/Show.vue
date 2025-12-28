@@ -184,6 +184,29 @@ const sessionTrainerPhoto = (session) =>
 const sessionTrainerName = (session) =>
     session?.trainer_name || session?.trainer?.name || "Trainer assigned";
 
+const getAvailableSeats = (session) => {
+    const capacity = Number(session?.capacity ?? 0);
+    const active = Number(session?.active_enrollments_count ?? 0);
+    if (!Number.isNaN(capacity) && capacity >= 9999) {
+        return { unlimited: true, available: null, capacity };
+    }
+    if (Number.isNaN(capacity) || capacity <= 0) {
+        return { unlimited: false, available: null, capacity: 0 };
+    }
+    const available = Math.max(capacity - active, 0);
+    return { unlimited: false, available, capacity };
+};
+
+const seatsLabel = (session) => {
+    const seats = getAvailableSeats(session);
+    if (seats.unlimited) {
+        return "Unlimited seats";
+    }
+    if (seats.available === null) {
+        return "Seats available";
+    }
+    return `${seats.available} seats available`;
+};
 onMounted(() => {
     fetchProgram();
     fetchSessions();
@@ -323,7 +346,7 @@ onMounted(() => {
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
-                                        5 seats available
+                                        {{ seatsLabel(session) }}
                                     </span>
                                     <button
                                         type="button"

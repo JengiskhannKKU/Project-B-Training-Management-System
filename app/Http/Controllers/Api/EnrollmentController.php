@@ -36,15 +36,24 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'Cannot enroll: Session capacity is full.'], 422);
         }
 
-        $exists = Enrollment::where('user_id', $user->id)
+        $existingEnrollment = Enrollment::where('user_id', $user->id)
             ->where('session_id', $session->id)
-            ->exists();
+            ->first();
 
-        if ($exists) {
+        if ($existingEnrollment && $existingEnrollment->status !== 'cancelled') {
             return response()->json(['message' => 'You are already enrolled in this session.'], 422);
         }
 
-        $enrollment = DB::transaction(function () use ($user, $session) {
+        $enrollment = DB::transaction(function () use ($user, $session, $existingEnrollment) {
+            if ($existingEnrollment) {
+                $existingEnrollment->update([
+                    'status' => 'confirmed',
+                    'enrolled_at' => now(),
+                ]);
+
+                return $existingEnrollment;
+            }
+
             return Enrollment::create([
                 'user_id' => $user->id,
                 'session_id' => $session->id,
@@ -54,7 +63,7 @@ class EnrollmentController extends Controller
         });
 
         return response()->json([
-            'message' => 'Enrollment created successfully.',
+            'message' => $existingEnrollment ? 'Enrollment reactivated successfully.' : 'Enrollment created successfully.',
             'data' => $enrollment,
         ], 201);
     }

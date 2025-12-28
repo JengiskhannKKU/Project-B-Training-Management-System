@@ -46,6 +46,11 @@ class CatalogController extends Controller
                 'approval_status',
             ])
             ->with('trainer:id,name')
+            ->withCount([
+                'enrollments as active_enrollments_count' => function ($q) {
+                    $q->where('status', '!=', 'cancelled');
+                },
+            ])
             ->where('program_id', $program->id)
             ->where('approval_status', 'approved')
             ->where('status', 'open')
