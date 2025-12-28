@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
+import CourseCard from "@/Components/CourseCard.vue";
 import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen } from "lucide-vue-next";
 
 const toast = useToast();
@@ -65,16 +66,6 @@ const formatDuration = (hours) => {
     return `${hours} hrs`;
 };
 
-const categoryClass = (category) => {
-    const colorMap = {
-        Design: "bg-rose-50 text-rose-700",
-        "IT & Software": "bg-blue-50 text-blue-700",
-        Marketing: "bg-amber-50 text-amber-700",
-        "Data Science": "bg-indigo-50 text-indigo-700",
-        General: "bg-gray-100 text-gray-600",
-    };
-    return colorMap[category] || "bg-gray-100 text-gray-600";
-};
 </script>
 
 <template>
@@ -157,50 +148,21 @@ const categoryClass = (category) => {
                     v-else
                     class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                 >
-                    <Link
+                    <CourseCard
                         v-for="program in filteredPrograms"
                         :key="program.id"
+                        :id="program.id"
                         :href="`/programs/${program.id}`"
-                        class="block"
-                    >
-                        <article
-                            class="rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-                        >
-                        <div class="h-40 overflow-hidden rounded-t-2xl bg-gradient-to-br from-[#c9f7e6] via-[#e8faf4] to-[#fff]">
-                            <img
-                                v-if="program.image_url"
-                                :src="program.image_url"
-                                alt=""
-                                class="h-full w-full object-cover"
-                            />
-                            <div
-                                v-else
-                                class="flex h-full items-center justify-center text-sm font-semibold text-[#2f837d]"
-                            >
-                                Training program
-                            </div>
-                        </div>
-                        <div class="p-5 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="rounded-full px-3 py-1 text-xs font-semibold"
-                                    :class="categoryClass(program.category || 'General')"
-                                >
-                                    {{ program.category || 'General' }}
-                                </span>
-                                <span class="text-xs text-gray-400">
-                                    {{ formatDuration(program.duration_hours) }}
-                                </span>
-                            </div>
-                            <h3 class="text-lg font-semibold text-gray-900">
-                                {{ program.name || 'Untitled program' }}
-                            </h3>
-                            <div class="text-sm text-gray-500">
-                                Duration: <span class="font-medium text-gray-700">{{ formatDuration(program.duration_hours) }}</span>
-                            </div>
-                        </div>
-                        </article>
-                    </Link>
+                        :name="program.name || 'Untitled program'"
+                        :image_url="program.image_url || ''"
+                        :rating="program.rating ?? 4.6"
+                        :level="program.level || 'beginner'"
+                        :students_count="program.students_count ?? 32"
+                        :price="program.price ?? 'Free'"
+                        :date="program.date ?? 'Jan 5-10, 2026'"
+                        :time="program.time ?? '09:00 - 16:00'"
+                        :location="program.location ?? 'Smart Classroom'"
+                    />
                 </div>
 
                 <div

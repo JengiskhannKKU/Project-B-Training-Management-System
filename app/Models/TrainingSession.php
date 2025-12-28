@@ -22,6 +22,8 @@ class TrainingSession extends Model
         'end_time',
         'capacity',
         'trainer_id',
+        'trainer_name',
+        'trainer_photo_url',
         'location',
         'status',
         'approval_status',

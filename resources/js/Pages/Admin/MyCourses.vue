@@ -327,6 +327,14 @@ const mapRequestToRow = (req) => {
             ? `${startTime || "--:--"} - ${endTime || "--:--"}`
             : "";
 
+    const enrollmentLimit = payload.enrollment_limit || payload.enrollmentLimit;
+    const capacityDisplay =
+        enrollmentLimit === "unlimited"
+            ? "0/Unlimited"
+            : payload.capacity
+                ? `0/${payload.capacity}`
+                : "";
+
     return {
         id: req.id,
         request_id: req.id,
@@ -338,7 +346,7 @@ const mapRequestToRow = (req) => {
                 : null,
         title:
             (req.target_type === "session"
-                ? payload.course
+                ? payload.title || payload.course
                 : payload.title || payload.name) ||
             `${req.target_type} ${req.id}`,
         program_label:
@@ -351,7 +359,7 @@ const mapRequestToRow = (req) => {
         session_date: payload.date || payload.start_date || "",
         session_time: timeRange,
         session_location: payload.location || "",
-        session_capacity: payload.capacity ? `0/${payload.capacity}` : "",
+        session_capacity: capacityDisplay,
         category: payload.category || "General",
         status: req.status || "pending",
         requester_email: req.requester?.email || "N/A",

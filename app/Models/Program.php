@@ -16,6 +16,7 @@ class Program extends Model
         'code',
         'description',
         'category',
+        'level',
         'duration_hours',
         'image_url',
         'created_by',

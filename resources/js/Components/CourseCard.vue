@@ -13,17 +13,25 @@ interface CourseCardProps {
     date?: string;
     time?: string;
     location?: string;
+    href?: string;
 }
 
 defineProps<CourseCardProps>();
 
+const formatLevel = (level: string) => {
+    if (!level) return 'Beginner';
+    const normalized = level.toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
 const getLevelColor = (level: string) => {
+    const normalized = level.toLowerCase();
     const colors = {
-        'Beginner': 'bg-teal-100 text-teal-700',
-        'Intermediate': 'bg-amber-100 text-amber-700',
-        'Advanced': 'bg-rose-100 text-rose-700',
+        beginner: 'bg-emerald-100 text-emerald-700',
+        intermediate: 'bg-amber-100 text-amber-700',
+        advanced: 'bg-red-100 text-red-700',
     };
-    return colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-700';
+    return colors[normalized as keyof typeof colors] || 'bg-gray-100 text-gray-700';
 };
 
 const getStarType = (index: number, rating: number) => {
@@ -38,7 +46,7 @@ const getStarType = (index: number, rating: number) => {
 
 <template>
     <Link
-        :href="`/trainer/programs/${id}`"
+        :href="href || `/trainer/programs/${id}`"
         class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer"
     >
         <div class="aspect-video w-full overflow-hidden flex-shrink-0">
@@ -76,7 +84,7 @@ const getStarType = (index: number, rating: number) => {
                     <span class="ml-1 text-sm text-gray-600">({{ rating }})</span>
                 </div>
                 <span :class="getLevelColor(level || 'Beginner')" class="rounded px-2 py-1 text-xs font-medium">
-                    {{ level }}
+                    {{ formatLevel(level || 'Beginner') }}
                 </span>
             </div>
 

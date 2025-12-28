@@ -94,6 +94,7 @@ class AdminRequestActionController extends Controller
                 'code' => $payload['code'] ?? 'PRG-' . strtoupper(Str::random(6)),
                 'description' => $payload['full_description'] ?? $payload['short_description'] ?? null,
                 'category' => $payload['category'] ?? 'General',
+                'level' => $payload['level'] ?? 'beginner',
                 'duration_hours' => $payload['duration_hours'] ?? 1,
                 'image_url' => $payload['image_url'] ?? null,
                 'created_by' => $adminRequest->requester_id,
@@ -158,6 +159,7 @@ class AdminRequestActionController extends Controller
                         'code' => $programPayload['code'] ?? 'PRG-' . strtoupper(Str::random(6)),
                         'description' => $programPayload['full_description'] ?? $programPayload['short_description'] ?? null,
                         'category' => $programPayload['category'] ?? 'General',
+                        'level' => $programPayload['level'] ?? 'beginner',
                         'duration_hours' => $programPayload['duration_hours'] ?? 1,
                         'image_url' => $programPayload['image_url'] ?? null,
                         'created_by' => $maybeProgramRequest->requester_id,
@@ -193,6 +195,14 @@ class AdminRequestActionController extends Controller
             'Close' => 'closed',
         ];
 
+        $enrollmentLimit = $payload['enrollment_limit'] ?? null;
+        $capacityValue = $enrollmentLimit === 'unlimited'
+            ? 9999
+            : (int) ($payload['capacity'] ?? 1);
+
+        $payloadStatus = $payload['status'] ?? null;
+        $normalizedStatus = $statusMap[$payloadStatus] ?? ($payloadStatus ?: 'open');
+
         $sessionData = [
             'program_id' => $program->id,
             'title' => $payload['course'] ?? $payload['title'] ?? 'Session',
@@ -200,10 +210,12 @@ class AdminRequestActionController extends Controller
             'end_date' => $payload['date'] ?? now()->toDateString(),
             'start_time' => $payload['start_time'] ? Carbon::parse($payload['start_time'])->format('H:i') : null,
             'end_time' => $payload['end_time'] ? Carbon::parse($payload['end_time'])->format('H:i') : null,
-            'capacity' => (int) ($payload['capacity'] ?? 1),
+            'capacity' => $capacityValue,
             'trainer_id' => $payload['trainer_id'] ?? $adminRequest->requester_id,
+            'trainer_name' => $payload['trainer'] ?? $payload['trainer_name'] ?? null,
+            'trainer_photo_url' => $payload['trainer_photo_url'] ?? null,
             'location' => $payload['location'] ?? null,
-            'status' => $statusMap[$payload['status'] ?? ''] ?? ($payload['status'] ?? 'upcoming'),
+            'status' => $normalizedStatus,
             'approval_status' => 'approved',
             'approved_by' => $request->user()->id,
             'approved_at' => now(),

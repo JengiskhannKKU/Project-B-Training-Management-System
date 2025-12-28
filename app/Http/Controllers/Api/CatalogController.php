@@ -29,6 +29,23 @@ class CatalogController extends Controller
     public function sessions(Program $program): JsonResponse
     {
         $sessions = TrainingSession::query()
+            ->select([
+                'id',
+                'program_id',
+                'title',
+                'start_date',
+                'end_date',
+                'start_time',
+                'end_time',
+                'capacity',
+                'trainer_id',
+                'trainer_name',
+                'trainer_photo_url',
+                'location',
+                'status',
+                'approval_status',
+            ])
+            ->with('trainer:id,name')
             ->where('program_id', $program->id)
             ->where('approval_status', 'approved')
             ->where('status', 'open')

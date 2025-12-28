@@ -50,14 +50,21 @@ const isLoadingSessions = ref(false);
 const sessionRequestRows = ref<any[]>([]);
 
 const sessionForm = useForm({
-    course: 'UX/UI Design Fundamentals',
+    title: '',
+    registration_start: '',
+    registration_end: '',
     date: '',
     start_time: '',
     end_time: '',
     location: '',
     trainer: '',
     capacity: '',
-    status: 'Open',
+    enrollment_limit: 'limited',
+    trainer_photo_url: '',
+    require_approval: false,
+    send_confirmation_email: false,
+    allow_waitlist: false,
+    allow_cancel_enrollment: false,
 });
 
 const toast = useToast();
@@ -91,31 +98,12 @@ const backLinkText = computed(() => {
     return 'Back to My Courses';
 });
 
-const availableCourses = [
-    'UX/UI Design Fundamentals',
-    'Leadership Fundamentals',
-    'Data Analysis',
-    'Advanced Computer Programming',
-    'Design Thinking Workshop'
-];
-
 const editForm = useForm({
     title: 'Advanced UX Design for Enterprise Application',
     short_description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue nullam consectetur ornare consectetur sed in leo.',
     full_description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue nullam consectetur ornare consectetur sed in leo.\nEnim imperdiet urna tincidunt at integer nunc amet vitae orci.\nUltrices augue scelerisque.',
     category: 'Design',
     level: 'beginner',
-    date: '10/15/2024',
-    start_time: '09:00 AM',
-    end_time: '10:30 AM',
-    location: 'Main Conference Room',
-    thumbnail: null,
-    registration_start: '12/02/2548',
-    registration_end: '13/02/2548',
-    require_approval: false,
-    send_confirmation_email: false,
-    allow_waitlist: false,
-    allow_cancel_enrollment: false,
     certificate_template: 'standard',
     certificate_type: 'free',
 });
@@ -197,16 +185,6 @@ const courseDataForModal = computed(() => ({
     full_description: editForm.full_description,
     category: editForm.category,
     level: editForm.level,
-    date: editForm.date,
-    start_time: editForm.start_time,
-    end_time: editForm.end_time,
-    location: editForm.location,
-    registration_start: editForm.registration_start,
-    registration_end: editForm.registration_end,
-    require_approval: editForm.require_approval,
-    send_confirmation_email: editForm.send_confirmation_email,
-    allow_waitlist: editForm.allow_waitlist,
-    allow_cancel_enrollment: editForm.allow_cancel_enrollment,
     certificate_template: editForm.certificate_template,
     certificate_type: editForm.certificate_type,
 }));
@@ -228,17 +206,23 @@ const handleEditModalSuccess = (payload?: Record<string, unknown>) => {
             payload,
         }))
         .then(() => {
-            toast.success('Course update request sent to admin.');
+            toast.success('Program update request sent to admin.');
             showEditModal.value = false;
         })
-        .catch((error) => handleApiError(error, 'Unable to submit course update.'));
+        .catch((error) => handleApiError(error, 'Unable to submit program update.'));
 };
 
 const validateSessionForm = () => {
     sessionErrors.value = {};
 
-    if (!sessionForm.course) {
-        sessionErrors.value.course = 'Please select a course';
+    if (!sessionForm.title.trim()) {
+        sessionErrors.value.title = 'Session title is required';
+    }
+    if (!sessionForm.registration_start) {
+        sessionErrors.value.registration_start = 'Registration start date is required';
+    }
+    if (!sessionForm.registration_end) {
+        sessionErrors.value.registration_end = 'Registration end date is required';
     }
     if (!sessionForm.date) {
         sessionErrors.value.date = 'Date is required';
@@ -252,7 +236,7 @@ const validateSessionForm = () => {
     if (!sessionForm.location.trim()) {
         sessionErrors.value.location = 'Location is required';
     }
-    if (!sessionForm.capacity) {
+    if (sessionForm.enrollment_limit === 'limited' && !sessionForm.capacity) {
         sessionErrors.value.capacity = 'Capacity is required';
     }
 
@@ -264,15 +248,23 @@ const submitAddSession = async () => {
         try {
             isSubmitting.value = true;
             await ensureCsrf();
+            const capacityValue = sessionForm.enrollment_limit === 'unlimited' ? null : sessionForm.capacity;
             const payload = {
-                course: sessionForm.course,
+                title: sessionForm.title,
+                registration_start: sessionForm.registration_start,
+                registration_end: sessionForm.registration_end,
                 date: sessionForm.date,
-                start_time: sessionForm.start_time,
-                end_time: sessionForm.end_time,
+                start_time: sessionForm.start_time || null,
+                end_time: sessionForm.end_time || null,
                 location: sessionForm.location,
                 trainer: sessionForm.trainer,
-                capacity: sessionForm.capacity,
-                status: sessionForm.status,
+                enrollment_limit: sessionForm.enrollment_limit,
+                capacity: capacityValue,
+                trainer_photo_url: sessionForm.trainer_photo_url || null,
+                require_approval: sessionForm.require_approval,
+                send_confirmation_email: sessionForm.send_confirmation_email,
+                allow_waitlist: sessionForm.allow_waitlist,
+                allow_cancel_enrollment: sessionForm.allow_cancel_enrollment,
             };
 
             await axios.post('/api/trainer/session-requests', {
@@ -302,14 +294,25 @@ const handleAddSession = () => {
 
 const handleEditSession = (session: any) => {
     selectedSession.value = session;
-    sessionForm.course = session.session;
-    sessionForm.date = session.date;
-    const times = session.time.split(' - ');
-    sessionForm.start_time = times[0];
-    sessionForm.end_time = times[1];
-    sessionForm.location = session.location;
-    sessionForm.capacity = session.capacity.split('/')[1] || session.capacity;
-    sessionForm.status = session.status;
+    sessionForm.title = session.session || session.title || '';
+    sessionForm.registration_start = session.registration_start || session.registration_start_date || '';
+    sessionForm.registration_end = session.registration_end || session.registration_end_date || '';
+    sessionForm.date = session.date || '';
+    sessionForm.start_time = session.start_time || session.startTime || '';
+    sessionForm.end_time = session.end_time || session.endTime || '';
+    sessionForm.location = session.location || '';
+    sessionForm.trainer = session.trainer || '';
+    const rawCapacity = session.capacity?.split?.('/')[1] || session.capacity || '';
+    const capacityLabel = String(rawCapacity || '');
+    const isUnlimited = capacityLabel.toLowerCase() === 'unlimited' || Number(capacityLabel) >= 9999;
+    const sessionEnrollmentLimit = session.enrollment_limit || (isUnlimited ? 'unlimited' : 'limited');
+    sessionForm.enrollment_limit = sessionEnrollmentLimit;
+    sessionForm.capacity = sessionEnrollmentLimit === 'unlimited' ? '' : capacityLabel;
+    sessionForm.trainer_photo_url = session.trainer_photo_url || '';
+    sessionForm.require_approval = session.require_approval ?? false;
+    sessionForm.send_confirmation_email = session.send_confirmation_email ?? false;
+    sessionForm.allow_waitlist = session.allow_waitlist ?? false;
+    sessionForm.allow_cancel_enrollment = session.allow_cancel_enrollment ?? false;
     showEditSessionModal.value = true;
 };
 
@@ -320,19 +323,27 @@ const handleDeleteSession = (session: any) => {
 
 const submitEditSession = () => {
     if (validateSessionForm()) {
+        const capacityValue = sessionForm.enrollment_limit === 'unlimited' ? null : sessionForm.capacity;
         ensureCsrf().then(() => axios.post('/api/trainer/session-requests', {
             action: 'update',
             session_id: selectedSession.value?.id,
             program_id: displayProgram.value?.id || props.program.id,
             payload: {
-                course: sessionForm.course,
+                title: sessionForm.title,
+                registration_start: sessionForm.registration_start,
+                registration_end: sessionForm.registration_end,
                 date: sessionForm.date,
-                start_time: sessionForm.start_time,
-                end_time: sessionForm.end_time,
+                start_time: sessionForm.start_time || null,
+                end_time: sessionForm.end_time || null,
                 location: sessionForm.location,
                 trainer: sessionForm.trainer,
-                capacity: sessionForm.capacity,
-                status: sessionForm.status,
+                enrollment_limit: sessionForm.enrollment_limit,
+                capacity: capacityValue,
+                trainer_photo_url: sessionForm.trainer_photo_url || null,
+                require_approval: sessionForm.require_approval,
+                send_confirmation_email: sessionForm.send_confirmation_email,
+                allow_waitlist: sessionForm.allow_waitlist,
+                allow_cancel_enrollment: sessionForm.allow_cancel_enrollment,
             },
         }))
             .then(() => {
@@ -441,6 +452,9 @@ const mapSessionForDisplay = (session: any) => {
     const end = session.end_time ? session.end_time.slice(0, 5) : '--:--';
     const capacityTaken = session.active_enrollments_count ?? 0;
     const capacityTotal = session.capacity ?? 0;
+    const capacityTotalNumber = Number(capacityTotal);
+    const isUnlimited = !Number.isNaN(capacityTotalNumber) && capacityTotalNumber >= 9999;
+    const capacityLabel = isUnlimited ? 'Unlimited' : (Number.isNaN(capacityTotalNumber) ? capacityTotal : capacityTotalNumber);
 
     return {
         id: session.id,
@@ -449,8 +463,9 @@ const mapSessionForDisplay = (session: any) => {
         time: `${start} - ${end}`,
         session: session.title || 'Session',
         location: session.location || '',
-        capacity: `${capacityTaken}/${capacityTotal}`,
+        capacity: `${capacityTaken}/${capacityLabel || 0}`,
         status: session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Open',
+        trainer_photo_url: session.trainer_photo_url || '',
     };
 };
 
@@ -466,15 +481,24 @@ const mapSessionRequest = (req: any) => {
         rejected: 'Closed',
     };
 
+    const enrollmentLimit = payload.enrollment_limit || payload.enrollmentLimit;
+    const capacityDisplay = enrollmentLimit === 'unlimited'
+        ? '0/Unlimited'
+        : payload.capacity
+            ? `0/${payload.capacity}`
+            : '0/0';
+
     return {
         id: `req-${req.id}`,
         display_id: payload.code || `Pending-${req.id}`,
         date: payload.date || payload.start_date || '',
         time: timeRange,
-        session: payload.course || payload.title || `Session ${req.id}`,
+        session: payload.title || payload.course || `Session ${req.id}`,
         location: payload.location || '',
-        capacity: payload.capacity ? `0/${payload.capacity}` : '0',
+        capacity: capacityDisplay,
         status: statusMap[req.status] || req.status || 'Pending',
+        enrollment_limit: enrollmentLimit || 'limited',
+        trainer_photo_url: payload.trainer_photo_url || '',
     };
 };
 
@@ -725,7 +749,7 @@ const getCertificateStatusColor = (status: string) => {
 </script>
 
 <template>
-    <Head title="Course Details" />
+    <Head title="Program Details" />
 
     <div class="min-h-screen bg-gray-50">
         <!-- Header with Logo -->
@@ -815,7 +839,7 @@ const getCertificateStatusColor = (status: string) => {
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
-                        Edit Course
+                        Edit Program
                     </button>
                 </div>
             </div>
@@ -883,7 +907,6 @@ const getCertificateStatusColor = (status: string) => {
     <SessionModal
         :show="showAddSessionModal"
         mode="add"
-        :available-courses="availableCourses"
         :session-form="sessionForm"
         :session-errors="sessionErrors"
         @close="closeSessionModal"
@@ -895,7 +918,6 @@ const getCertificateStatusColor = (status: string) => {
         :show="showEditSessionModal"
         mode="edit"
         :session="selectedSession"
-        :available-courses="availableCourses"
         :session-form="sessionForm"
         :session-errors="sessionErrors"
         @close="closeSessionModal"

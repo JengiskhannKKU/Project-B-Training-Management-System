@@ -178,6 +178,12 @@ const formattedTime = (session) => {
     return `${start} - ${end}`;
 };
 
+const sessionTrainerPhoto = (session) =>
+    session?.trainer_photo_url || "/default-avatar.svg";
+
+const sessionTrainerName = (session) =>
+    session?.trainer_name || session?.trainer?.name || "Trainer assigned";
+
 onMounted(() => {
     fetchProgram();
     fetchSessions();
@@ -294,8 +300,14 @@ onMounted(() => {
                             <div
                                 v-for="session in openSessions"
                                 :key="session.id"
-                                class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                                class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                             >
+                                <div class="flex items-center gap-4">
+                                    <img
+                                        :src="sessionTrainerPhoto(session)"
+                                        :alt="session.title || 'Trainer'"
+                                        class="h-12 w-12 rounded-full object-cover"
+                                    />
                                     <div>
                                         <div class="text-sm font-semibold text-gray-900">
                                             {{ session.title || "Session" }}
@@ -303,20 +315,25 @@ onMounted(() => {
                                         <div class="mt-1 text-xs text-gray-500">
                                             {{ formatSessionMeta(session) }}
                                         </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
-                                            5 seats available
-                                        </span>
-                                        <button
-                                            type="button"
-                                            class="rounded-full border border-[#2f837d] px-4 py-2 text-sm font-semibold text-[#2f837d] hover:bg-[#2f837d] hover:text-white"
-                                            @click="openEnrollModal(session)"
-                                        >
-                                            register
-                                        </button>
+                                        <div class="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                                            <UserRound class="h-4 w-4 text-gray-400" />
+                                            <span>{{ sessionTrainerName(session) }}</span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                                        5 seats available
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-[#2f837d] px-4 py-2 text-sm font-semibold text-[#2f837d] hover:bg-[#2f837d] hover:text-white"
+                                        @click="openEnrollModal(session)"
+                                    >
+                                        register
+                                    </button>
+                                </div>
+                            </div>
 
                             <div v-if="openSessions.length === 0" class="text-sm text-gray-500">
                                 No open sessions available.
