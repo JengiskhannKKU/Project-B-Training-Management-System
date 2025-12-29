@@ -41,9 +41,6 @@ Route::middleware(['auth'])->group(function () {
             'enrollmentId' => $id,
         ]);
     })->name('me.enrollments.show');
-    Route::get('/student/settings', function () {
-        return Inertia::render('Student/Settings');
-    })->name('student.settings');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
