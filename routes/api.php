@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\TrainerRequestController;
 use App\Http\Controllers\Api\AdminRequestActionController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
+use App\Http\Controllers\Api\CertificateRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -47,15 +48,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
     });
 
-    Route::middleware('role:trainer')->prefix('trainer')->group(function () {
-        Route::get('requests', [TrainerRequestController::class, 'index']);
-        Route::post('program-requests', [TrainerRequestController::class, 'program']);
-        Route::post('session-requests', [TrainerRequestController::class, 'session']);
-        Route::post('trainee-requests', [TrainerRequestController::class, 'trainee']);
-        
-        // Image upload for programs
-        Route::post('upload/image', [FileUploadController::class, 'image']);
-        Route::delete('upload/image', [FileUploadController::class, 'deleteImage']);
+    Route::middleware('role:trainer')->group(function () {
+        Route::post('certificate-requests', [CertificateRequestController::class, 'store']);
+
+        Route::prefix('trainer')->group(function () {
+            Route::get('requests', [TrainerRequestController::class, 'index']);
+            Route::post('program-requests', [TrainerRequestController::class, 'program']);
+            Route::post('session-requests', [TrainerRequestController::class, 'session']);
+            Route::post('trainee-requests', [TrainerRequestController::class, 'trainee']);
+            Route::get('certificate-requests', [CertificateRequestController::class, 'trainerIndex']);
+            
+            // Image upload for programs
+            Route::post('upload/image', [FileUploadController::class, 'image']);
+            Route::delete('upload/image', [FileUploadController::class, 'deleteImage']);
+        });
     });
 
     Route::middleware('role:admin')->group(function () {
