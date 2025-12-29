@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Certificate;
 use App\Models\CertificateRequest;
-use App\Models\Enrollment;
 use App\Models\Program;
 use App\Models\TrainingSession;
+use App\Services\CertificateGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CertificateRequestController extends Controller
@@ -124,11 +122,13 @@ class CertificateRequestController extends Controller
         return $this->successResponse($requests, 'Certificate requests retrieved successfully.');
     }
 
-    public function show(CertificateRequest $certificateRequest)
+    public function show(CertificateRequest $certificateRequest, CertificateGenerationService $certificateService)
     {
         $certificateRequest->load(['trainer', 'program', 'session']);
 
-        $eligibleCount = $this->eligibleEnrollmentsQuery($certificateRequest)->count();
+        $eligibleCount = $certificateService
+            ->getEligibleEnrollmentsForRequest($certificateRequest->id)
+            ->count();
 
         return $this->successResponse([
             'request' => $certificateRequest,
@@ -136,7 +136,7 @@ class CertificateRequestController extends Controller
         ], 'Certificate request retrieved successfully.');
     }
 
-    public function approve(Request $request, CertificateRequest $certificateRequest)
+    public function approve(Request $request, CertificateRequest $certificateRequest, CertificateGenerationService $certificateService)
     {
         $user = $request->user();
 
@@ -155,14 +155,14 @@ class CertificateRequestController extends Controller
             return $targetCheck;
         }
 
-        $result = DB::transaction(function () use ($certificateRequest, $user) {
+        $result = DB::transaction(function () use ($certificateRequest, $user, $certificateService) {
             $certificateRequest->update([
                 'status' => 'approved',
                 'approved_by' => $user->id,
                 'approved_at' => now(),
             ]);
 
-            $generated = $this->generateCertificates($certificateRequest, $user->id);
+            $generated = $certificateService->generateCertificates($certificateRequest->id, $user->id);
 
             return [
                 'request' => $certificateRequest->fresh(),
@@ -227,59 +227,4 @@ class CertificateRequestController extends Controller
         return null;
     }
 
-    private function eligibleEnrollmentsQuery(CertificateRequest $certificateRequest)
-    {
-        $query = Enrollment::query()->where('status', 'completed');
-
-        if ($certificateRequest->type === 'program') {
-            $query->whereHas('session', function ($builder) use ($certificateRequest) {
-                $builder->where('program_id', $certificateRequest->program_id);
-            });
-        } else {
-            $query->where('session_id', $certificateRequest->session_id);
-        }
-
-        return $query;
-    }
-
-    private function generateCertificates(CertificateRequest $certificateRequest, int $issuedBy): int
-    {
-        $enrollments = $this->eligibleEnrollmentsQuery($certificateRequest)
-            ->with('session')
-            ->get();
-
-        $created = 0;
-
-        foreach ($enrollments as $enrollment) {
-            $exists = Certificate::where('enrollment_id', $enrollment->id)->exists();
-            if ($exists) {
-                continue;
-            }
-
-            Certificate::create([
-                'enrollment_id' => $enrollment->id,
-                'user_id' => $enrollment->user_id,
-                'program_id' => $enrollment->session?->program_id ?? $certificateRequest->program_id,
-                'session_id' => $enrollment->session_id,
-                'issued_by' => $issuedBy,
-                'issued_at' => now(),
-                'certificate_code' => $this->generateCertificateCode(),
-                'file_url' => null,
-                'status' => 'valid',
-            ]);
-
-            $created++;
-        }
-
-        return $created;
-    }
-
-    private function generateCertificateCode(): string
-    {
-        do {
-            $code = 'CERT-' . Str::upper(Str::random(10));
-        } while (Certificate::where('certificate_code', $code)->exists());
-
-        return $code;
-    }
 }
