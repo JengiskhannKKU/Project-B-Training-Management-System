@@ -75,5 +75,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('admin/requests', [AdminRequestActionController::class, 'index']);
         Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
         Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
+
+        Route::get('admin/certificate-requests', [CertificateRequestController::class, 'adminIndex']);
+        Route::get('admin/certificate-requests/{certificateRequest}', [CertificateRequestController::class, 'show']);
+        Route::post('admin/certificate-requests/{certificateRequest}/approve', [CertificateRequestController::class, 'approve']);
+        Route::post('admin/certificate-requests/{certificateRequest}/reject', [CertificateRequestController::class, 'reject']);
     });
 });

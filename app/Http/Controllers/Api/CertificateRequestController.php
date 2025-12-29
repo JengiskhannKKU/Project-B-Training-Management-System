@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Certificate;
 use App\Models\CertificateRequest;
+use App\Models\Enrollment;
 use App\Models\Program;
 use App\Models\TrainingSession;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CertificateRequestController extends Controller
@@ -93,5 +97,189 @@ class CertificateRequestController extends Controller
             ->get();
 
         return $this->successResponse($requests, 'Certificate requests retrieved successfully.');
+    }
+
+    public function adminIndex(Request $request)
+    {
+        $query = CertificateRequest::with(['trainer', 'program', 'session']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->string('type'));
+        }
+
+        if ($request->filled('program_id')) {
+            $query->where('program_id', $request->integer('program_id'));
+        }
+
+        if ($request->filled('session_id')) {
+            $query->where('session_id', $request->integer('session_id'));
+        }
+
+        $requests = $query->latest()->get();
+
+        return $this->successResponse($requests, 'Certificate requests retrieved successfully.');
+    }
+
+    public function show(CertificateRequest $certificateRequest)
+    {
+        $certificateRequest->load(['trainer', 'program', 'session']);
+
+        $eligibleCount = $this->eligibleEnrollmentsQuery($certificateRequest)->count();
+
+        return $this->successResponse([
+            'request' => $certificateRequest,
+            'eligible_enrollments_count' => $eligibleCount,
+        ], 'Certificate request retrieved successfully.');
+    }
+
+    public function approve(Request $request, CertificateRequest $certificateRequest)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admins can approve certificate requests.');
+        }
+
+        if ($certificateRequest->status !== 'pending') {
+            return $this->validationErrorResponse([
+                'status' => ['Certificate request must be pending.'],
+            ]);
+        }
+
+        $targetCheck = $this->validateTargetState($certificateRequest);
+        if ($targetCheck !== null) {
+            return $targetCheck;
+        }
+
+        $result = DB::transaction(function () use ($certificateRequest, $user) {
+            $certificateRequest->update([
+                'status' => 'approved',
+                'approved_by' => $user->id,
+                'approved_at' => now(),
+            ]);
+
+            $generated = $this->generateCertificates($certificateRequest, $user->id);
+
+            return [
+                'request' => $certificateRequest->fresh(),
+                'generated' => $generated,
+            ];
+        });
+
+        return $this->successResponse($result, 'Certificate request approved.');
+    }
+
+    public function reject(Request $request, CertificateRequest $certificateRequest)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admins can reject certificate requests.');
+        }
+
+        if ($certificateRequest->status !== 'pending') {
+            return $this->validationErrorResponse([
+                'status' => ['Certificate request must be pending.'],
+            ]);
+        }
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string'],
+        ]);
+
+        $certificateRequest->update([
+            'status' => 'rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'note' => $data['note'] ?? $certificateRequest->note,
+        ]);
+
+        return $this->successResponse($certificateRequest->fresh(), 'Certificate request rejected.');
+    }
+
+    private function validateTargetState(CertificateRequest $certificateRequest)
+    {
+        if ($certificateRequest->type === 'program') {
+            $program = Program::find($certificateRequest->program_id);
+            if (!$program || $program->approval_status !== 'approved') {
+                return $this->validationErrorResponse([
+                    'program_id' => ['Program must be approved to issue certificates.'],
+                ]);
+            }
+        } else {
+            $session = TrainingSession::find($certificateRequest->session_id);
+            if (!$session || $session->approval_status !== 'approved') {
+                return $this->validationErrorResponse([
+                    'session_id' => ['Session must be approved to issue certificates.'],
+                ]);
+            }
+            if ($session->status !== 'completed') {
+                return $this->validationErrorResponse([
+                    'session_id' => ['Session must be completed before issuing certificates.'],
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    private function eligibleEnrollmentsQuery(CertificateRequest $certificateRequest)
+    {
+        $query = Enrollment::query()->where('status', 'completed');
+
+        if ($certificateRequest->type === 'program') {
+            $query->whereHas('session', function ($builder) use ($certificateRequest) {
+                $builder->where('program_id', $certificateRequest->program_id);
+            });
+        } else {
+            $query->where('session_id', $certificateRequest->session_id);
+        }
+
+        return $query;
+    }
+
+    private function generateCertificates(CertificateRequest $certificateRequest, int $issuedBy): int
+    {
+        $enrollments = $this->eligibleEnrollmentsQuery($certificateRequest)
+            ->with('session')
+            ->get();
+
+        $created = 0;
+
+        foreach ($enrollments as $enrollment) {
+            $exists = Certificate::where('enrollment_id', $enrollment->id)->exists();
+            if ($exists) {
+                continue;
+            }
+
+            Certificate::create([
+                'enrollment_id' => $enrollment->id,
+                'user_id' => $enrollment->user_id,
+                'program_id' => $enrollment->session?->program_id ?? $certificateRequest->program_id,
+                'session_id' => $enrollment->session_id,
+                'issued_by' => $issuedBy,
+                'issued_at' => now(),
+                'certificate_code' => $this->generateCertificateCode(),
+                'file_url' => null,
+                'status' => 'valid',
+            ]);
+
+            $created++;
+        }
+
+        return $created;
+    }
+
+    private function generateCertificateCode(): string
+    {
+        do {
+            $code = 'CERT-' . Str::upper(Str::random(10));
+        } while (Certificate::where('certificate_code', $code)->exists());
+
+        return $code;
     }
 }
