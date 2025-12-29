@@ -88,8 +88,8 @@ const showConfirmDialog = ref(false);
 const confirmDialogConfig = ref({
     title: '',
     message: '',
-    confirmText: 'ยืนยัน',
-    cancelText: 'ยกเลิก',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
     confirmButtonClass: 'bg-[#2f837d] hover:bg-[#266a66]',
     onConfirm: () => {},
 });
@@ -237,10 +237,10 @@ const cancelProfileEdit = () => {
     // Check if there are unsaved changes
     if (hasFormChanges.value) {
         confirmDialogConfig.value = {
-            title: 'ละทิ้งการเปลี่ยนแปลง?',
-            message: 'คุณมีการแก้ไขที่ยังไม่ได้บันทึก คุณต้องการละทิ้งการเปลี่ยนแปลงหรือไม่?',
-            confirmText: 'ละทิ้ง',
-            cancelText: 'ยกเลิก',
+            title: 'Discard Changes?',
+            message: 'You have unsaved changes. Do you want to discard them?',
+            confirmText: 'Discard',
+            cancelText: 'Cancel',
             confirmButtonClass: 'bg-red-500 hover:bg-red-600',
             onConfirm: () => {
                 // Reset form to original data
@@ -270,10 +270,10 @@ const cancelProfileEdit = () => {
 
 const deleteAvatar = () => {
     confirmDialogConfig.value = {
-        title: 'ลบรูปโปรไฟล์?',
-        message: 'คุณต้องการลบรูปโปรไฟล์และกลับไปใช้รูปเริ่มต้นหรือไม่?',
-        confirmText: 'ลบรูป',
-        cancelText: 'ยกเลิก',
+        title: 'Delete Avatar?',
+        message: 'Do you want to delete your profile picture and use the default avatar?',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
         confirmButtonClass: 'bg-red-500 hover:bg-red-600',
         onConfirm: async () => {
             try {
@@ -303,7 +303,7 @@ const deleteAvatar = () => {
                 // Reload Inertia props to update header/navbar avatar
                 router.reload({ only: ['auth'] });
 
-                toast.success('ลบรูปโปรไฟล์สำเร็จ');
+                toast.success('Avatar deleted successfully');
             } catch (error) {
                 const message = error.response?.data?.message || 'Failed to delete avatar.';
                 toast.error(message);
@@ -454,7 +454,16 @@ const onAvatarSelected = async (event) => {
                                     <label class="text-xs font-medium text-gray-500">Name</label>
                                     <input
                                         type="text"
-                                        value="Training Management System"
+                                        :value="apiUser?.name || form.name || props.user.name"
+                                        class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
+                                        disabled
+                                    />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-500">Contact Phone</label>
+                                    <input
+                                        type="text"
+                                        :value="apiUser?.profile?.phone || form.phone || '02-123-456'"
                                         class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
                                         disabled
                                     />
@@ -464,15 +473,6 @@ const onAvatarSelected = async (event) => {
                                     <input
                                         type="email"
                                         :value="apiUser?.email || props.user.email"
-                                        class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
-                                        disabled
-                                    />
-                                </div>
-                                <div>
-                                    <label class="text-xs font-medium text-gray-500">Contact Phone</label>
-                                    <input
-                                        type="text"
-                                        :value="form.phone || '02-123-456'"
                                         class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm"
                                         disabled
                                     />
@@ -569,7 +569,7 @@ const onAvatarSelected = async (event) => {
                             <div class="flex flex-col items-center">
                                 <div class="relative">
                                     <div
-                                        class="h-24 w-24 overflow-hidden rounded-full border border-gray-200 bg-gray-100 cursor-pointer group"
+                                        class="h-32 w-32 overflow-hidden rounded-full border border-gray-200 bg-gray-100 cursor-pointer group"
                                         @click="showImagePreview = true"
                                     >
                                         <img
@@ -606,11 +606,11 @@ const onAvatarSelected = async (event) => {
                                         <button
                                             type="button"
                                             @click="toggleAvatarMenu"
-                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#2f837d] text-white shadow hover:bg-[#266a66]"
+                                            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#2f837d] text-white shadow hover:bg-[#266a66]"
                                             :class="{ 'opacity-70': isUploadingAvatar }"
                                             :disabled="isUploadingAvatar"
                                         >
-                                            <Edit class="h-4 w-4" />
+                                            <Edit class="h-5 w-5" />
                                         </button>
 
                                         <!-- Dropdown menu -->
