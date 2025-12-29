@@ -61,6 +61,20 @@ const isActive = (path) => {
     return currentPath.value === path;
 };
 
+const userRole = computed(() => {
+    const role = page.props.auth?.user?.role?.name || page.props.auth?.user?.role;
+    if (!role) return '';
+    return role.toUpperCase();
+});
+
+const roleColor = computed(() => {
+    const role = (page.props.auth?.user?.role?.name || page.props.auth?.user?.role || '').toLowerCase();
+    if (role === 'admin') return 'text-red-600';
+    if (role === 'trainer') return 'text-blue-600';
+    if (role === 'student') return 'text-green-600';
+    return 'text-gray-600';
+});
+
 </script>
 
 <template>
@@ -150,6 +164,9 @@ const isActive = (path) => {
                             </p>
                             <p class="text-xs text-gray-500">
                                 {{ page.props.auth?.user?.email }}
+                            </p>
+                            <p class="text-xs font-medium" :class="roleColor">
+                                Role: {{ userRole }}
                             </p>
                         </div>
                     </div>
