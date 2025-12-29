@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
+use App\Services\CompletionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
@@ -121,5 +123,42 @@ class TrainingSessionController extends Controller
         $session->delete();
 
         return $this->successResponse(null, 'Session deleted successfully');
+    }
+
+    /**
+     * Mark a session as completed and evaluate enrollments.
+     */
+    public function complete(Request $request, TrainingSession $session, CompletionService $completionService): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        if (!$user->isRole('admin') && $session->trainer_id !== $user->id) {
+            return $this->forbiddenResponse('Only the session trainer or admin can complete this session.');
+        }
+
+        if (!in_array($session->status, ['open', 'closed'], true)) {
+            return $this->validationErrorResponse([
+                'status' => ['Session must be open or closed to complete.'],
+            ]);
+        }
+
+        if ($session->end_date && Carbon::parse($session->end_date)->isAfter(Carbon::today())) {
+            return $this->validationErrorResponse([
+                'end_date' => ['Session cannot be completed before the end date.'],
+            ]);
+        }
+
+        $session->update(['status' => 'completed']);
+
+        $summary = $completionService->evaluateSessionCompletions($session->id);
+
+        return $this->successResponse([
+            'session' => $session->fresh(),
+            'summary' => $summary,
+        ], 'Session marked as completed.');
     }
 }

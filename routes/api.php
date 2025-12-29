@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('sessions', TrainingSessionController::class);
 
     Route::middleware('role:trainer,admin')->group(function () {
+        Route::post('sessions/{session}/complete', [TrainingSessionController::class, 'complete']);
         Route::get('sessions/{session}/enrollments-for-attendance', [AttendanceController::class, 'enrollmentsForAttendance']);
         Route::get('sessions/{session}/attendances', [AttendanceController::class, 'sessionAttendances']);
         Route::get('sessions/{session}/attendance-summary', [AttendanceController::class, 'attendanceSummary']);
