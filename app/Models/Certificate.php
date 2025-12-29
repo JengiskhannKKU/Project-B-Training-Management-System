@@ -20,10 +20,14 @@ class Certificate extends Model
         'certificate_code',
         'file_url',
         'status',
+        'revoked_by',
+        'revoked_at',
+        'revoked_note',
     ];
 
     protected $casts = [
         'issued_at' => 'datetime',
+        'revoked_at' => 'datetime',
     ];
 
     public function enrollment(): BelongsTo
@@ -55,5 +59,10 @@ class Certificate extends Model
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');
+    }
+
+    public function revoker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 }

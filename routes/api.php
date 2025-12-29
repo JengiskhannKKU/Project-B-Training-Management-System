@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AdminRequestActionController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
 use App\Http\Controllers\Api\CertificateRequestController;
+use App\Http\Controllers\Api\CertificateController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -20,6 +21,7 @@ Route::post('auth/login', [AuthController::class, 'login']);
 // Public catalog
 Route::get('catalog/programs', [CatalogController::class, 'programs']);
 Route::get('catalog/programs/{program}/sessions', [CatalogController::class, 'sessions']);
+Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [MeController::class, 'show']);
@@ -28,8 +30,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me/avatar', [MeController::class, 'showAvatar']);
     Route::delete('me/avatar', [MeController::class, 'deleteAvatar']);
     Route::get('me/enrollments', [EnrollmentController::class, 'myEnrollments']);
+    Route::get('me/certificates', [CertificateController::class, 'myCertificates']);
     Route::post('enrollments', [EnrollmentController::class, 'store']);
     Route::put('enrollments/{enrollment}/cancel', [EnrollmentController::class, 'cancel']);
+    Route::get('certificates/{certificate}', [CertificateController::class, 'show']);
 
     // Students can view their own enrollment attendance
     Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
@@ -57,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('session-requests', [TrainerRequestController::class, 'session']);
             Route::post('trainee-requests', [TrainerRequestController::class, 'trainee']);
             Route::get('certificate-requests', [CertificateRequestController::class, 'trainerIndex']);
+            Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             
             // Image upload for programs
             Route::post('upload/image', [FileUploadController::class, 'image']);
@@ -80,5 +85,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('admin/certificate-requests/{certificateRequest}', [CertificateRequestController::class, 'show']);
         Route::post('admin/certificate-requests/{certificateRequest}/approve', [CertificateRequestController::class, 'approve']);
         Route::post('admin/certificate-requests/{certificateRequest}/reject', [CertificateRequestController::class, 'reject']);
+        Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
     });
 });
