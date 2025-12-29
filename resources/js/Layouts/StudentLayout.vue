@@ -23,7 +23,7 @@ const navigationItems = [
     },
     {
         name: "Setting",
-        path: "/me/profile",
+        path: "/student/settings",
         icon: Settings,
     },
 ];

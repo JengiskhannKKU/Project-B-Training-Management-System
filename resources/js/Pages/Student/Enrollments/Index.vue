@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
@@ -51,6 +51,27 @@ const formatTime = (session) => {
     return `${start} - ${end}`;
 };
 
+const getEnrollmentStatusBadge = (status) => {
+    const badges = {
+        pending: { text: "Pending", class: "bg-yellow-600" },
+        confirmed: { text: "Confirmed", class: "bg-emerald-600" },
+        completed: { text: "Completed", class: "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg" },
+        cancelled: { text: "Cancelled", class: "bg-gray-600" },
+    };
+    return badges[status] || { text: "Pending", class: "bg-yellow-600" };
+};
+
+const getSessionStatusBadge = (status) => {
+    const badges = {
+        upcoming: { text: "Upcoming", class: "bg-indigo-100 text-indigo-700" },
+        open: { text: "Open", class: "bg-green-100 text-green-700" },
+        closed: { text: "Closed", class: "bg-gray-100 text-gray-700" },
+        completed: { text: "Completed", class: "bg-purple-100 text-purple-700" },
+        cancelled: { text: "Cancelled", class: "bg-red-100 text-red-700" },
+    };
+    return badges[status] || { text: status, class: "bg-gray-100 text-gray-700" };
+};
+
 const isUpcoming = (session) => {
     const date = normalizeDate(session?.start_date);
     if (!date) return true;
@@ -86,13 +107,13 @@ const normalizedEnrollments = computed(() =>
 
 const upcomingEnrollments = computed(() =>
     normalizedEnrollments.value.filter(
-        (item) => isUpcoming(item.session) && item.status !== "cancelled"
+        (item) => item.status !== "completed"
     )
 );
 
 const finishedEnrollments = computed(() =>
     normalizedEnrollments.value.filter(
-        (item) => !isUpcoming(item.session) || item.status === "cancelled"
+        (item) => item.status === "completed"
     )
 );
 
@@ -247,9 +268,10 @@ onMounted(fetchEnrollments);
                                 Training Management
                             </div>
                             <span
-                                class="absolute left-3 top-3 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white"
+                                :class="getEnrollmentStatusBadge(enrollment.status).class"
+                                class="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold text-white"
                             >
-                                Registered
+                                {{ getEnrollmentStatusBadge(enrollment.status).text }}
                             </span>
                         </div>
 
@@ -278,6 +300,17 @@ onMounted(fetchEnrollments);
                                         <div class="font-semibold text-gray-900">
                                             {{ formatDate(enrollment.session?.start_date) }}
                                         </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="text-xs text-gray-400">Session Status</div>
+                                        <span
+                                            :class="getSessionStatusBadge(enrollment.session?.status).class"
+                                            class="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold"
+                                        >
+                                            {{ getSessionStatusBadge(enrollment.session?.status).text }}
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -316,21 +349,33 @@ onMounted(fetchEnrollments);
                             </div>
 
                             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
-                                <button
-                                    v-if="activeTab === 'upcoming' && canCancel(enrollment)"
-                                    type="button"
-                                    class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
-                                    :disabled="cancellingId === enrollment.id"
-                                    @click="cancelEnrollment(enrollment)"
-                                >
-                                    <LoadingSpinner
-                                        v-if="cancellingId === enrollment.id"
-                                        size="sm"
-                                        color="gray"
-                                        inline
-                                    />
-                                    <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
-                                </button>
+                                <!-- If status is "pending", show only Cancel button -->
+                                <template v-if="enrollment.status === 'pending'">
+                                    <button
+                                        type="button"
+                                        class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
+                                        :disabled="cancellingId === enrollment.id"
+                                        @click="cancelEnrollment(enrollment)"
+                                    >
+                                        <LoadingSpinner
+                                            v-if="cancellingId === enrollment.id"
+                                            size="sm"
+                                            color="gray"
+                                            inline
+                                        />
+                                        <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
+                                    </button>
+                                </template>
+
+                                <!-- For other statuses, show View Details only -->
+                                <template v-else>
+                                    <Link
+                                        :href="route('me.enrollments.show', enrollment.id)"
+                                        class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                                    >
+                                        View Details
+                                    </Link>
+                                </template>
                             </div>
                         </div>
                     </div>

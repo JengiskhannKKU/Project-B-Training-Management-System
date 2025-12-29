@@ -132,6 +132,14 @@ class AttendanceController extends Controller
 
     public function enrollmentAttendances(Enrollment $enrollment)
     {
+        $user = auth()->user();
+
+        // Students can only view their own enrollment attendance
+        // Trainers and admins can view any enrollment attendance
+        if ($user->role_id === 3 && $enrollment->user_id !== $user->id) {
+            return $this->forbiddenResponse('You can only view your own attendance records');
+        }
+
         $attendances = Attendance::with('session')
             ->where('enrollment_id', $enrollment->id)
             ->get();
