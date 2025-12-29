@@ -32,6 +32,10 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'Cannot enroll: Session is closed or not open for registration.'], 422);
         }
 
+        if ($session->status === 'completed') {
+            return response()->json(['message' => 'Cannot enroll: Session has already been completed.'], 422);
+        }
+
         if ($session->active_enrollments_count >= $session->capacity) {
             return response()->json(['message' => 'Cannot enroll: Session capacity is full.'], 422);
         }
@@ -47,7 +51,7 @@ class EnrollmentController extends Controller
         $enrollment = DB::transaction(function () use ($user, $session, $existingEnrollment) {
             if ($existingEnrollment) {
                 $existingEnrollment->update([
-                    'status' => 'confirmed',
+                    'status' => 'pending',
                     'enrolled_at' => now(),
                 ]);
 
@@ -57,7 +61,7 @@ class EnrollmentController extends Controller
             return Enrollment::create([
                 'user_id' => $user->id,
                 'session_id' => $session->id,
-                'status' => 'confirmed',
+                'status' => 'pending',
                 'enrolled_at' => now(),
             ]);
         });

@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 use Mailtrap\Helper\ResponseHelper;
 use Mailtrap\MailtrapClient;
 use Mailtrap\Mime\MailtrapEmail;
@@ -43,3 +44,12 @@ Artisan::command('mailtrap:test {--to=} {--subject=}', function () {
     $this->info('Sent. Response:');
     $this->line(print_r(ResponseHelper::toArray($response), true));
 })->purpose('Send a test email via Mailtrap API');
+
+// Schedule: Close expired sessions daily at midnight
+Schedule::command('sessions:close-expired')->daily();
+
+// Schedule: Evaluate enrollment completions daily at 1 AM
+Schedule::command('enrollments:evaluate-completions')->dailyAt('01:00');
+
+// Schedule: Auto-complete sessions 7 days after end_date, runs daily at 2 AM
+Schedule::command('sessions:auto-complete --days=7')->dailyAt('02:00');

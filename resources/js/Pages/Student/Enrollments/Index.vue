@@ -56,7 +56,7 @@ const getEnrollmentStatusBadge = (status) => {
         pending: { text: "Pending", class: "bg-yellow-600" },
         confirmed: { text: "Confirmed", class: "bg-emerald-600" },
         completed: { text: "Completed", class: "bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg" },
-        cancelled: { text: "Cancelled", class: "bg-gray-600" },
+        cancelled: { text: "Cancelled", class: "bg-red-600" },
     };
     return badges[status] || { text: "Pending", class: "bg-yellow-600" };
 };
@@ -349,33 +349,29 @@ onMounted(fetchEnrollments);
                             </div>
 
                             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
-                                <!-- If status is "pending", show only Cancel button -->
-                                <template v-if="enrollment.status === 'pending'">
-                                    <button
-                                        type="button"
-                                        class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
-                                        :disabled="cancellingId === enrollment.id"
-                                        @click="cancelEnrollment(enrollment)"
-                                    >
-                                        <LoadingSpinner
-                                            v-if="cancellingId === enrollment.id"
-                                            size="sm"
-                                            color="gray"
-                                            inline
-                                        />
-                                        <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
-                                    </button>
-                                </template>
+                                <Link
+                                    :href="route('me.enrollments.show', enrollment.id)"
+                                    class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                                >
+                                    View Details
+                                </Link>
 
-                                <!-- For other statuses, show View Details only -->
-                                <template v-else>
-                                    <Link
-                                        :href="route('me.enrollments.show', enrollment.id)"
-                                        class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
-                                    >
-                                        View Details
-                                    </Link>
-                                </template>
+                                <!-- Show Cancel button only when status is pending and can be cancelled -->
+                                <button
+                                    v-if="enrollment.status === 'pending' && canCancel(enrollment)"
+                                    type="button"
+                                    class="rounded-full border border-rose-400 px-5 py-2 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-60"
+                                    :disabled="cancellingId === enrollment.id"
+                                    @click="cancelEnrollment(enrollment)"
+                                >
+                                    <LoadingSpinner
+                                        v-if="cancellingId === enrollment.id"
+                                        size="sm"
+                                        color="gray"
+                                        inline
+                                    />
+                                    <span>{{ cancellingId === enrollment.id ? "Cancelling..." : "Cancel Registration" }}</span>
+                                </button>
                             </div>
                         </div>
                     </div>
