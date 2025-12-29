@@ -166,4 +166,14 @@ class AttendanceController extends Controller
 
         return $this->successResponse($summary, 'Attendance summary retrieved successfully');
     }
+
+    public function eligibleEnrollments(TrainingSession $session)
+    {
+        $enrollments = $session->enrollments()
+            ->where('status', 'completed')
+            ->with(['user', 'session.program'])
+            ->get();
+
+        return $this->successResponse($enrollments, 'Eligible enrollments retrieved successfully');
+    }
 }
