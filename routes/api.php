@@ -87,5 +87,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('admin/certificate-requests/{certificateRequest}/approve', [CertificateRequestController::class, 'approve']);
         Route::post('admin/certificate-requests/{certificateRequest}/reject', [CertificateRequestController::class, 'reject']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
+
+        Route::get('admin/sessions', [TrainingSessionController::class, 'adminSessions']);
+        Route::post('admin/program-requests', [TrainerRequestController::class, 'program']);
+        Route::post('admin/session-requests', [TrainerRequestController::class, 'session']);
+
+        // Image upload for programs
+        Route::post('admin/upload/image', [FileUploadController::class, 'image']);
+        Route::delete('admin/upload/image', [FileUploadController::class, 'deleteImage']);
     });
 });

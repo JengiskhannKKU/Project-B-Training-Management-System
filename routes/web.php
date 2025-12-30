@@ -68,6 +68,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/Categories');
     })->name('admin.categories.edit');
 
+    Route::get('/admin/requests', function () {
+        return Inertia::render('Admin/Requests');
+    })->name('admin.requests');
+
     Route::get('/admin/my-courses', function () {
         return Inertia::render('Admin/MyCourses');
     })->name('admin.my-courses');
