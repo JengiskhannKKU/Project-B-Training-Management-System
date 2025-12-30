@@ -38,8 +38,6 @@ const courses = ref([
                 date: "Dec 15, 2025",
                 time: "10:00 AM - 12:00 PM",
                 location: "Room A101",
-                status: "open",
-                end_date: "2025-12-15",
             },
             {
                 id: 2,
@@ -47,8 +45,6 @@ const courses = ref([
                 date: "Dec 16, 2025",
                 time: "10:00 AM - 12:00 PM",
                 location: "Room A101",
-                status: "closed",
-                end_date: "2025-12-16",
             },
             {
                 id: 3,
@@ -56,8 +52,6 @@ const courses = ref([
                 date: "Dec 17, 2025",
                 time: "10:00 AM - 12:00 PM",
                 location: "Room A101",
-                status: "upcoming",
-                end_date: "2025-12-17",
             },
             {
                 id: 4,
@@ -65,8 +59,6 @@ const courses = ref([
                 date: "Dec 18, 2025",
                 time: "10:00 AM - 12:00 PM",
                 location: "Room A101",
-                status: "open",
-                end_date: "2026-01-18",
             },
         ],
     },
@@ -91,8 +83,6 @@ const courses = ref([
                 date: "Dec 18, 2025",
                 time: "2:00 PM - 4:00 PM",
                 location: "Room B205",
-                status: "closed",
-                end_date: "2025-12-18",
             },
             {
                 id: 6,
@@ -100,8 +90,6 @@ const courses = ref([
                 date: "Dec 19, 2025",
                 time: "2:00 PM - 4:00 PM",
                 location: "Room B205",
-                status: "open",
-                end_date: "2025-12-19",
             },
             {
                 id: 7,
@@ -109,8 +97,6 @@ const courses = ref([
                 date: "Dec 20, 2025",
                 time: "2:00 PM - 4:00 PM",
                 location: "Room B205",
-                status: "completed",
-                end_date: "2025-12-20",
             },
         ],
     },
