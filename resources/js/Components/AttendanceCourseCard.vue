@@ -105,12 +105,12 @@ const getStarType = (index: number, rating: number) => {
                 </div>
             </div>
 
-            <!-- Sessions Button - Stays at bottom -->
+            <!-- Check Attendance Button - Stays at bottom -->
             <button
                 @click="emit('viewSessions', id)"
                 class="w-full inline-flex justify-center items-center bg-[#2f837d] hover:bg-[#26685f] text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md mt-auto"
             >
-                Sessions
+                Check Attendance
             </button>
         </div>
     </div>

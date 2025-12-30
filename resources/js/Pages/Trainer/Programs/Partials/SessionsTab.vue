@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, ListFilter, ArrowDownNarrowWide, Share } from 'lucide-vue-next';
+import { Search, ListFilter, ArrowDownNarrowWide, Share, Award } from 'lucide-vue-next';
 
 defineProps<{
     sessions: Array<{
@@ -19,6 +19,29 @@ const emit = defineEmits<{
     'edit-session': [session: any];
     'delete-session': [session: any];
 }>();
+
+/**
+ * Get badge styling for session status
+ * Statuses: upcoming, open, closed, completed, cancelled
+ */
+const getStatusBadgeClass = (status: string) => {
+    const statusLower = status.toLowerCase();
+
+    switch (statusLower) {
+        case 'upcoming':
+            return 'bg-blue-100 text-blue-700';
+        case 'open':
+            return 'bg-teal-100 text-teal-700';
+        case 'closed':
+            return 'bg-amber-100 text-amber-700';
+        case 'completed':
+            return 'bg-purple-100 text-purple-700';
+        case 'cancelled':
+            return 'bg-red-100 text-red-700';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+};
 </script>
 
 <template>
@@ -97,12 +120,20 @@ const emit = defineEmits<{
                             </span>
                         </td>
                         <td class="px-4 py-3 text-sm">
-                            <span :class="[
-                                'rounded-full px-3 py-1 text-xs font-medium',
-                                session.status === 'Open' ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700'
-                            ]">
-                                {{ session.status }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span :class="[
+                                    'rounded-full px-3 py-1 text-xs font-medium inline-flex items-center gap-1.5',
+                                    getStatusBadgeClass(session.status)
+                                ]">
+                                    {{ session.status }}
+                                </span>
+                                <Award
+                                    v-if="session.status.toLowerCase() === 'completed'"
+                                    :size="16"
+                                    class="text-purple-600"
+                                    title="Ready for certificate phase"
+                                />
+                            </div>
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex gap-2">
