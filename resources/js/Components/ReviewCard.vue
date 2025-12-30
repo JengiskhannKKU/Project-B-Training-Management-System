@@ -68,19 +68,17 @@ const getAvatarColor = (name) => {
                 {{ getInitials(review.reviewerName) }}
             </div>
 
-            <!-- Name, Date, Rating -->
+            <!-- Name, Date, Rating, Course -->
             <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900">
-                            {{ review.reviewerName }}
-                        </h3>
-                        <p class="text-xs text-gray-500">
-                            {{ review.relativeTime }}
-                        </p>
-                    </div>
+                <!-- Name and Date -->
+                <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2 mb-2">
+                    <span>{{ review.reviewerName }}</span>
+                    <span class="text-gray-400">·</span>
+                    <span class="text-xs text-gray-500 font-normal">{{ review.relativeTime }}</span>
+                </h3>
 
-                    <!-- Star Rating -->
+                <!-- Star Rating and Course Name -->
+                <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex items-center gap-1">
                         <Star
                             v-for="i in 5"
@@ -89,10 +87,6 @@ const getAvatarColor = (name) => {
                             :class="i <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'"
                         />
                     </div>
-                </div>
-
-                <!-- Course Name -->
-                <div class="mt-2">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
                         {{ review.courseName }}
                     </span>
@@ -143,7 +137,7 @@ const getAvatarColor = (name) => {
 
             <button
                 @click="handleShare"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors ml-auto"
             >
                 <Share2 :size="14" />
                 <span>Share</span>

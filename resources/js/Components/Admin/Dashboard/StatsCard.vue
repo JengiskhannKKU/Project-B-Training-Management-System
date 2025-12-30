@@ -63,12 +63,10 @@ const props = defineProps({
 
 const iconColorClasses = computed(() => {
     const colors = {
-        blue: "from-blue-500 to-blue-600 shadow-blue-500/25 group-hover:shadow-blue-500/30",
-        purple:
-            "from-purple-500 to-purple-600 shadow-purple-500/25 group-hover:shadow-purple-500/30",
-        emerald:
-            "from-emerald-500 to-emerald-600 shadow-emerald-500/25 group-hover:shadow-emerald-500/30",
-        amber: "from-amber-500 to-amber-600 shadow-amber-500/25 group-hover:shadow-amber-500/30",
+        blue: "bg-blue-500/20 text-blue-500 shadow-blue-500/25 group-hover:shadow-blue-500/30",
+        purple: "bg-purple-500/20 text-purple-500 shadow-purple-500/25 group-hover:shadow-purple-500/30",
+        emerald: "bg-emerald-500/20 text-emerald-500 shadow-emerald-500/25 group-hover:shadow-emerald-500/30",
+        amber: "bg-amber-500/20 text-amber-500 shadow-amber-500/25 group-hover:shadow-amber-500/30",
     };
     return colors[props.iconColor] || colors.blue;
 });
@@ -214,10 +212,10 @@ const sparklineOptions = computed(() => {
             <!-- Icon -->
             <div
                 v-if="icon"
-                class="rounded-xl bg-gradient-to-br p-3 shadow-lg transition-all duration-300 group-hover:shadow-xl"
+                class="rounded-full p-3 transition-all duration-300 group-hover:shadow-xl"
                 :class="iconColorClasses"
             >
-                <component :is="icon" :size="24" class="text-white" />
+                <component :is="icon" :size="24" />
             </div>
         </div>
 

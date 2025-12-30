@@ -1,7 +1,7 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { GraduationCap, BookOpen, TrendingUp, Star } from "lucide-vue-next";
+import { GraduationCap, BookOpen, TrendingUp, Star, Award } from "lucide-vue-next";
 
 // Component imports
 import StatsCard from "@/Components/Admin/Dashboard/StatsCard.vue";
@@ -170,7 +170,7 @@ const topTrainers = [
                         title="Total Trainees"
                         :value="stats.trainees.value.toLocaleString()"
                         :growth="stats.trainees.growth"
-                        :icon="GraduationCap"
+                        :icon="Award"
                         icon-color="blue"
                         hover-color="blue"
                     >

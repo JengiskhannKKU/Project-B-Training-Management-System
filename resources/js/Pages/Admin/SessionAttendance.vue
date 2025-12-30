@@ -502,23 +502,21 @@ onMounted(() => {
                 <div
                     class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6"
                 >
-                    <!-- Left: Search and Filters -->
-                    <div
-                        class="flex flex-col sm:flex-row gap-4 flex-1 w-full lg:w-auto"
-                    >
-                        <!-- Search Bar -->
-                        <div class="relative flex-1 max-w-md">
-                            <input
-                                v-model="searchQuery"
-                                type="text"
-                                placeholder="Search trainees..."
-                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                            />
-                            <Search
-                                class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                            />
-                        </div>
+                    <!-- Left: Search Bar -->
+                    <div class="relative w-full lg:max-w-md">
+                        <input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search trainees..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
+                        />
+                        <Search
+                            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                        />
+                    </div>
 
+                    <!-- Right: Filter, Sort, Export buttons -->
+                    <div class="flex flex-row gap-4">
                         <!-- Filter button -->
                         <button
                             @click="showFilterModal = true"
