@@ -17,9 +17,6 @@ import {
     CheckCircle,
     XCircle,
     ArrowLeft,
-    UserRoundCheck,
-    UserRoundX,
-    Save,
     AlertTriangle,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
@@ -42,8 +39,8 @@ const props = defineProps({
 const toast = useToast();
 
 // State for save functionality
-const isSaving = ref(false);
 const isLoading = ref(true);
+const lastAutoSaved = ref(null);
 
 // Data from backend
 const sessionInfo = ref({
@@ -185,12 +182,23 @@ watch([searchQuery, selectedDepartment, selectedStatus], () => {
     currentPage.value = 1;
 });
 
-// Toggle attendance
-const toggleAttendance = (traineeId) => {
+// Auto-save timeout
+let autoSaveTimeout = null;
+
+// Set attendance status directly with auto-save
+const setAttendanceStatus = (traineeId, status) => {
     const trainee = trainees.value.find((t) => t.id === traineeId);
     if (trainee) {
-        trainee.checked = !trainee.checked;
-        trainee.status = trainee.checked ? "present" : "absent";
+        trainee.status = status;
+        trainee.checked = status === 'present';
+
+        // Trigger auto-save after 500ms debounce
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(() => {
+            autoSaveAttendance();
+        }, 500);
     }
 };
 
@@ -304,9 +312,12 @@ const fetchAttendanceData = async () => {
 
         // Map enrollments to trainees format
         trainees.value = enrollments.map(enrollment => {
-            // Get the latest attendance record if exists
-            const latestAttendance = enrollment.attendances?.[0];
-            const status = latestAttendance?.status || 'absent';
+            // Get the latest attendance record if exists (sorted by created_at desc)
+            const sortedAttendances = enrollment.attendances?.sort((a, b) =>
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            const latestAttendance = sortedAttendances?.[0];
+            const status = latestAttendance?.status || 'not_marked';
 
             return {
                 id: enrollment.id,
@@ -317,6 +328,7 @@ const fetchAttendanceData = async () => {
                 department: enrollment.user?.department || 'N/A',
                 status: status,
                 checked: status === 'present',
+                attendanceId: latestAttendance?.id || null,
             };
         });
     } catch (error) {
@@ -327,31 +339,35 @@ const fetchAttendanceData = async () => {
     }
 };
 
-// Save attendance
-const saveAttendance = async () => {
-    isSaving.value = true;
-
+// Auto-save attendance (silent, no toast on success)
+const autoSaveAttendance = async () => {
     try {
-        // Prepare bulk attendance data
-        const attendanceData = trainees.value.map(trainee => ({
-            enrollment_id: trainee.enrollmentId,
-            status: trainee.status,
-        }));
+        // Prepare bulk attendance data - only include marked attendances (not 'not_marked')
+        const attendanceData = trainees.value
+            .filter(trainee => trainee.status !== 'not_marked')
+            .map(trainee => ({
+                enrollment_id: trainee.enrollmentId,
+                status: trainee.status,
+            }));
 
-        // Send to API
+        // Check if there's anything to save
+        if (attendanceData.length === 0) {
+            return;
+        }
+
+        // Send to API (silent save)
         await axios.post(`/api/sessions/${props.sessionId}/attendances/bulk`, {
             items: attendanceData
         });
 
-        toast.success('Attendance saved successfully!');
+        // Update last auto-saved time
+        lastAutoSaved.value = new Date();
 
-        // Refresh data
-        await fetchAttendanceData();
+        // Silently refresh summary only
+        await fetchAttendanceSummary();
     } catch (error) {
-        console.error('Error saving attendance:', error);
-        toast.error(error.response?.data?.message || 'Failed to save attendance. Please try again.');
-    } finally {
-        isSaving.value = false;
+        console.error('Error auto-saving attendance:', error);
+        toast.error('Failed to auto-save attendance.');
     }
 };
 
@@ -417,16 +433,13 @@ onMounted(() => {
                         Track attendance for this training session
                     </p>
                 </div>
-                <div class="flex gap-3">
-                    <button
-                        @click="saveAttendance"
-                        :disabled="isSaving || isLoading || isSessionCompleted"
-                        class="inline-flex items-center gap-2 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Save :size="20" />
-                        <span v-if="isSaving">Saving...</span>
-                        <span v-else>Save Attendance</span>
-                    </button>
+                <div class="flex items-center gap-3">
+                    <!-- Auto-save indicator -->
+                    <div v-if="lastAutoSaved" class="text-sm text-gray-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                        <CheckCircle :size="16" class="text-green-600" />
+                        <span class="font-medium">Auto-saved</span>
+                    </div>
+                    <!-- Complete Session Button -->
                     <button
                         v-if="!isSessionCompleted"
                         @click="completeSession"
@@ -520,7 +533,7 @@ onMounted(() => {
 
                 <!-- Attendance Summary -->
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="text-center">
                             <p class="text-2xl font-bold text-gray-900">
                                 {{ attendanceSummary.total }}
@@ -538,6 +551,12 @@ onMounted(() => {
                                 {{ attendanceSummary.absent }}
                             </p>
                             <p class="text-sm text-gray-500">Absent</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-600">
+                                {{ attendanceSummary.not_marked }}
+                            </p>
+                            <p class="text-sm text-gray-500">Not Marked</p>
                         </div>
                     </div>
                 </div>
@@ -687,7 +706,7 @@ onMounted(() => {
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
-                                        Check
+                                        Mark Attendance
                                     </th>
                                 </tr>
                             </thead>
@@ -741,38 +760,72 @@ onMounted(() => {
                                                 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
                                                 trainee.status === 'present'
                                                     ? 'bg-green-100 text-green-800'
-                                                    : 'bg-red-100 text-red-800'
+                                                    : trainee.status === 'absent'
+                                                    ? 'bg-red-100 text-red-800'
+                                                    : 'bg-gray-100 text-gray-800'
                                             ]"
                                         >
                                             <component
                                                 :is="trainee.status === 'present' ? CheckCircle : XCircle"
                                                 :size="14"
                                             />
-                                            {{ trainee.status === 'present' ? 'Present' : 'Absent' }}
+                                            {{
+                                                trainee.status === 'present' ? 'Present' :
+                                                trainee.status === 'absent' ? 'Absent' :
+                                                'Not Marked'
+                                            }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <button
-                                            @click="toggleAttendance(trainee.id)"
-                                            :class="[
-                                                'p-2 rounded-lg transition-all duration-200 hover:scale-110',
-                                                trainee.checked
-                                                    ? 'text-green-600 bg-green-50'
-                                                    : 'text-red-600 bg-red-50'
-                                            ]"
-                                            :title="trainee.checked ? 'Mark as absent' : 'Mark as present'"
-                                        >
-                                            <UserRoundCheck
-                                                v-if="trainee.checked"
-                                                :size="24"
-                                                class="stroke-[2]"
-                                            />
-                                            <UserRoundX
-                                                v-else
-                                                :size="24"
-                                                class="stroke-[2]"
-                                            />
-                                        </button>
+                                        <div class="flex items-center gap-2">
+                                            <!-- Present Button -->
+                                            <button
+                                                @click="setAttendanceStatus(trainee.id, 'present')"
+                                                :class="[
+                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                    trainee.status === 'present'
+                                                        ? 'bg-green-600 text-white shadow-md'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600'
+                                                ]"
+                                                title="Mark as present"
+                                            >
+                                                <div class="flex items-center gap-1">
+                                                    <CheckCircle :size="14" />
+                                                    <span>Present</span>
+                                                </div>
+                                            </button>
+
+                                            <!-- Absent Button -->
+                                            <button
+                                                @click="setAttendanceStatus(trainee.id, 'absent')"
+                                                :class="[
+                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                    trainee.status === 'absent'
+                                                        ? 'bg-red-600 text-white shadow-md'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                                ]"
+                                                title="Mark as absent"
+                                            >
+                                                <div class="flex items-center gap-1">
+                                                    <XCircle :size="14" />
+                                                    <span>Absent</span>
+                                                </div>
+                                            </button>
+
+                                            <!-- Not Marked Button -->
+                                            <button
+                                                @click="setAttendanceStatus(trainee.id, 'not_marked')"
+                                                :class="[
+                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                    trainee.status === 'not_marked'
+                                                        ? 'bg-gray-600 text-white shadow-md'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ]"
+                                                title="Clear marking"
+                                            >
+                                                <span>Clear</span>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -885,7 +938,7 @@ onMounted(() => {
                 v-model:selectedDepartment="selectedDepartment"
                 v-model:selectedStatus="selectedStatus"
                 :departments="departments"
-                :statusOptions="['present', 'absent']"
+                :statusOptions="['present', 'absent', 'not_marked']"
                 departmentLabel="Department"
                 @close="showFilterModal = false"
                 @reset="resetFilters"

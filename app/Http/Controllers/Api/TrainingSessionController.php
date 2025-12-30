@@ -12,9 +12,7 @@ use Illuminate\Support\Carbon;
 
 class TrainingSessionController extends Controller
 {
-    /**
-     * Return all sessions, optionally filtered by program.
-     */
+    
     public function index(Request $request)
     {
         $query = TrainingSession::query()->latest();
@@ -28,9 +26,7 @@ class TrainingSessionController extends Controller
         return $this->successResponse($sessions, 'Sessions retrieved successfully');
     }
 
-    /**
-     * Create a new session for a program.
-     */
+    
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -160,5 +156,184 @@ class TrainingSessionController extends Controller
             'session' => $session->fresh(),
             'summary' => $summary,
         ], 'Session marked as completed.');
+    }
+
+    /**
+     * Get all approved programs for the authenticated trainer (with or without sessions).
+     */
+    public function trainerSessions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        // Get all approved programs created by this trainer
+        $programs = \App\Models\Program::where('created_by', $user->id)
+            ->where('status', 'active')
+            ->with(['sessions' => function ($query) {
+                $query->withCount('enrollments')
+                    ->orderBy('start_date', 'desc');
+            }])
+            ->get()
+            ->map(function ($program) {
+                $sessions = $program->sessions;
+
+                // Calculate aggregated data
+                $totalEnrolled = $sessions->sum('enrollments_count');
+                $dates = $sessions->pluck('start_date')->filter();
+                $earliestDate = $dates->min();
+                $latestDate = $dates->max();
+
+                // Format date range
+                $dateRange = 'N/A';
+                if ($earliestDate && $latestDate) {
+                    $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
+                    $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
+                    $dateRange = $earliestDate->eq($latestDate)
+                        ? Carbon::parse($earliestDate)->format('M j, Y')
+                        : "{$earliestFormatted} - {$latestFormatted}";
+                }
+
+                // Get most common location
+                $locations = $sessions->pluck('location')->filter();
+                $locationCounts = $locations->countBy();
+                $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
+
+                // Get time range from first session
+                $firstSession = $sessions->first();
+                $timeRange = 'N/A';
+                if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
+                    $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
+                }
+
+                return [
+                    'id' => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                    'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                    'rating' => 4.5, // Placeholder - can be calculated from feedback if available
+                    'level' => ucfirst($program->level ?? 'Beginner'),
+                    'students_count' => $totalEnrolled,
+                    'price' => 'Free', // Placeholder - add to Program model if needed
+                    'date' => $dateRange,
+                    'time' => $timeRange,
+                    'location' => $mostCommonLocation,
+                    'category' => $program->category,
+                    'duration' => $program->duration_hours ? $program->duration_hours . ' hours' : 'N/A',
+                    'status' => $program->status,
+                    'sessions' => $sessions->map(function ($session) {
+                        return [
+                            'id' => $session->id,
+                            'name' => $session->title,
+                            'title' => $session->title,
+                            'date' => $session->start_date?->format('M j, Y'),
+                            'start_date' => $session->start_date?->format('Y-m-d'),
+                            'end_date' => $session->end_date?->format('Y-m-d'),
+                            'time' => $session->start_time && $session->end_time
+                                ? "{$session->start_time} - {$session->end_time}"
+                                : 'N/A',
+                            'start_time' => $session->start_time,
+                            'end_time' => $session->end_time,
+                            'location' => $session->location ?? 'N/A',
+                            'capacity' => $session->capacity,
+                            'enrolled' => $session->enrollments_count,
+                            'status' => $session->status,
+                        ];
+                    })->values()->all(),
+                ];
+            });
+
+        return $this->successResponse($programs, 'Trainer programs retrieved successfully');
+    }
+
+    /**
+     * Get all approved programs for admin (with or without sessions).
+     */
+    public function adminSessions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        // Get all approved programs
+        $programs = \App\Models\Program::where('status', 'active')
+            ->with(['sessions' => function ($query) {
+                $query->withCount('enrollments')
+                    ->orderBy('start_date', 'desc');
+            }])
+            ->get()
+            ->map(function ($program) {
+                $sessions = $program->sessions;
+
+                // Calculate aggregated data
+                $totalEnrolled = $sessions->sum('enrollments_count');
+                $dates = $sessions->pluck('start_date')->filter();
+                $earliestDate = $dates->min();
+                $latestDate = $dates->max();
+
+                // Format date range
+                $dateRange = 'N/A';
+                if ($earliestDate && $latestDate) {
+                    $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
+                    $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
+                    $dateRange = $earliestDate->eq($latestDate)
+                        ? Carbon::parse($earliestDate)->format('M j, Y')
+                        : "{$earliestFormatted} - {$latestFormatted}";
+                }
+
+                // Get most common location
+                $locations = $sessions->pluck('location')->filter();
+                $locationCounts = $locations->countBy();
+                $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
+
+                // Get time range from first session
+                $firstSession = $sessions->first();
+                $timeRange = 'N/A';
+                if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
+                    $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
+                }
+
+                return [
+                    'id' => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                    'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                    'rating' => 4.5, // Placeholder - can be calculated from feedback if available
+                    'level' => ucfirst($program->level ?? 'Beginner'),
+                    'students_count' => $totalEnrolled,
+                    'price' => 'Free', // Placeholder - add to Program model if needed
+                    'date' => $dateRange,
+                    'time' => $timeRange,
+                    'location' => $mostCommonLocation,
+                    'category' => $program->category,
+                    'duration' => $program->duration_hours ? $program->duration_hours . ' hours' : 'N/A',
+                    'status' => $program->status,
+                    'sessions' => $sessions->map(function ($session) {
+                        return [
+                            'id' => $session->id,
+                            'name' => $session->title,
+                            'title' => $session->title,
+                            'date' => $session->start_date?->format('M j, Y'),
+                            'start_date' => $session->start_date?->format('Y-m-d'),
+                            'end_date' => $session->end_date?->format('Y-m-d'),
+                            'time' => $session->start_time && $session->end_time
+                                ? "{$session->start_time} - {$session->end_time}"
+                                : 'N/A',
+                            'start_time' => $session->start_time,
+                            'end_time' => $session->end_time,
+                            'location' => $session->location ?? 'N/A',
+                            'capacity' => $session->capacity,
+                            'enrolled' => $session->enrollments_count,
+                            'status' => $session->status,
+                        ];
+                    })->values()->all(),
+                ];
+            });
+
+        return $this->successResponse($programs, 'Admin programs retrieved successfully');
     }
 }

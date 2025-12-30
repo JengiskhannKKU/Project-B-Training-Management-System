@@ -10,6 +10,7 @@ import {
     MessageSquare,
     Settings,
     LogOut,
+    FileCheck,
 } from "lucide-vue-next";
 
 const showingSidebar = ref(true);
@@ -34,6 +35,11 @@ const navigationItems = [
         name: "Categories",
         path: "/admin/categories",
         icon: Tags,
+    },
+    {
+        name: "Requests",
+        path: "/admin/requests",
+        icon: FileCheck,
     },
     {
         name: "My Courses",

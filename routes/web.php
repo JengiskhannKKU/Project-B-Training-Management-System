@@ -41,9 +41,6 @@ Route::middleware(['auth'])->group(function () {
             'enrollmentId' => $id,
         ]);
     })->name('me.enrollments.show');
-    Route::get('/student/settings', function () {
-        return Inertia::render('Student/Settings');
-    })->name('student.settings');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -70,6 +67,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/categories/{id}/edit', function ($id) {
         return Inertia::render('Admin/Categories');
     })->name('admin.categories.edit');
+
+    Route::get('/admin/requests', function () {
+        return Inertia::render('Admin/Requests');
+    })->name('admin.requests');
 
     Route::get('/admin/my-courses', function () {
         return Inertia::render('Admin/MyCourses');

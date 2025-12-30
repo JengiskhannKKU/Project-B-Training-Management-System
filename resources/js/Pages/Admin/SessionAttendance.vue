@@ -17,9 +17,6 @@ import {
     CheckCircle,
     XCircle,
     ArrowLeft,
-    UserRoundCheck,
-    UserRoundX,
-    Save,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
@@ -41,8 +38,8 @@ const props = defineProps({
 const toast = useToast();
 
 // State for save functionality
-const isSaving = ref(false);
 const isLoading = ref(true);
+const lastAutoSaved = ref(null);
 
 // Data from backend
 const sessionInfo = ref({
@@ -179,12 +176,40 @@ watch([searchQuery, selectedDepartment, selectedStatus], () => {
     currentPage.value = 1;
 });
 
-// Toggle attendance
+// Auto-save timeout
+let autoSaveTimeout = null;
+
+// Set attendance status directly with auto-save
+const setAttendanceStatus = (traineeId, status) => {
+    const trainee = trainees.value.find((t) => t.id === traineeId);
+    if (trainee) {
+        trainee.status = status;
+        trainee.checked = status === 'present';
+
+        // Trigger auto-save after 500ms debounce
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(() => {
+            autoSaveAttendance();
+        }, 500);
+    }
+};
+
+// Toggle attendance with auto-save
 const toggleAttendance = (traineeId) => {
     const trainee = trainees.value.find((t) => t.id === traineeId);
     if (trainee) {
         trainee.checked = !trainee.checked;
         trainee.status = trainee.checked ? "present" : "absent";
+
+        // Trigger auto-save after 500ms debounce
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(() => {
+            autoSaveAttendance();
+        }, 500);
     }
 };
 
@@ -321,31 +346,35 @@ const fetchAttendanceData = async () => {
     }
 };
 
-// Save attendance
-const saveAttendance = async () => {
-    isSaving.value = true;
-
+// Auto-save attendance (silent, no toast on success)
+const autoSaveAttendance = async () => {
     try {
-        // Prepare bulk attendance data
-        const attendanceData = trainees.value.map(trainee => ({
-            enrollment_id: trainee.enrollmentId,
-            status: trainee.status,
-        }));
+        // Prepare bulk attendance data - only include marked attendances (not 'not_marked')
+        const attendanceData = trainees.value
+            .filter(trainee => trainee.status !== 'not_marked')
+            .map(trainee => ({
+                enrollment_id: trainee.enrollmentId,
+                status: trainee.status,
+            }));
 
-        // Send to API
+        // Check if there's anything to save
+        if (attendanceData.length === 0) {
+            return;
+        }
+
+        // Send to API (silent save)
         await axios.post(`/api/sessions/${props.sessionId}/attendances/bulk`, {
             items: attendanceData
         });
 
-        toast.success('Attendance saved successfully!');
+        // Update last auto-saved time
+        lastAutoSaved.value = new Date();
 
-        // Refresh data
-        await fetchAttendanceData();
+        // Silently refresh summary only
+        await fetchAttendanceSummary();
     } catch (error) {
-        console.error('Error saving attendance:', error);
-        toast.error(error.response?.data?.message || 'Failed to save attendance. Please try again.');
-    } finally {
-        isSaving.value = false;
+        console.error('Error auto-saving attendance:', error);
+        toast.error('Failed to auto-save attendance.');
     }
 };
 
@@ -378,15 +407,11 @@ onMounted(() => {
                         Track attendance for this training session
                     </p>
                 </div>
-                <button
-                    @click="saveAttendance"
-                    :disabled="isSaving || isLoading"
-                    class="inline-flex items-center gap-2 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Save :size="20" />
-                    <span v-if="isSaving">Saving...</span>
-                    <span v-else>Save Attendance</span>
-                </button>
+                <!-- Auto-save indicator -->
+                <div v-if="lastAutoSaved" class="text-sm text-gray-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                    <CheckCircle :size="16" class="text-green-600" />
+                    <span class="font-medium">Auto-saved</span>
+                </div>
             </div>
 
             <!-- Loading State -->

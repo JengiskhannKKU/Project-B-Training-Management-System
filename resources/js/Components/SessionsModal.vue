@@ -115,6 +115,12 @@ const eligibleSessions = computed(() => {
                     <p class="mt-1 text-sm text-gray-500">
                         Sessions must be 'open' or 'closed' status and past their end date to check attendance.
                     </p>
+                    <Link
+                        :href="`/trainer/programs/${courseId}`"
+                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#26685f] transition-colors"
+                    >
+                        Create Session
+                    </Link>
                 </div>
             </div>
 

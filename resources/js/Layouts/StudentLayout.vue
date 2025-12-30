@@ -23,7 +23,7 @@ const navigationItems = [
     },
     {
         name: "Setting",
-        path: "/student/settings",
+        path: "/me/profile",
         icon: Settings,
     },
 ];
@@ -34,6 +34,9 @@ const isActive = (path) => {
     }
     if (path === "/me/enrollments") {
         return currentPath.value.startsWith("/me/enrollments");
+    }
+    if (path === "/me/profile") {
+        return currentPath.value.startsWith("/me/profile");
     }
     return currentPath.value === path;
 };

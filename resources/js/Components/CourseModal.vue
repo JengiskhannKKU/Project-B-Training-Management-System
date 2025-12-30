@@ -26,6 +26,7 @@ const toast = useToast();
 interface Props {
     show: boolean;
     enablePreviewDialogs?: boolean;
+    uploadUrlPrefix?: string;
     course?: {
         id?: number;
         title?: string;
@@ -42,6 +43,7 @@ const props = withDefaults(defineProps<Props>(), {
     show: false,
     course: null,
     enablePreviewDialogs: true,
+    uploadUrlPrefix: 'trainer',
 });
 
 const emit = defineEmits<{
@@ -223,7 +225,7 @@ const handleImageUpload = async (event: Event) => {
         const formData = new FormData();
         formData.append('image', file);
         
-        const { data } = await axios.post('/api/trainer/upload/image', formData, {
+        const { data } = await axios.post(`/api/${props.uploadUrlPrefix}/upload/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },

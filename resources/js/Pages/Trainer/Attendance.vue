@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { Head } from "@inertiajs/vue3";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import AttendanceCourseCard from "@/Components/AttendanceCourseCard.vue";
@@ -15,233 +15,36 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 import SessionsModal from "@/Components/SessionsModal.vue";
+import axios from "axios";
 
-const courses = ref([
-    {
-        id: 1,
-        name: "Advanced Laravel Development",
-        image_url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800",
-        rating: 4.8,
-        level: "Advanced",
-        students_count: 45,
-        price: "RM 1,200",
-        date: "Dec 15-20, 2025",
-        time: "10:00 AM - 12:00 PM",
-        location: "Room A101",
-        instructor: "John Smith",
-        department: "IT",
-        status: "Active",
-        sessions: [
-            {
-                id: 1,
-                name: "Session 1: Introduction to Laravel",
-                date: "Dec 15, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 2,
-                name: "Session 2: Eloquent ORM",
-                date: "Dec 16, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 3,
-                name: "Session 3: Advanced Routing",
-                date: "Dec 17, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-            {
-                id: 4,
-                name: "Session 4: Authentication & Authorization",
-                date: "Dec 18, 2025",
-                time: "10:00 AM - 12:00 PM",
-                location: "Room A101",
-            },
-        ],
-    },
-    {
-        id: 2,
-        name: "Vue.js Masterclass",
-        image_url: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800",
-        rating: 4.9,
-        level: "Intermediate",
-        students_count: 32,
-        price: "RM 1,000",
-        date: "Dec 18-22, 2025",
-        time: "2:00 PM - 4:00 PM",
-        location: "Room B205",
-        instructor: "Sarah Johnson",
-        department: "IT",
-        status: "Active",
-        sessions: [
-            {
-                id: 5,
-                name: "Session 1: Vue Fundamentals",
-                date: "Dec 18, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-            {
-                id: 6,
-                name: "Session 2: Component Design",
-                date: "Dec 19, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-            {
-                id: 7,
-                name: "Session 3: State Management",
-                date: "Dec 20, 2025",
-                time: "2:00 PM - 4:00 PM",
-                location: "Room B205",
-            },
-        ],
-    },
-    {
-        id: 3,
-        name: "UI/UX Design Principles",
-        image_url: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800",
-        rating: 4.7,
-        level: "Beginner",
-        students_count: 28,
-        price: "RM 800",
-        date: "Dec 20-25, 2025",
-        time: "9:00 AM - 11:00 AM",
-        location: "Design Lab",
-        instructor: "Mike Davis",
-        department: "Design",
-        status: "Active",
-        sessions: [
-            {
-                id: 8,
-                name: "Session 1: Design Thinking",
-                date: "Dec 20, 2025",
-                time: "9:00 AM - 11:00 AM",
-                location: "Design Lab",
-            },
-            {
-                id: 9,
-                name: "Session 2: User Research",
-                date: "Dec 21, 2025",
-                time: "9:00 AM - 11:00 AM",
-                location: "Design Lab",
-            },
-        ],
-    },
-    {
-        id: 4,
-        name: "Digital Marketing Strategy",
-        image_url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800",
-        rating: 4.6,
-        level: "Intermediate",
-        students_count: 56,
-        price: "RM 1,500",
-        date: "Jan 5-10, 2026",
-        time: "1:00 PM - 3:00 PM",
-        location: "Marketing Hub",
-        instructor: "Emily Brown",
-        department: "Marketing",
-        status: "Active",
-        sessions: [
-            {
-                id: 10,
-                name: "Session 1: Digital Marketing Overview",
-                date: "Jan 5, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-            {
-                id: 11,
-                name: "Session 2: SEO & SEM",
-                date: "Jan 6, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-            {
-                id: 12,
-                name: "Session 3: Social Media Marketing",
-                date: "Jan 7, 2026",
-                time: "1:00 PM - 3:00 PM",
-                location: "Marketing Hub",
-            },
-        ],
-    },
-    {
-        id: 5,
-        name: "Python for Data Science",
-        image_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800",
-        rating: 4.9,
-        level: "Advanced",
-        students_count: 38,
-        price: "RM 1,300",
-        date: "Jan 8-15, 2026",
-        time: "10:00 AM - 1:00 PM",
-        location: "Data Lab",
-        instructor: "David Lee",
-        department: "IT",
-        status: "Upcoming",
-        sessions: [
-            {
-                id: 13,
-                name: "Session 1: Python Basics for Data Science",
-                date: "Jan 8, 2026",
-                time: "10:00 AM - 1:00 PM",
-                location: "Data Lab",
-            },
-            {
-                id: 14,
-                name: "Session 2: NumPy and Pandas",
-                date: "Jan 9, 2026",
-                time: "10:00 AM - 1:00 PM",
-                location: "Data Lab",
-            },
-        ],
-    },
-    {
-        id: 6,
-        name: "Mobile App Development",
-        image_url: "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=800",
-        rating: 4.5,
-        level: "Intermediate",
-        students_count: 42,
-        price: "RM 1,100",
-        date: "Jan 12-18, 2026",
-        time: "3:00 PM - 5:00 PM",
-        location: "Tech Center",
-        instructor: "Lisa Wang",
-        department: "IT",
-        status: "Upcoming",
-        sessions: [
-            {
-                id: 15,
-                name: "Session 1: Mobile Development Fundamentals",
-                date: "Jan 12, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-            {
-                id: 16,
-                name: "Session 2: React Native Basics",
-                date: "Jan 13, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-            {
-                id: 17,
-                name: "Session 3: Building Your First App",
-                date: "Jan 14, 2026",
-                time: "3:00 PM - 5:00 PM",
-                location: "Tech Center",
-            },
-        ],
-    },
-]);
+const courses = ref([]);
+const loading = ref(true);
+const error = ref(null);
+
+// Fetch trainer's courses from API
+const fetchCourses = async () => {
+    try {
+        loading.value = true;
+        error.value = null;
+        const response = await axios.get("/api/trainer/sessions");
+
+        if (response.data && response.data.data) {
+            courses.value = response.data.data;
+        }
+    } catch (err) {
+        console.error("Error fetching courses:", err);
+        error.value = err.response?.data?.message || "Failed to load courses";
+    } finally {
+        loading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchCourses();
+});
 
 const searchQuery = ref("");
-const selectedDepartment = ref("all");
+const selectedCategory = ref("all");
 const selectedStatus = ref("all");
 const sortColumn = ref("");
 const sortDirection = ref("asc");
@@ -253,9 +56,9 @@ const selectedCourse = ref(null);
 const currentPage = ref(1);
 const itemsPerPage = ref(9); // 9 cards per page for grid layout
 
-// Get unique departments for filter
-const departments = computed(() => {
-    return [...new Set(courses.value.map((course) => course.department))];
+// Get unique categories for filter
+const categories = computed(() => {
+    return [...new Set(courses.value.map((course) => course.category))];
 });
 
 // Count courses
@@ -264,7 +67,7 @@ const totalCoursesCount = computed(() => {
 });
 
 const activeCoursesCount = computed(() => {
-    return courses.value.filter((course) => course.status === "Active").length;
+    return courses.value.filter((course) => course.status === "active").length;
 });
 
 // Filtered and sorted courses
@@ -277,16 +80,16 @@ const filteredCourses = computed(() => {
         result = result.filter(
             (course) =>
                 course.name.toLowerCase().includes(query) ||
-                course.instructor.toLowerCase().includes(query) ||
                 course.location.toLowerCase().includes(query) ||
-                course.department.toLowerCase().includes(query)
+                course.category.toLowerCase().includes(query) ||
+                course.code.toLowerCase().includes(query)
         );
     }
 
-    // Filter by department
-    if (selectedDepartment.value !== "all") {
+    // Filter by category
+    if (selectedCategory.value !== "all") {
         result = result.filter(
-            (course) => course.department === selectedDepartment.value
+            (course) => course.category === selectedCategory.value
         );
     }
 
@@ -348,7 +151,7 @@ const goToPage = (page) => {
 };
 
 // Reset to first page when filters change
-watch([searchQuery, selectedDepartment, selectedStatus], () => {
+watch([searchQuery, selectedCategory, selectedStatus], () => {
     currentPage.value = 1;
 });
 
@@ -356,9 +159,10 @@ watch([searchQuery, selectedDepartment, selectedStatus], () => {
 const exportToCSV = () => {
     const headers = [
         "ID",
+        "Code",
         "Course Name",
-        "Instructor",
-        "Department",
+        "Category",
+        "Level",
         "Students",
         "Date",
         "Time",
@@ -367,9 +171,10 @@ const exportToCSV = () => {
     ];
     const csvData = filteredCourses.value.map((course) => [
         course.id,
+        course.code,
         course.name,
-        course.instructor,
-        course.department,
+        course.category,
+        course.level,
         course.students_count,
         course.date,
         course.time,
@@ -399,8 +204,8 @@ const exportToPDF = () => {
 };
 
 // Apply filters
-const applyFilters = (department, status) => {
-    selectedDepartment.value = department;
+const applyFilters = (category, status) => {
+    selectedCategory.value = category;
     selectedStatus.value = status;
     showFilterModal.value = false;
 };
@@ -418,7 +223,7 @@ const applySort = (column) => {
 
 // Reset filters
 const resetFilters = () => {
-    selectedDepartment.value = "all";
+    selectedCategory.value = "all";
     selectedStatus.value = "all";
     showFilterModal.value = false;
 };
@@ -526,9 +331,50 @@ const selectedCourseName = computed(() => {
                 <div
                     class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden p-6"
                 >
+                    <!-- Loading State -->
+                    <div v-if="loading" class="text-center py-12">
+                        <div
+                            class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"
+                        ></div>
+                        <p class="mt-4 text-sm text-gray-600">
+                            Loading courses...
+                        </p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div v-else-if="error" class="text-center py-12">
+                        <div
+                            class="mx-auto h-12 w-12 text-red-500 flex items-center justify-center"
+                        >
+                            <svg
+                                class="h-12 w-12"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">
+                            Error loading courses
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-500">{{ error }}</p>
+                        <button
+                            @click="fetchCourses"
+                            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+
                     <!-- Grid of Course Cards -->
                     <div
-                        v-if="paginatedCourses.length > 0"
+                        v-else-if="paginatedCourses.length > 0"
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         <AttendanceCourseCard
@@ -550,7 +396,7 @@ const selectedCourseName = computed(() => {
 
                     <!-- Empty State -->
                     <div
-                        v-if="filteredCourses.length === 0"
+                        v-else-if="!loading && filteredCourses.length === 0"
                         class="text-center py-12"
                     >
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
@@ -656,11 +502,11 @@ const selectedCourseName = computed(() => {
             <FilterModal
                 :show="showFilterModal"
                 title="Filter Courses"
-                v-model:selectedDepartment="selectedDepartment"
+                v-model:selectedDepartment="selectedCategory"
                 v-model:selectedStatus="selectedStatus"
-                :departments="departments"
-                :statusOptions="['Active', 'Upcoming', 'Completed']"
-                departmentLabel="Department"
+                :departments="categories"
+                :statusOptions="['active', 'inactive']"
+                departmentLabel="Category"
                 @close="showFilterModal = false"
                 @reset="resetFilters"
             />
@@ -677,8 +523,8 @@ const selectedCourseName = computed(() => {
                         directionLabels: { asc: 'A-Z', desc: 'Z-A' },
                     },
                     {
-                        value: 'instructor',
-                        label: 'Instructor',
+                        value: 'category',
+                        label: 'Category',
                         directionLabels: { asc: 'A-Z', desc: 'Z-A' },
                     },
                     {
