@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { X, Calendar, Clock, MapPin } from 'lucide-vue-next';
 
@@ -8,6 +9,8 @@ interface Session {
     date: string;
     time: string;
     location?: string;
+    status?: string;
+    end_date?: string;
 }
 
 interface Props {
@@ -29,6 +32,31 @@ const emit = defineEmits<{
 const handleClose = () => {
     emit('close');
 };
+
+/**
+ * Filter sessions to show only those eligible for attendance checking:
+ * - Status must be 'open' or 'closed'
+ * - End date must have passed (or no end_date set)
+ */
+const eligibleSessions = computed(() => {
+    return props.sessions.filter((session) => {
+        const statusLower = session.status?.toLowerCase();
+        const isValidStatus = statusLower === 'open' || statusLower === 'closed';
+
+        if (!isValidStatus) return false;
+
+        // If no end_date, allow attendance check based on status only
+        if (!session.end_date) return true;
+
+        // Check if end_date has passed
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const endDate = new Date(session.end_date);
+        endDate.setHours(0, 0, 0, 0);
+
+        return endDate <= today;
+    });
+});
 </script>
 
 <template>
@@ -60,32 +88,20 @@ const handleClose = () => {
 
             <!-- Sessions List -->
             <div class="p-6">
-                <div v-if="sessions.length > 0" class="space-y-4">
+                <div v-if="eligibleSessions.length > 0" class="space-y-3">
                     <Link
-                        v-for="session in sessions"
+                        v-for="session in eligibleSessions"
                         :key="session.id"
                         :href="`${props.baseUrl}/${courseId}/sessions/${session.id}/attendance`"
-                        class="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:border-[#2f837d] transition-all cursor-pointer"
+                        class="flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-[#2f837d] transition-all cursor-pointer"
                     >
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">
-                            {{ session.name }}
-                        </h3>
-
-                        <div class="space-y-2 text-sm text-gray-600">
-                            <div class="flex items-center gap-2">
-                                <Calendar :size="16" class="text-[#2f837d]" />
-                                <span>{{ session.date }}</span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <Clock :size="16" class="text-[#2f837d]" />
-                                <span>{{ session.time }}</span>
-                            </div>
-
-                            <div v-if="session.location" class="flex items-center gap-2">
-                                <MapPin :size="16" class="text-[#2f837d]" />
-                                <span>{{ session.location }}</span>
-                            </div>
+                        <div class="flex items-center gap-3">
+                            <Calendar :size="18" class="text-[#2f837d]" />
+                            <span class="font-medium text-gray-900">{{ session.name }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <Clock :size="16" class="text-gray-400" />
+                            <span>{{ session.date }} | {{ session.time }}</span>
                         </div>
                     </Link>
                 </div>
@@ -94,10 +110,10 @@ const handleClose = () => {
                 <div v-else class="text-center py-12">
                     <Calendar class="mx-auto h-12 w-12 text-gray-400" />
                     <h3 class="mt-2 text-sm font-medium text-gray-900">
-                        No sessions available
+                        No sessions available for attendance
                     </h3>
                     <p class="mt-1 text-sm text-gray-500">
-                        There are no sessions scheduled for this course yet.
+                        Sessions must be 'open' or 'closed' status and past their end date to check attendance.
                     </p>
                 </div>
             </div>
