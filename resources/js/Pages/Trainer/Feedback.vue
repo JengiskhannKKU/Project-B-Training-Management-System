@@ -5,6 +5,7 @@ import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import OverallRating from '@/Components/OverallRating.vue';
 import SentimentOverview from '@/Components/SentimentOverview.vue';
 import CommentsPanel from '@/Components/CommentsPanel.vue';
+import { Download } from 'lucide-vue-next';
 import { mockFeedbacks, calculateFeedbackStats, filterFeedbacksByTrainer } from '@/mockData/feedbackData.js';
 
 // Simulating trainer ID - in a real app, this would come from auth
@@ -15,6 +16,34 @@ const trainerFeedbacks = computed(() => filterFeedbacksByTrainer(mockFeedbacks, 
 
 // Calculate statistics
 const stats = computed(() => calculateFeedbackStats(trainerFeedbacks.value));
+
+// Export feedback data
+const exportFeedback = () => {
+    // Convert feedback data to CSV format
+    const headers = ['Reviewer', 'Course', 'Rating', 'Sentiment', 'Review', 'Date'];
+    const csvData = trainerFeedbacks.value.map(review => [
+        review.reviewerName,
+        review.courseName,
+        review.rating,
+        review.sentiment,
+        `"${review.reviewText.replace(/"/g, '""')}"`, // Escape quotes
+        review.date
+    ]);
+
+    const csv = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `my-feedback-export-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+};
 </script>
 
 <template>
@@ -29,25 +58,38 @@ const stats = computed(() => calculateFeedbackStats(trainerFeedbacks.value));
             </div>
 
             <!-- Two Column Layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Left Column: Analytics Panel (1/3 width) -->
-                <div class="lg:col-span-1 space-y-6">
-                    <!-- Overall Rating Component -->
-                    <OverallRating
-                        :average-rating="stats.averageRating"
-                        :total-reviews="stats.totalReviews"
-                        :distribution-percentages="stats.distributionPercentages"
-                    />
+            <div class="bg-white border-[#DFE5EF] rounded-xl p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[800px]">
+                    <!-- Left Column: Analytics Panel (1/3 width) -->
+                    <div class="lg:col-span-1 space-y-6 flex flex-col">
+                        <!-- Overall Rating Component -->
+                        <OverallRating
+                            :average-rating="stats.averageRating"
+                            :total-reviews="stats.totalReviews"
+                            :distribution-percentages="stats.distributionPercentages"
+                        />
 
-                    <!-- Sentiment Overview Component -->
-                    <SentimentOverview
-                        :sentiment-percentages="stats.sentimentPercentages"
-                    />
+                        <!-- Sentiment Overview Component -->
+                        <SentimentOverview
+                            :sentiment-percentages="stats.sentimentPercentages"
+                        />
+                    </div>
+
+                    <!-- Right Column: Comments Reader Panel (2/3 width) -->
+                    <div class="lg:col-span-2 flex flex-col min-h-0">
+                        <CommentsPanel :reviews="trainerFeedbacks" />
+                    </div>
                 </div>
 
-                <!-- Right Column: Comments Reader Panel (2/3 width) -->
-                <div class="lg:col-span-2">
-                    <CommentsPanel :reviews="trainerFeedbacks" />
+                <!-- Export Button Row -->
+                <div class="flex justify-end mt-6 pt-6">
+                    <button
+                        @click="exportFeedback"
+                        class="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors shadow-lg hover:shadow-xl font-medium text-sm"
+                    >
+                        <Download :size="18" />
+                        <span>Export Data</span>
+                    </button>
                 </div>
             </div>
         </div>
