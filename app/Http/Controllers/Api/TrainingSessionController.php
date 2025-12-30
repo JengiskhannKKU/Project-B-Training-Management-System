@@ -161,4 +161,94 @@ class TrainingSessionController extends Controller
             'summary' => $summary,
         ], 'Session marked as completed.');
     }
+
+    /**
+     * Get all sessions for the authenticated trainer grouped by program.
+     */
+    public function trainerSessions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        // Get all sessions for this trainer with program and enrollment count
+        $sessions = TrainingSession::with('program')
+            ->where('trainer_id', $user->id)
+            ->withCount('enrollments')
+            ->orderBy('start_date', 'desc')
+            ->get();
+
+        // Group sessions by program
+        $programs = $sessions->groupBy('program_id')->map(function ($sessionGroup) {
+            $program = $sessionGroup->first()->program;
+
+            // Calculate aggregated data
+            $totalEnrolled = $sessionGroup->sum('enrollments_count');
+            $dates = $sessionGroup->pluck('start_date')->filter();
+            $earliestDate = $dates->min();
+            $latestDate = $dates->max();
+
+            // Format date range
+            $dateRange = 'N/A';
+            if ($earliestDate && $latestDate) {
+                $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
+                $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
+                $dateRange = $earliestDate->eq($latestDate)
+                    ? Carbon::parse($earliestDate)->format('M j, Y')
+                    : "{$earliestFormatted} - {$latestFormatted}";
+            }
+
+            // Get most common location
+            $locations = $sessionGroup->pluck('location')->filter();
+            $locationCounts = $locations->countBy();
+            $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
+
+            // Get time range from first session
+            $firstSession = $sessionGroup->first();
+            $timeRange = 'N/A';
+            if ($firstSession->start_time && $firstSession->end_time) {
+                $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
+            }
+
+            return [
+                'id' => $program->id,
+                'code' => $program->code,
+                'name' => $program->name,
+                'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                'rating' => 4.5, // Placeholder - can be calculated from feedback if available
+                'level' => ucfirst($program->level ?? 'Beginner'),
+                'students_count' => $totalEnrolled,
+                'price' => 'Free', // Placeholder - add to Program model if needed
+                'date' => $dateRange,
+                'time' => $timeRange,
+                'location' => $mostCommonLocation,
+                'category' => $program->category,
+                'duration' => $program->duration_hours ? $program->duration_hours . ' hours' : 'N/A',
+                'status' => $program->status,
+                'sessions' => $sessionGroup->map(function ($session) {
+                    return [
+                        'id' => $session->id,
+                        'name' => $session->title,
+                        'title' => $session->title,
+                        'date' => $session->start_date?->format('M j, Y'),
+                        'start_date' => $session->start_date?->format('Y-m-d'),
+                        'end_date' => $session->end_date?->format('Y-m-d'),
+                        'time' => $session->start_time && $session->end_time
+                            ? "{$session->start_time} - {$session->end_time}"
+                            : 'N/A',
+                        'start_time' => $session->start_time,
+                        'end_time' => $session->end_time,
+                        'location' => $session->location ?? 'N/A',
+                        'capacity' => $session->capacity,
+                        'enrolled' => $session->enrollments_count,
+                        'status' => $session->status,
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
+
+        return $this->successResponse($programs, 'Trainer sessions retrieved successfully');
+    }
 }
