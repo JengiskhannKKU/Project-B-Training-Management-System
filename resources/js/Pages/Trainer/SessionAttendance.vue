@@ -293,33 +293,35 @@ const fetchAttendanceSummary = async () => {
 // Fetch enrollments and attendance data
 const fetchAttendanceData = async () => {
     isLoading.value = true;
-
     try {
-        // Fetch session info
-        const sessionResponse = await axios.get(`/api/sessions/${props.sessionId}`);
-        sessionInfo.value = sessionResponse.data.data;
+        const [enrollmentsResponse] = await Promise.all([
+            axios.get(`/api/sessions/${props.sessionId}/enrollments-for-attendance`),
+            fetchAttendanceSummary(),
+            fetchSessionInfo()
+        ]);
 
-        // Fetch enrollments for this session
-        const enrollmentsResponse = await axios.get(`/api/sessions/${props.sessionId}/enrollments`);
-        const enrollments = enrollmentsResponse.data.data || [];
+        const enrollments = enrollmentsResponse.data.data;
 
         // Map enrollments to trainees format
-        trainees.value = enrollments.map((enrollment) => ({
-            id: enrollment.trainee?.employee_id || enrollment.id,
-            enrollmentId: enrollment.id,
-            name: enrollment.trainee?.name || 'Unknown',
-            email: enrollment.trainee?.email || '',
-            contact: enrollment.trainee?.phone || '',
-            department: enrollment.trainee?.department || '',
-            status: enrollment.attendance_status || 'not_marked',
-            checked: enrollment.attendance_status === 'present',
-        }));
+        trainees.value = enrollments.map(enrollment => {
+            // Get the latest attendance record if exists
+            const latestAttendance = enrollment.attendances?.[0];
+            const status = latestAttendance?.status || 'absent';
 
-        // Fetch attendance summary
-        await fetchAttendanceSummary();
+            return {
+                id: enrollment.id,
+                enrollmentId: enrollment.id,
+                name: enrollment.user?.name || 'Unknown',
+                email: enrollment.user?.email || '',
+                contact: enrollment.user?.phone_number || '',
+                department: enrollment.user?.department || 'N/A',
+                status: status,
+                checked: status === 'present',
+            };
+        });
     } catch (error) {
         console.error('Error fetching attendance data:', error);
-        toast.error('Failed to load attendance data. Please try again.');
+        toast.error('Failed to load attendance data');
     } finally {
         isLoading.value = false;
     }
@@ -371,7 +373,7 @@ const completeSession = async () => {
     isCompleting.value = true;
 
     try {
-        const response = await axios.post(`/api/sessions/${props.sessionId}/complete`);
+        await axios.post(`/api/sessions/${props.sessionId}/complete`);
 
         toast.success('Session completed successfully!');
 
