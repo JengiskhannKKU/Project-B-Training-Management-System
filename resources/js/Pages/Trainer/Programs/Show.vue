@@ -122,7 +122,7 @@ const traineeForm = useForm({
 
 const categories = ['Design', 'Development', 'Marketing', 'Business'];
 
-// Mock sessions data
+// Sessions data
 const sessions = ref<Array<any>>([]);
 
 // Mock trainees data

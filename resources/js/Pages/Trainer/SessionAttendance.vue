@@ -20,6 +20,7 @@ import {
     UserRoundCheck,
     UserRoundX,
     Save,
+    AlertTriangle,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
@@ -174,6 +175,11 @@ const goToPage = (page) => {
     }
 };
 
+// Check if session is completed
+const isSessionCompleted = computed(() => {
+    return sessionInfo.value?.status?.toLowerCase() === 'completed';
+});
+
 // Reset to first page when filters change
 watch([searchQuery, selectedDepartment, selectedStatus], () => {
     currentPage.value = 1;
@@ -287,35 +293,33 @@ const fetchAttendanceSummary = async () => {
 // Fetch enrollments and attendance data
 const fetchAttendanceData = async () => {
     isLoading.value = true;
-    try {
-        const [enrollmentsResponse] = await Promise.all([
-            axios.get(`/api/sessions/${props.sessionId}/enrollments-for-attendance`),
-            fetchAttendanceSummary(),
-            fetchSessionInfo()
-        ]);
 
-        const enrollments = enrollmentsResponse.data.data;
+    try {
+        // Fetch session info
+        const sessionResponse = await axios.get(`/api/sessions/${props.sessionId}`);
+        sessionInfo.value = sessionResponse.data.data;
+
+        // Fetch enrollments for this session
+        const enrollmentsResponse = await axios.get(`/api/sessions/${props.sessionId}/enrollments`);
+        const enrollments = enrollmentsResponse.data.data || [];
 
         // Map enrollments to trainees format
-        trainees.value = enrollments.map(enrollment => {
-            // Get the latest attendance record if exists
-            const latestAttendance = enrollment.attendances?.[0];
-            const status = latestAttendance?.status || 'absent';
+        trainees.value = enrollments.map((enrollment) => ({
+            id: enrollment.trainee?.employee_id || enrollment.id,
+            enrollmentId: enrollment.id,
+            name: enrollment.trainee?.name || 'Unknown',
+            email: enrollment.trainee?.email || '',
+            contact: enrollment.trainee?.phone || '',
+            department: enrollment.trainee?.department || '',
+            status: enrollment.attendance_status || 'not_marked',
+            checked: enrollment.attendance_status === 'present',
+        }));
 
-            return {
-                id: enrollment.id,
-                enrollmentId: enrollment.id,
-                name: enrollment.user?.name || 'Unknown',
-                email: enrollment.user?.email || '',
-                contact: enrollment.user?.phone_number || '',
-                department: enrollment.user?.department || 'N/A',
-                status: status,
-                checked: status === 'present',
-            };
-        });
+        // Fetch attendance summary
+        await fetchAttendanceSummary();
     } catch (error) {
         console.error('Error fetching attendance data:', error);
-        toast.error('Failed to load attendance data');
+        toast.error('Failed to load attendance data. Please try again.');
     } finally {
         isLoading.value = false;
     }
@@ -349,6 +353,39 @@ const saveAttendance = async () => {
     }
 };
 
+// Complete session
+const isCompleting = ref(false);
+
+const completeSession = async () => {
+    // Show confirmation dialog
+    const confirmed = confirm(
+        'Are you sure you want to complete this session?\n\n' +
+        'After completion:\n' +
+        '- Attendance records will be locked (only admin can modify)\n' +
+        '- No new enrollments will be allowed\n' +
+        '- This action cannot be undone'
+    );
+
+    if (!confirmed) return;
+
+    isCompleting.value = true;
+
+    try {
+        const response = await axios.post(`/api/sessions/${props.sessionId}/complete`);
+
+        toast.success('Session completed successfully!');
+
+        // Refresh session data to show updated status
+        await fetchAttendanceData();
+    } catch (error) {
+        console.error('Error completing session:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to complete session. Please try again.';
+        toast.error(errorMessage);
+    } finally {
+        isCompleting.value = false;
+    }
+};
+
 // Load data on mount
 onMounted(() => {
     fetchAttendanceData();
@@ -378,15 +415,49 @@ onMounted(() => {
                         Track attendance for this training session
                     </p>
                 </div>
-                <button
-                    @click="saveAttendance"
-                    :disabled="isSaving || isLoading"
-                    class="inline-flex items-center gap-2 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Save :size="20" />
-                    <span v-if="isSaving">Saving...</span>
-                    <span v-else>Save Attendance</span>
-                </button>
+                <div class="flex gap-3">
+                    <button
+                        @click="saveAttendance"
+                        :disabled="isSaving || isLoading || isSessionCompleted"
+                        class="inline-flex items-center gap-2 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Save :size="20" />
+                        <span v-if="isSaving">Saving...</span>
+                        <span v-else>Save Attendance</span>
+                    </button>
+                    <button
+                        v-if="!isSessionCompleted"
+                        @click="completeSession"
+                        :disabled="isCompleting || isLoading"
+                        class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <CheckCircle :size="20" />
+                        <span v-if="isCompleting">Completing...</span>
+                        <span v-else>Complete Session</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Completed Session Warning -->
+            <div
+                v-if="isSessionCompleted"
+                class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg"
+            >
+                <div class="flex items-start gap-3">
+                    <AlertTriangle class="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div class="flex-1">
+                        <h3 class="text-sm font-semibold text-amber-800 mb-1">
+                            Session Completed
+                        </h3>
+                        <p class="text-sm text-amber-700">
+                            This session has been marked as completed. The following restrictions apply:
+                        </p>
+                        <ul class="mt-2 text-sm text-amber-700 list-disc list-inside space-y-1">
+                            <li>Attendance records are locked (only admin can modify)</li>
+                            <li>No new enrollments are allowed</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <!-- Loading State -->
