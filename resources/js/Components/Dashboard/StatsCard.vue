@@ -112,6 +112,8 @@ const sparklineColorValue = computed(() => {
         blue: "#3b82f6",
         purple: "#8b5cf6",
         amber: "#f59e0b",
+        green: "#12B76A",
+        teal: "#3D9792",
     };
     return colors[props.sparklineColor] || colors.emerald;
 });
@@ -153,45 +155,45 @@ const sparklineOptions = computed(() => {
 
 <template>
     <div
-        class="group relative overflow-hidden rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+        class="group relative overflow-hidden rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg md:p-6"
         :class="hoverBorderClass"
     >
         <div
-            class="absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-all duration-300"
+            class="absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-all duration-300 md:h-32 md:w-32"
             :class="glowColorClass"
         ></div>
 
         <div class="relative flex items-start justify-between">
             <div class="flex-1">
                 <p
-                    class="text-xs font-semibold uppercase tracking-wider text-gray-500"
+                    class="text-xs font-semibold uppercase tracking-wider text-gray-500 md:text-sm"
                 >
                     {{ title }}
                 </p>
 
-                <div class="mt-3 flex items-baseline gap-2.5">
-                    <h3 class="text-4xl font-bold text-gray-900">
+                <div class="mt-3 flex items-baseline gap-2.5 md:mt-4">
+                    <h3 class="text-4xl font-bold text-gray-900 md:text-5xl lg:text-6xl">
                         {{ value }}
                     </h3>
                     <span
                         v-if="growth !== null"
-                        class="flex items-center gap-0.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100"
+                        class="flex items-center gap-0.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 md:px-3 md:py-1.5 md:text-sm"
                     >
                         <slot name="growth-icon"></slot>
                         {{ growth }}%
                     </span>
                     <span
                         v-if="stars !== null"
-                        class="text-xl font-semibold text-gray-400"
+                        class="text-xl font-semibold text-gray-400 md:text-2xl lg:text-3xl"
                     >
                         / {{ maxStars }}
                     </span>
                 </div>
 
                 <!-- Badge slot -->
-                <p v-if="badge" class="mt-2.5 text-xs">
+                <p v-if="badge" class="mt-2.5 text-xs md:mt-3 md:text-sm">
                     <span
-                        class="inline-flex items-center rounded-full px-2.5 py-1 font-semibold ring-1"
+                        class="inline-flex items-center rounded-full px-2.5 py-1 font-semibold ring-1 md:px-3 md:py-1.5"
                         :class="badgeColorClasses"
                     >
                         {{ badge }}
@@ -199,12 +201,12 @@ const sparklineOptions = computed(() => {
                 </p>
 
                 <!-- Stars display -->
-                <div v-if="stars !== null" class="relative mt-3 flex items-center gap-0.5">
+                <div v-if="stars !== null" class="relative mt-3 flex items-center gap-0.5 md:mt-4 md:gap-1">
                     <slot name="stars"></slot>
                 </div>
 
                 <!-- Subtitle -->
-                <p v-if="subtitle" class="relative mt-2.5 text-xs text-gray-500">
+                <p v-if="subtitle" class="relative mt-2.5 text-xs text-gray-500 md:mt-3 md:text-sm">
                     {{ subtitle }}
                 </p>
             </div>
@@ -212,26 +214,26 @@ const sparklineOptions = computed(() => {
             <!-- Icon -->
             <div
                 v-if="icon"
-                class="rounded-full p-3 transition-all duration-300 group-hover:shadow-xl"
+                class="rounded-full p-3 transition-all duration-300 group-hover:shadow-xl md:p-4"
                 :class="iconColorClasses"
             >
-                <component :is="icon" :size="24" />
+                <component :is="icon" :size="24" class="md:h-7 md:w-7 lg:h-8 lg:w-8" />
             </div>
         </div>
 
         <!-- Sparkline -->
-        <div v-if="sparklineData" class="relative mt-5 h-12">
+        <div v-if="sparklineData" class="relative mt-5 h-12 md:mt-6 md:h-16 lg:h-20">
             <VueApexCharts
                 type="area"
-                height="48"
+                :height="sparklineData ? '100%' : '48'"
                 :options="sparklineOptions"
                 :series="[{ data: sparklineData }]"
             />
         </div>
 
         <!-- Progress bar -->
-        <div v-if="progressBar !== null" class="relative mt-5">
-            <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div v-if="progressBar !== null" class="relative mt-5 md:mt-6">
+            <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 md:h-3">
                 <div
                     class="h-full rounded-full bg-gradient-to-r shadow-md transition-all duration-700 ease-out"
                     :class="progressColorClass"

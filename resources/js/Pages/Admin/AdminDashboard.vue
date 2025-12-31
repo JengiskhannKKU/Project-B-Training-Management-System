@@ -4,11 +4,11 @@ import AdminLayout from "@/Layouts/AdminLayout.vue";
 import { GraduationCap, BookOpen, TrendingUp, Star, Award } from "lucide-vue-next";
 
 // Component imports
-import StatsCard from "@/Components/Admin/Dashboard/StatsCard.vue";
-import DepartmentDistributionCard from "@/Components/Admin/Dashboard/DepartmentDistributionCard.vue";
+import StatsCard from "@/Components/Dashboard/StatsCard.vue";
+import DepartmentDistributionCard from "@/Components/Dashboard/DepartmentDistributionCard.vue";
 import RegistrationTrendCard from "@/Components/Admin/Dashboard/RegistrationTrendCard.vue";
 import TopCategoriesCard from "@/Components/Admin/Dashboard/TopCategoriesCard.vue";
-import TopCoursesCard from "@/Components/Admin/Dashboard/TopCoursesCard.vue";
+import TopCoursesCard from "@/Components/Dashboard/TopCoursesCard.vue";
 import TopTrainersCard from "@/Components/Admin/Dashboard/TopTrainersCard.vue";
 
 // Stats data with growth indicators
@@ -192,7 +192,7 @@ const topTrainers = [
 
                 <!-- Second Row: Completion, Satisfaction, Department -->
                 <div
-                    class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_minmax(280px,1fr)_minmax(320px,600px)]"
+                    class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
                 >
                     <!-- Completion Rate Card -->
                     <StatsCard
@@ -221,11 +221,12 @@ const topTrainers = [
                                 v-for="i in 5"
                                 :key="i"
                                 :size="18"
-                                :class="
+                                :class="[
                                     i <= Math.floor(stats.satisfaction.rating)
                                         ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
-                                        : 'fill-gray-200 text-gray-200'
-                                "
+                                        : 'fill-gray-200 text-gray-200',
+                                    'md:h-5 md:w-5 lg:h-6 lg:w-6'
+                                ]"
                             />
                         </template>
                     </StatsCard>

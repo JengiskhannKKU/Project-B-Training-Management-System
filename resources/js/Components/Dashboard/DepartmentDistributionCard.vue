@@ -16,7 +16,6 @@ const props = defineProps({
 const donutOptions = computed(() => ({
     chart: {
         type: "donut",
-        height: 120,
         animations: {
             enabled: true,
             easing: "easeinout",
@@ -69,49 +68,72 @@ const donutOptions = computed(() => ({
 
 <template>
     <div
-        class="group relative overflow-hidden rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lg"
+        class="group relative w-full overflow-hidden rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-lg md:p-6"
     >
         <div
             class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-indigo-50/50 blur-2xl transition-all duration-300 group-hover:bg-indigo-100/70"
         ></div>
         <p
-            class="relative mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500"
+            class="relative mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 md:text-sm"
         >
             Department Distribution
         </p>
-        <div class="relative flex items-center gap-5">
-            <!-- Donut chart on the left -->
+        <div class="relative flex flex-col items-center gap-5 sm:flex-row md:gap-6 lg:gap-8">
+            <!-- Donut chart - responsive sizes -->
             <div class="flex-shrink-0">
-                <VueApexCharts
-                    type="donut"
-                    width="120"
-                    height="120"
-                    :options="donutOptions"
-                    :series="data"
-                />
+                <!-- Small screens -->
+                <div class="block sm:hidden">
+                    <VueApexCharts
+                        type="donut"
+                        width="120"
+                        height="120"
+                        :options="donutOptions"
+                        :series="data"
+                    />
+                </div>
+                <!-- Medium screens -->
+                <div class="hidden sm:block lg:hidden">
+                    <VueApexCharts
+                        type="donut"
+                        width="150"
+                        height="150"
+                        :options="donutOptions"
+                        :series="data"
+                    />
+                </div>
+                <!-- Large screens -->
+                <div class="hidden lg:block">
+                    <VueApexCharts
+                        type="donut"
+                        width="180"
+                        height="180"
+                        :options="donutOptions"
+                        :series="data"
+                    />
+                </div>
             </div>
-            <!-- Legend on the right -->
-            <div class="min-w-0 flex-1 space-y-2">
+            <!-- Legend - responsive text sizes -->
+            <div class="min-w-0 w-full flex-1 space-y-2 md:space-y-3">
                 <div
                     v-for="(label, index) in labels"
                     :key="label"
-                    class="flex items-center justify-between gap-2"
+                    class="flex items-center justify-between gap-2 md:gap-3"
                 >
-                    <div class="flex min-w-0 items-center gap-2">
+                    <div class="flex min-w-0 items-center gap-2 md:gap-3">
                         <div
-                            class="h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm ring-2 ring-white"
+                            class="h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm ring-2 ring-white md:h-3 md:w-3"
                             :style="{
                                 backgroundColor: donutOptions.colors[index],
                             }"
                         ></div>
                         <span
-                            class="truncate text-xs font-medium text-gray-700"
+                            class="truncate text-xs font-medium text-gray-700 md:text-sm"
                         >
                             {{ label }}
                         </span>
                     </div>
                     <span
-                        class="ml-2 text-xs font-bold tabular-nums text-gray-900"
+                        class="ml-2 text-xs font-bold tabular-nums text-gray-900 md:text-sm lg:text-base"
                     >
                         {{ data[index] }}%
                     </span>
