@@ -34,6 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('enrollments', [EnrollmentController::class, 'store']);
     Route::put('enrollments/{enrollment}/cancel', [EnrollmentController::class, 'cancel']);
     Route::get('certificates/{certificate}', [CertificateController::class, 'show']);
+    Route::get('certificates/{certificate}/download', [CertificateController::class, 'download']);
+    Route::get('certificates/{certificate}/view', [CertificateController::class, 'view']);
 
     // Students can view their own enrollment attendance
     Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);

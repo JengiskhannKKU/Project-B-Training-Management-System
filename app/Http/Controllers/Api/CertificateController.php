@@ -7,9 +7,11 @@ use App\Models\Certificate;
 use App\Models\CertificateRequest;
 use App\Models\Program;
 use App\Models\TrainingSession;
+use App\Services\CertificateFileService;
 use App\Services\CertificateGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class CertificateController extends Controller
 {
@@ -76,14 +78,7 @@ class CertificateController extends Controller
             'enrollment.session:id,trainer_id',
         ]);
 
-        $isOwner = $certificate->user_id === $user->id;
-        $trainerId = $certificate->session?->trainer_id ?? $certificate->enrollment?->session?->trainer_id;
-        $isTrainer = $trainerId && $trainerId === $user->id;
-        $programOwnerId = $certificate->program?->created_by;
-        $isProgramOwner = $programOwnerId && $programOwnerId === $user->id;
-        $isAdmin = $user->isRole('admin');
-
-        if (!$isOwner && !$isTrainer && !$isProgramOwner && !$isAdmin) {
+        if (!$this->canAccessCertificate($user, $certificate)) {
             return $this->forbiddenResponse('You are not allowed to view this certificate.');
         }
 
@@ -130,6 +125,60 @@ class CertificateController extends Controller
         ]);
 
         return $this->successResponse($certificate->fresh(), 'Certificate revoked successfully.');
+    }
+
+    public function download(Request $request, Certificate $certificate, CertificateFileService $fileService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        $this->loadCertificateAccessRelations($certificate);
+
+        if (!$this->canAccessCertificate($user, $certificate)) {
+            return $this->forbiddenResponse('You are not allowed to download this certificate.');
+        }
+
+        try {
+            $certificate = $fileService->generateAndStoreFile($certificate);
+        } catch (RuntimeException $exception) {
+            return $this->errorResponse('Certificate file not available.', 500);
+        }
+
+        if (!$certificate->file_data) {
+            return $this->errorResponse('Certificate file not available.', 500);
+        }
+
+        return $this->buildCertificateFileResponse($certificate, 'attachment');
+    }
+
+    public function view(Request $request, Certificate $certificate, CertificateFileService $fileService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        $this->loadCertificateAccessRelations($certificate);
+
+        if (!$this->canAccessCertificate($user, $certificate)) {
+            return $this->forbiddenResponse('You are not allowed to view this certificate.');
+        }
+
+        try {
+            $certificate = $fileService->generateAndStoreFile($certificate);
+        } catch (RuntimeException $exception) {
+            return $this->errorResponse('Certificate file not available.', 500);
+        }
+
+        if (!$certificate->file_data) {
+            return $this->errorResponse('Certificate file not available.', 500);
+        }
+
+        return $this->buildCertificateFileResponse($certificate, 'inline');
     }
 
     public function generateForSession(Request $request, TrainingSession $session, CertificateGenerationService $certificateService)
@@ -190,6 +239,56 @@ class CertificateController extends Controller
         });
 
         return $this->successResponse($result, 'Certificates generated successfully.');
+    }
+
+    private function loadCertificateAccessRelations(Certificate $certificate): void
+    {
+        $certificate->loadMissing([
+            'program:id,created_by',
+            'session:id,trainer_id',
+            'enrollment.session:id,trainer_id',
+        ]);
+    }
+
+    private function canAccessCertificate($user, Certificate $certificate): bool
+    {
+        $isOwner = $certificate->user_id === $user->id;
+        $trainerId = $certificate->session?->trainer_id ?? $certificate->enrollment?->session?->trainer_id;
+        $isTrainer = $trainerId && $trainerId === $user->id;
+        $programOwnerId = $certificate->program?->created_by;
+        $isProgramOwner = $programOwnerId && $programOwnerId === $user->id;
+        $isAdmin = $user->isRole('admin');
+
+        return $isOwner || $isTrainer || $isProgramOwner || $isAdmin;
+    }
+
+    private function buildCertificateFileResponse(Certificate $certificate, string $disposition)
+    {
+        $mimeType = $certificate->file_mime_type ?: 'application/octet-stream';
+        $filename = $this->resolveCertificateFilename($certificate, $mimeType);
+
+        return response($certificate->file_data, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => sprintf('%s; filename="%s"', $disposition, $filename),
+        ]);
+    }
+
+    private function resolveCertificateFilename(Certificate $certificate, string $mimeType): string
+    {
+        $extension = $this->mimeToExtension($mimeType);
+        $code = $certificate->certificate_code ?: 'certificate';
+
+        return "certificate-{$code}.{$extension}";
+    }
+
+    private function mimeToExtension(string $mimeType): string
+    {
+        return match ($mimeType) {
+            'application/pdf' => 'pdf',
+            'image/png' => 'png',
+            'image/jpeg', 'image/jpg' => 'jpg',
+            default => 'bin',
+        };
     }
 
     private function logAutoCertificateRequest(int $userId, string $type, ?int $programId, ?int $sessionId): void
