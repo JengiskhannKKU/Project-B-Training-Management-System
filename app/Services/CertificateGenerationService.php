@@ -10,21 +10,35 @@ use Illuminate\Support\Str;
 
 class CertificateGenerationService
 {
+    public function getEligibleEnrollmentsForSession(int $sessionId): Collection
+    {
+        return Enrollment::query()
+            ->where('session_id', $sessionId)
+            ->where('status', 'completed')
+            ->with(['user', 'session'])
+            ->get();
+    }
+
+    public function getEligibleEnrollmentsForProgram(int $programId): Collection
+    {
+        return Enrollment::query()
+            ->where('status', 'completed')
+            ->whereHas('session', function ($builder) use ($programId) {
+                $builder->where('program_id', $programId);
+            })
+            ->with('session')
+            ->get();
+    }
+
     public function getEligibleEnrollmentsForRequest(int $certificateRequestId): Collection
     {
         $request = CertificateRequest::findOrFail($certificateRequestId);
 
-        $query = Enrollment::query()->where('status', 'completed');
-
         if ($request->type === 'session') {
-            $query->where('session_id', $request->session_id);
-        } else {
-            $query->whereHas('session', function ($builder) use ($request) {
-                $builder->where('program_id', $request->program_id);
-            });
+            return $this->getEligibleEnrollmentsForSession($request->session_id);
         }
 
-        return $query->with('session')->get();
+        return $this->getEligibleEnrollmentsForProgram($request->program_id);
     }
 
     public function generateCertificates(int $certificateRequestId, int $issuedBy): array
