@@ -20,6 +20,10 @@ class Certificate extends Model
         'issued_at',
         'certificate_code',
         'file_url',
+        'file_data',
+        'file_mime_type',
+        'file_size',
+        'generated_at',
         'status',
         'revoked_by',
         'revoked_at',
@@ -28,6 +32,7 @@ class Certificate extends Model
 
     protected $casts = [
         'issued_at' => 'datetime',
+        'generated_at' => 'datetime',
         'revoked_at' => 'datetime',
     ];
 
