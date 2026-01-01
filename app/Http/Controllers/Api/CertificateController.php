@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
+use App\Models\Program;
 use App\Models\TrainingSession;
+use App\Services\CertificateGenerationService;
 use Illuminate\Http\Request;
 
 class CertificateController extends Controller
@@ -104,5 +106,57 @@ class CertificateController extends Controller
         ]);
 
         return $this->successResponse($certificate->fresh(), 'Certificate revoked successfully.');
+    }
+
+    public function generateForSession(Request $request, TrainingSession $session, CertificateGenerationService $certificateService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        if (!$user->isRole('admin') && $session->trainer_id !== $user->id) {
+            return $this->forbiddenResponse('Only the session trainer or admin can generate certificates.');
+        }
+
+        if ($session->status !== 'completed') {
+            return $this->validationErrorResponse([
+                'status' => ['Session must be completed before generating certificates.'],
+            ]);
+        }
+
+        $result = $certificateService->generateCertificatesForSession($session, $user->id);
+
+        return $this->successResponse($result, 'Certificates generated successfully.');
+    }
+
+    public function generateForProgram(Request $request, Program $program, CertificateGenerationService $certificateService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
+        }
+
+        if (!$user->isRole('admin') && $program->created_by !== $user->id) {
+            return $this->forbiddenResponse('Only the program owner or admin can generate certificates.');
+        }
+
+        if ($program->approval_status !== 'approved') {
+            return $this->validationErrorResponse([
+                'program_id' => ['Program must be approved before generating certificates.'],
+            ]);
+        }
+
+        if ($program->status !== 'active') {
+            return $this->validationErrorResponse([
+                'status' => ['Program must be active before generating certificates.'],
+            ]);
+        }
+
+        $result = $certificateService->generateCertificatesForProgram($program, $user->id);
+
+        return $this->successResponse($result, 'Certificates generated successfully.');
     }
 }
