@@ -15,6 +15,7 @@ class Certificate extends Model
         'user_id',
         'program_id',
         'session_id',
+        'template_id',
         'issued_by',
         'issued_at',
         'certificate_code',
@@ -54,6 +55,11 @@ class Certificate extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(TrainingSession::class, 'session_id');
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(CertificateTemplate::class, 'template_id');
     }
 
     public function issuer(): BelongsTo

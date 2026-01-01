@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TrainingSession extends Model
 {
@@ -71,5 +72,17 @@ class TrainingSession extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'session_id');
+    }
+
+    public function certificateTemplates(): HasMany
+    {
+        return $this->hasMany(CertificateTemplate::class, 'session_id');
+    }
+
+    public function activeCertificateTemplate(): HasOne
+    {
+        return $this->hasOne(CertificateTemplate::class, 'session_id')
+            ->where('is_active', true)
+            ->latestOfMany();
     }
 }
