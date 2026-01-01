@@ -17,7 +17,7 @@ class CertificateController extends Controller
 
         $certificates = Certificate::with([
             'program:id,name',
-            'session:id,title,program_id',
+            'session:id,title,program_id,start_date,end_date',
             'session.program:id,name',
         ])
             ->where('user_id', $user->id)
@@ -31,8 +31,8 @@ class CertificateController extends Controller
     {
         $user = $request->user();
 
-        if ($session->trainer_id !== $user->id) {
-            return $this->forbiddenResponse('You can only view certificates for your own sessions.');
+        if (!$user->isRole('admin') && $session->trainer_id !== $user->id) {
+            return $this->forbiddenResponse('Only the session trainer or admin can view certificates.');
         }
 
         $certificates = Certificate::with(['user:id,name,email', 'program:id,name', 'session:id,title'])
@@ -43,13 +43,33 @@ class CertificateController extends Controller
         return $this->successResponse($certificates, 'Session certificates retrieved successfully.');
     }
 
+    public function programCertificates(Request $request, Program $program)
+    {
+        $user = $request->user();
+
+        if (!$user->isRole('admin') && $program->created_by !== $user->id) {
+            return $this->forbiddenResponse('Only the program owner or admin can view certificates.');
+        }
+
+        $certificates = Certificate::with([
+            'user:id,name,email',
+            'program:id,name',
+            'session:id,title,program_id,start_date,end_date',
+        ])
+            ->where('program_id', $program->id)
+            ->latest()
+            ->get();
+
+        return $this->successResponse($certificates, 'Program certificates retrieved successfully.');
+    }
+
     public function show(Request $request, Certificate $certificate)
     {
         $user = $request->user();
 
         $certificate->load([
             'user:id,name,email',
-            'program:id,name',
+            'program:id,name,created_by',
             'session:id,title,program_id,trainer_id',
             'enrollment.session:id,trainer_id',
         ]);
@@ -57,9 +77,11 @@ class CertificateController extends Controller
         $isOwner = $certificate->user_id === $user->id;
         $trainerId = $certificate->session?->trainer_id ?? $certificate->enrollment?->session?->trainer_id;
         $isTrainer = $trainerId && $trainerId === $user->id;
+        $programOwnerId = $certificate->program?->created_by;
+        $isProgramOwner = $programOwnerId && $programOwnerId === $user->id;
         $isAdmin = $user->isRole('admin');
 
-        if (!$isOwner && !$isTrainer && !$isAdmin) {
+        if (!$isOwner && !$isTrainer && !$isProgramOwner && !$isAdmin) {
             return $this->forbiddenResponse('You are not allowed to view this certificate.');
         }
 

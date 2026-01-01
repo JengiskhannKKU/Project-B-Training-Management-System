@@ -47,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('sessions/{session}/attendances', [AttendanceController::class, 'sessionAttendances']);
         Route::get('sessions/{session}/attendance-summary', [AttendanceController::class, 'attendanceSummary']);
         Route::get('sessions/{session}/eligible-enrollments', [AttendanceController::class, 'eligibleEnrollments']);
+        Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
+        Route::get('programs/{program}/certificates', [CertificateController::class, 'programCertificates']);
         Route::post('sessions/{session}/certificates/generate', [CertificateController::class, 'generateForSession']);
         Route::post('programs/{program}/certificates/generate', [CertificateController::class, 'generateForProgram']);
         Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);
