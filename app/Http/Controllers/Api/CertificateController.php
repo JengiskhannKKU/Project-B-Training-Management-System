@@ -94,17 +94,19 @@ class CertificateController extends Controller
         ])->where('certificate_code', $certificateCode)->first();
 
         if (!$certificate || $certificate->status !== 'valid') {
-            return $this->errorResponse('Certificate invalid.', 404);
+            return response()->json([
+                'is_valid' => false,
+            ]);
         }
 
-        return $this->successResponse([
-            'recipient' => $certificate->user?->name,
+        return response()->json([
+            'is_valid' => true,
+            'holder_name' => $certificate->user?->name,
             'program' => $certificate->program?->name,
             'session' => $certificate->session?->title,
             'issued_at' => $certificate->issued_at,
             'status' => $certificate->status,
-            'certificate_code' => $certificate->certificate_code,
-        ], 'Certificate verified successfully.');
+        ]);
     }
 
     public function revoke(Request $request, Certificate $certificate)
