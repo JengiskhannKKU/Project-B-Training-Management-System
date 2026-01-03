@@ -126,6 +126,20 @@ Route::get('/admin/my-courses/{id}', function ($id) {
     Route::get('/admin/certificates', function () {
         return Inertia::render('Admin/Certificates');
     })->name('admin.certificates');
+
+    Route::get('/admin/certificate-templates', function () {
+        return Inertia::render('Admin/CertificateTemplates/Index');
+    })->name('admin.certificate-templates.index');
+
+    Route::get('/admin/certificate-templates/create', function () {
+        return Inertia::render('Admin/CertificateTemplates/Create');
+    })->name('admin.certificate-templates.create');
+
+    Route::get('/admin/certificate-templates/{id}/edit', function ($id) {
+        return Inertia::render('Admin/CertificateTemplates/Edit', [
+            'templateId' => $id,
+        ]);
+    })->name('admin.certificate-templates.edit');
 });
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
@@ -178,6 +192,20 @@ Route::get('/trainer/programs/{id}', function ($id) {
     Route::get('/trainer/settings', function () {
         return Inertia::render('Trainer/Settings');
     })->name('trainer.settings');
+
+    Route::get('/trainer/certificate-templates', function () {
+        return Inertia::render('Trainer/CertificateTemplates/Index');
+    })->name('trainer.certificate-templates.index');
+
+    Route::get('/trainer/certificate-templates/create', function () {
+        return Inertia::render('Trainer/CertificateTemplates/Create');
+    })->name('trainer.certificate-templates.create');
+
+    Route::get('/trainer/certificate-templates/{id}/edit', function ($id) {
+        return Inertia::render('Trainer/CertificateTemplates/Edit', [
+            'templateId' => $id,
+        ]);
+    })->name('trainer.certificate-templates.edit');
 
     Route::get('/sessions/{id}/certificates', function ($id) {
         return Inertia::render('Certificates/SessionCertificates', [

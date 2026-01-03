@@ -261,7 +261,7 @@ onMounted(fetchCertificates);
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-2">
                                         <a
-                                            :href="`/certificates/${certificate.id}/view`"
+                                            :href="`/api/certificates/${certificate.id}/view`"
                                             target="_blank"
                                             rel="noopener"
                                             class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"

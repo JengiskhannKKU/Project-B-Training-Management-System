@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
 use App\Http\Controllers\Api\CertificateRequestController;
 use App\Http\Controllers\Api\CertificateController;
+use App\Http\Controllers\Api\CertificateTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -69,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('certificate-requests', [CertificateRequestController::class, 'trainerIndex']);
             Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             Route::get('sessions', [TrainingSessionController::class, 'trainerSessions']);
+            Route::apiResource('certificate-templates', CertificateTemplateController::class)
+                ->except(['create', 'edit']);
 
             // Image upload for programs
             Route::post('upload/image', [FileUploadController::class, 'image']);
@@ -94,6 +97,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('admin/certificate-requests/{certificateRequest}/reject', [CertificateRequestController::class, 'reject']);
         Route::get('admin/certificates', [CertificateController::class, 'adminIndex']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
+        Route::apiResource('admin/certificate-templates', CertificateTemplateController::class)
+            ->except(['create', 'edit']);
 
         Route::get('admin/sessions', [TrainingSessionController::class, 'adminSessions']);
         Route::post('admin/program-requests', [TrainerRequestController::class, 'program']);

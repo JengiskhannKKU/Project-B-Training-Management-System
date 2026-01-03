@@ -68,10 +68,62 @@ class CertificateFileService
             }
         }
 
-        return CertificateTemplate::where('scope', 'global')
+        $globalTemplate = CertificateTemplate::where('scope', 'global')
             ->where('is_active', true)
             ->latest()
             ->first();
+
+        if ($globalTemplate) {
+            return $globalTemplate;
+        }
+
+        return $this->createDefaultGlobalTemplate();
+    }
+
+    private function createDefaultGlobalTemplate(): CertificateTemplate
+    {
+        $layout = [
+            'canvas' => [
+                'width' => 1600,
+                'height' => 1200,
+            ],
+            'name' => [
+                'x' => 192,
+                'y' => 384,
+            ],
+            'program' => [
+                'x' => 192,
+                'y' => 504,
+            ],
+            'session' => [
+                'x' => 192,
+                'y' => 624,
+            ],
+            'issued_at' => [
+                'x' => 192,
+                'y' => 744,
+            ],
+            'certificate_code' => [
+                'x' => 192,
+                'y' => 864,
+            ],
+            'qr' => [
+                'x' => 1152,
+                'y' => 696,
+                'width' => 160,
+                'height' => 160,
+                'size' => 160,
+            ],
+        ];
+
+        return CertificateTemplate::create([
+            'name' => 'Default Global Template',
+            'scope' => 'global',
+            'layout_config' => $layout,
+            'font_size' => 28,
+            'text_color' => '#1f2937',
+            'is_active' => true,
+        ]);
     }
 
     private function hasFileData(Certificate $certificate): bool

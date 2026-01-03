@@ -11,6 +11,7 @@ import {
     Settings,
     LogOut,
     FileCheck,
+    Award,
 } from "lucide-vue-next";
 
 const showingSidebar = ref(true);
@@ -40,6 +41,11 @@ const navigationItems = [
         name: "Requests",
         path: "/admin/requests",
         icon: FileCheck,
+    },
+    {
+        name: "Certificate Templates",
+        path: "/admin/certificate-templates",
+        icon: Award,
     },
     {
         name: "My Courses",

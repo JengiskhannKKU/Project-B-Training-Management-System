@@ -5,6 +5,7 @@ import {
     LayoutDashboard,
     BookOpen,
     BookCheck,
+    Award,
     MessageSquare,
     Settings,
     LogOut,
@@ -32,6 +33,11 @@ const navigationItems = [
         name: "Attendance",
         path: "/trainer/attendance",
         icon: BookCheck,
+    },
+    {
+        name: "Certificate Templates",
+        path: "/trainer/certificate-templates",
+        icon: Award,
     },
     {
         name: "Feedback",
