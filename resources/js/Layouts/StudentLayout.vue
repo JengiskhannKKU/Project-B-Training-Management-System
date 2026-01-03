@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import { BookOpen, BookCheck, Settings, LogOut } from "lucide-vue-next";
+import { BookOpen, BookCheck, Award, Settings, LogOut } from "lucide-vue-next";
 
 const showingSidebar = ref(true);
 const page = usePage();
@@ -22,6 +22,11 @@ const navigationItems = [
         icon: BookCheck,
     },
     {
+        name: "Certificates",
+        path: "/me/certificates",
+        icon: Award,
+    },
+    {
         name: "Setting",
         path: "/me/profile",
         icon: Settings,
@@ -34,6 +39,9 @@ const isActive = (path) => {
     }
     if (path === "/me/enrollments") {
         return currentPath.value.startsWith("/me/enrollments");
+    }
+    if (path === "/me/certificates") {
+        return currentPath.value.startsWith("/me/certificates");
     }
     if (path === "/me/profile") {
         return currentPath.value.startsWith("/me/profile");

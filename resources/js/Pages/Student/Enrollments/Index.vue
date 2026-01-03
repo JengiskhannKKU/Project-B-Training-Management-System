@@ -17,6 +17,7 @@ import {
 
 const toast = useToast();
 const enrollments = ref([]);
+const certificates = ref([]);
 const isLoading = ref(false);
 const activeTab = ref("upcoming");
 const cancellingId = ref(null);
@@ -29,6 +30,13 @@ const fetchEnrollments = async () => {
     } catch (error) {
         enrollments.value = [];
         toast.error("Unable to load enrollments.");
+    }
+
+    try {
+        const { data } = await axios.get("/api/me/certificates");
+        certificates.value = Array.isArray(data?.data) ? data.data : [];
+    } catch (error) {
+        certificates.value = [];
     } finally {
         isLoading.value = false;
     }
@@ -97,10 +105,15 @@ const normalizedEnrollments = computed(() =>
     enrollments.value.map((enrollment) => {
         const session = enrollment.session || {};
         const program = session.program || {};
+        const certificate =
+            certificatesByEnrollmentId.value.get(enrollment.id) ||
+            certificatesBySessionId.value.get(enrollment.session_id) ||
+            null;
         return {
             ...enrollment,
             session,
             program,
+            certificate,
         };
     })
 );
@@ -130,7 +143,27 @@ const completeCount = computed(
             (item) => !isUpcoming(item.session) && item.status !== "cancelled"
         ).length
 );
-const certificateCount = computed(() => completeCount.value);
+const certificateCount = computed(() => certificates.value.length);
+
+const certificatesByEnrollmentId = computed(() => {
+    const map = new Map();
+    certificates.value.forEach((certificate) => {
+        if (certificate?.enrollment_id) {
+            map.set(Number(certificate.enrollment_id), certificate);
+        }
+    });
+    return map;
+});
+
+const certificatesBySessionId = computed(() => {
+    const map = new Map();
+    certificates.value.forEach((certificate) => {
+        if (certificate?.session_id) {
+            map.set(Number(certificate.session_id), certificate);
+        }
+    });
+    return map;
+});
 
 const cancelEnrollment = async (enrollment) => {
     if (!canCancel(enrollment)) return;
@@ -349,6 +382,14 @@ onMounted(fetchEnrollments);
                             </div>
 
                             <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
+                                <Link
+                                    v-if="enrollment.certificate"
+                                    href="/me/certificates"
+                                    class="inline-flex items-center gap-2 rounded-full border border-purple-300 px-5 py-2 text-sm font-semibold text-purple-600 hover:bg-purple-50"
+                                >
+                                    <Award class="h-4 w-4" />
+                                    Certificate
+                                </Link>
                                 <Link
                                     :href="route('me.enrollments.show', enrollment.id)"
                                     class="rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
