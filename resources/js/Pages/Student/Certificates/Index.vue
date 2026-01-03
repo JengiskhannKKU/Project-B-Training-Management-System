@@ -153,15 +153,13 @@ onMounted(fetchCertificates);
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a
-                                            :href="`/api/certificates/${certificate.id}/view`"
-                                            target="_blank"
-                                            rel="noopener"
+                                        <Link
+                                            :href="`/certificates/${certificate.id}`"
                                             class="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                                         >
                                             <Eye class="h-4 w-4" />
                                             View
-                                        </a>
+                                        </Link>
                                         <a
                                             :href="`/api/certificates/${certificate.id}/download`"
                                             class="inline-flex items-center gap-1 rounded-full border border-emerald-400 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"

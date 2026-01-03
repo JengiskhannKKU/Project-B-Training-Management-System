@@ -44,6 +44,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/me/certificates', function () {
         return Inertia::render('Student/Certificates/Index');
     })->name('me.certificates');
+    Route::get('/certificates/{id}', function ($id) {
+        return Inertia::render('Certificates/Show', [
+            'certificateId' => $id,
+        ]);
+    })->name('certificates.show');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
