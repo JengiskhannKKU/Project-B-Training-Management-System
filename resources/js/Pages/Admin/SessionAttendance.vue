@@ -613,6 +613,12 @@ onMounted(() => {
                     </h2>
                     <span v-if="isLoadingCertificates" class="text-sm text-gray-500">Loading...</span>
                 </div>
+                <div
+                    v-if="!isSessionCompleted"
+                    class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+                >
+                    ต้องปิด Session (Completed) ก่อนออกใบรับรอง
+                </div>
                 <div v-if="certificates.length === 0" class="text-sm text-gray-500">
                     No certificates generated yet.
                 </div>
