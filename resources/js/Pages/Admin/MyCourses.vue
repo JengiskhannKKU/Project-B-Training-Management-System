@@ -285,9 +285,11 @@ const handleApiLogin = async () => {
 
 const mapProgramFromRequest = (req: any) => {
     const payload = req.payload || {};
+    const resolvedProgramId =
+        req.status === 'approved' && req.target_id ? req.target_id : req.id;
     return {
-        // Use request ID for navigation (Show.vue looks up by admin_request.id)
-        id: req.id,
+        // Use program ID when approved; fall back to request ID for pending/rejected
+        id: resolvedProgramId,
         request_id: req.id,
         // Keep target_id for reference to actual program in programs table
         program_id: req.target_id,
@@ -465,6 +467,7 @@ onMounted(() => {
                             v-for="course in paginatedCourses"
                             :key="course.request_id || course.id"
                             :id="course.id"
+                            :href="`/admin/my-courses/${course.id}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"

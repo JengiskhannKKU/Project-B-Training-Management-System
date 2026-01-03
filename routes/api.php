@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('admin/certificate-requests/{certificateRequest}', [CertificateRequestController::class, 'show']);
         Route::post('admin/certificate-requests/{certificateRequest}/approve', [CertificateRequestController::class, 'approve']);
         Route::post('admin/certificate-requests/{certificateRequest}/reject', [CertificateRequestController::class, 'reject']);
+        Route::get('admin/certificates', [CertificateController::class, 'adminIndex']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
 
         Route::get('admin/sessions', [TrainingSessionController::class, 'adminSessions']);

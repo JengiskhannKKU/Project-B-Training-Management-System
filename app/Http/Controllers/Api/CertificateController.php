@@ -39,7 +39,12 @@ class CertificateController extends Controller
             return $this->forbiddenResponse('Only the session trainer or admin can view certificates.');
         }
 
-        $certificates = Certificate::with(['user:id,name,email', 'program:id,name', 'session:id,title'])
+        $certificates = Certificate::with([
+            'user:id,name,email',
+            'program:id,name',
+            'session:id,title',
+            'enrollment:id,status',
+        ])
             ->where('session_id', $session->id)
             ->latest()
             ->get();
@@ -59,12 +64,48 @@ class CertificateController extends Controller
             'user:id,name,email',
             'program:id,name',
             'session:id,title,program_id,start_date,end_date',
+            'enrollment:id,status',
         ])
             ->where('program_id', $program->id)
             ->latest()
             ->get();
 
         return $this->successResponse($certificates, 'Program certificates retrieved successfully.');
+    }
+
+    public function adminIndex(Request $request)
+    {
+        $query = Certificate::with([
+            'user:id,name,email',
+            'program:id,name',
+            'session:id,title,program_id',
+            'issuer:id,name',
+            'enrollment:id,status',
+        ])->latest();
+
+        if ($request->filled('program_id')) {
+            $query->where('program_id', $request->integer('program_id'));
+        }
+
+        if ($request->filled('session_id')) {
+            $query->where('session_id', $request->integer('session_id'));
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->integer('user_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        if ($request->filled('issued_by')) {
+            $query->where('issued_by', $request->integer('issued_by'));
+        }
+
+        $certificates = $query->get();
+
+        return $this->successResponse($certificates, 'Certificates retrieved successfully.');
     }
 
     public function show(Request $request, Certificate $certificate)

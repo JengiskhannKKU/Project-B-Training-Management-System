@@ -564,14 +564,16 @@ const fetchSessions = async () => {
 const fetchProgramRequestFallback = async () => {
     const tryFetch = async (url: string) => {
         const { data } = await axios.get(url);
-        const list = data?.data || data || [];
+        const list = (data?.data || data || []).filter(
+            (req: any) => req.target_type === 'program'
+        );
+        const targetId = Number(props.program.id);
         console.log('[DEBUG] Fetched requests from', url, ':', list);
         console.log('[DEBUG] Searching for request with id:', props.program.id, 'type:', typeof props.program.id);
-        // Look for admin request by ID (the URL contains the request ID)
-        const match = list.find((r: any) => {
-            console.log('[DEBUG] Comparing request id:', r.id, 'type:', typeof r.id, 'with:', props.program.id);
-            return r.id === Number(props.program.id);
-        });
+        const match =
+            list.find((r: any) => Number(r.id) === targetId) ||
+            list.find((r: any) => Number(r.target_id) === targetId) ||
+            list.find((r: any) => Number(r.payload?.program_id) === targetId);
         console.log('[DEBUG] Match result:', match);
         return match;
     };
@@ -580,24 +582,14 @@ const fetchProgramRequestFallback = async () => {
         await ensureCsrf();
         // Prefer trainer requests when the path is trainer, otherwise admin
         const isAdminPath = page.url.startsWith('/admin/');
-        const firstUrl = isAdminPath ? '/api/admin/requests' : '/api/trainer/requests';
-        const fallbackUrl = isAdminPath ? '/api/trainer/requests' : '/api/admin/requests';
-        console.log('[DEBUG] isAdminPath:', isAdminPath, 'firstUrl:', firstUrl);
+        const requestUrl = isAdminPath ? '/api/admin/requests' : '/api/trainer/requests';
+        console.log('[DEBUG] isAdminPath:', isAdminPath, 'requestUrl:', requestUrl);
 
         let match = null;
         try {
-            match = await tryFetch(firstUrl);
+            match = await tryFetch(requestUrl);
         } catch (err: any) {
-            console.log('[DEBUG] Error fetching from firstUrl:', err?.message);
-            // ignore and try fallback
-        }
-        if (!match) {
-            try {
-                match = await tryFetch(fallbackUrl);
-            } catch (err: any) {
-                console.log('[DEBUG] Error fetching from fallbackUrl:', err?.message);
-                // ignore
-            }
+            console.log('[DEBUG] Error fetching from requestUrl:', err?.message);
         }
 
         if (match) {

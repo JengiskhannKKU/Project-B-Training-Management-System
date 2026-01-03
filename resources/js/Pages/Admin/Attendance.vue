@@ -234,8 +234,15 @@ const resetSort = () => {
 };
 
 // Handle view sessions
-const handleViewSessions = (courseId) => {
-    const course = courses.value.find((c) => c.id === courseId);
+const handleViewSessions = (courseOrId) => {
+    if (courseOrId && typeof courseOrId === "object") {
+        selectedCourse.value = courseOrId;
+        showSessionsModal.value = true;
+        return;
+    }
+
+    const targetId = String(courseOrId);
+    const course = courses.value.find((c) => String(c.id) === targetId);
     if (course) {
         selectedCourse.value = course;
         showSessionsModal.value = true;
@@ -386,7 +393,7 @@ const selectedCourseName = computed(() => {
                             :date="course.date"
                             :time="course.time"
                             :location="course.location"
-                            @viewSessions="handleViewSessions"
+                            @viewSessions="() => handleViewSessions(course)"
                         />
                     </div>
 

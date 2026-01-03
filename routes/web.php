@@ -114,6 +114,10 @@ Route::get('/admin/my-courses/{id}', function ($id) {
     Route::get('/admin/settings', function () {
         return Inertia::render('Admin/Settings');
     })->name('admin.settings');
+
+    Route::get('/admin/certificates', function () {
+        return Inertia::render('Admin/Certificates');
+    })->name('admin.certificates');
 });
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
@@ -166,6 +170,18 @@ Route::get('/trainer/programs/{id}', function ($id) {
     Route::get('/trainer/settings', function () {
         return Inertia::render('Trainer/Settings');
     })->name('trainer.settings');
+
+    Route::get('/sessions/{id}/certificates', function ($id) {
+        return Inertia::render('Certificates/SessionCertificates', [
+            'sessionId' => $id,
+        ]);
+    })->name('sessions.certificates');
+
+    Route::get('/programs/{id}/certificates', function ($id) {
+        return Inertia::render('Certificates/ProgramCertificates', [
+            'programId' => $id,
+        ]);
+    })->name('programs.certificates');
 });
 
 Route::middleware(['auth', 'role:student'])->group(function () {

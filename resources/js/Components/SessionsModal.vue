@@ -34,28 +34,29 @@ const handleClose = () => {
 };
 
 /**
- * Filter sessions to show only those eligible for attendance checking:
- * - Status must be 'open' or 'closed'
- * - End date must have passed (or no end_date set)
+ * Filter sessions for attendance display:
+ * - Show open/closed/completed/upcoming sessions
+ * - Hide cancelled sessions
  */
 const eligibleSessions = computed(() => {
     return props.sessions.filter((session) => {
         const statusLower = session.status?.toLowerCase();
-        const isValidStatus = statusLower === 'open' || statusLower === 'closed';
-
-        if (!isValidStatus) return false;
-
-        // If no end_date, allow attendance check based on status only
-        if (!session.end_date) return true;
-
-        // Check if end_date has passed
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(session.end_date);
-        endDate.setHours(0, 0, 0, 0);
-
-        return endDate <= today;
+        if (!statusLower) return true;
+        if (statusLower === 'cancelled') return false;
+        return ['open', 'closed', 'completed', 'upcoming'].includes(statusLower);
     });
+});
+
+const programBaseUrl = computed(() => {
+    if (props.baseUrl === '/admin') {
+        return '/admin/my-courses';
+    }
+
+    if (props.baseUrl === '/trainer') {
+        return '/trainer/programs';
+    }
+
+    return `${props.baseUrl}/programs`;
 });
 </script>
 
@@ -113,10 +114,10 @@ const eligibleSessions = computed(() => {
                         No sessions available for attendance
                     </h3>
                     <p class="mt-1 text-sm text-gray-500">
-                        Sessions must be 'open' or 'closed' status and past their end date to check attendance.
+                        No sessions are available to display for this course yet.
                     </p>
                     <Link
-                        :href="`/trainer/programs/${courseId}`"
+                        :href="`${programBaseUrl}/${courseId}`"
                         class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#26685f] transition-colors"
                     >
                         Create Session

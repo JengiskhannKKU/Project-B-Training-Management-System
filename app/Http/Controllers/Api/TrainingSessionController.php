@@ -136,16 +136,11 @@ class TrainingSessionController extends Controller
             return $this->forbiddenResponse('Only the session trainer or admin can complete this session.');
         }
 
-        if (!in_array($session->status, ['open', 'closed'], true)) {
+        $status = strtolower((string) $session->status);
+        if (!in_array($status, ['open', 'closed'], true)) {
             return $this->validationErrorResponse([
                 'status' => ['Session must be open or closed to complete.'],
-            ]);
-        }
-
-        if ($session->end_date && Carbon::parse($session->end_date)->isAfter(Carbon::today())) {
-            return $this->validationErrorResponse([
-                'end_date' => ['Session cannot be completed before the end date.'],
-            ]);
+            ], 'Session must be open or closed to complete.');
         }
 
         $session->update(['status' => 'completed']);
