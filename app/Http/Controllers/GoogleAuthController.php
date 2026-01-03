@@ -82,7 +82,7 @@ class GoogleAuthController extends Controller
             return match ($role) {
                 'admin'   => redirect()->route('admin.dashboard'),
                 'trainer' => redirect()->route('trainer.dashboard'),
-                default   => redirect()->route('student.dashboard'),
+                default   => redirect()->route('student.programs.index'),
             };
 
         } catch (Throwable $e) {
@@ -101,10 +101,10 @@ class GoogleAuthController extends Controller
         } elseif ($user->isRole('trainer')) {
             return redirect('/trainer');
         } elseif ($user->isRole('student')) {
-            return redirect('/student');
+            return redirect('/student/programs');
         }
 
         // Fallback to student dashboard for Google login users
-        return redirect('/student');
+        return redirect('/student/programs');
     }
 }

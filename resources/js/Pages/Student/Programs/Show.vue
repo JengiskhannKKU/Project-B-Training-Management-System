@@ -50,9 +50,7 @@ const openSessions = computed(() =>
 
 const userRole = computed(() => page.props.auth?.user?.role?.name || "");
 
-const backLink = computed(() =>
-    userRole.value === "student" ? "/student" : "/programs"
-);
+const backLink = computed(() => "/programs");
 
 const backLinkText = computed(() =>
     userRole.value === "student" ? "Back to My Courses" : "Back to Courses"

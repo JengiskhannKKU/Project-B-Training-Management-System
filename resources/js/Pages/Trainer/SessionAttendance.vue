@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import axios from "axios";
 import { useToast } from "vue-toastification";
@@ -18,10 +18,12 @@ import {
     XCircle,
     ArrowLeft,
     AlertTriangle,
+    Award,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
+import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
 
 // Props from route
 const props = defineProps({
@@ -37,6 +39,8 @@ const props = defineProps({
 
 // Toast
 const toast = useToast();
+const page = usePage();
+const ensureCsrf = () => axios.get('/sanctum/csrf-cookie');
 
 // State for save functionality
 const isLoading = ref(true);
@@ -52,6 +56,8 @@ const sessionInfo = ref({
     start_time: "",
     end_time: "",
     location: "",
+    status: "",
+    trainer_id: null,
 });
 
 const trainees = ref([]);
@@ -65,6 +71,12 @@ const attendanceSummary = ref({
     leave_early: 0,
     not_marked: 0,
 });
+
+const certificates = ref([]);
+const isLoadingCertificates = ref(false);
+const showGenerateCertificatesModal = ref(false);
+const isGeneratingCertificates = ref(false);
+const generateCertificatesResult = ref(null);
 
 const searchQuery = ref("");
 const selectedDepartment = ref("all");
@@ -175,6 +187,35 @@ const goToPage = (page) => {
 // Check if session is completed
 const isSessionCompleted = computed(() => {
     return sessionInfo.value?.status?.toLowerCase() === 'completed';
+});
+
+const sessionStatus = computed(() => (sessionInfo.value?.status || 'unknown').toLowerCase());
+const sessionStatusBadgeClass = computed(() => {
+    switch (sessionStatus.value) {
+        case 'upcoming':
+            return 'bg-blue-100 text-blue-700';
+        case 'open':
+            return 'bg-teal-100 text-teal-700';
+        case 'closed':
+            return 'bg-amber-100 text-amber-700';
+        case 'completed':
+            return 'bg-purple-100 text-purple-700';
+        case 'cancelled':
+            return 'bg-red-100 text-red-700';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+});
+
+const canGenerateCertificates = computed(() => {
+    const user = page.props.auth?.user;
+    if (!user || !isSessionCompleted.value) {
+        return false;
+    }
+    if (user.role?.name === 'admin') {
+        return true;
+    }
+    return sessionInfo.value?.trainer_id === user.id;
 });
 
 // Reset to first page when filters change
@@ -331,11 +372,26 @@ const fetchAttendanceData = async () => {
                 attendanceId: latestAttendance?.id || null,
             };
         });
+
+        await fetchCertificates();
     } catch (error) {
         console.error('Error fetching attendance data:', error);
         toast.error('Failed to load attendance data');
     } finally {
         isLoading.value = false;
+    }
+};
+
+const fetchCertificates = async () => {
+    isLoadingCertificates.value = true;
+    try {
+        const response = await axios.get(`/api/sessions/${props.sessionId}/certificates`);
+        certificates.value = response.data.data ?? response.data ?? [];
+    } catch (error) {
+        certificates.value = [];
+        console.error('Error fetching certificates:', error);
+    } finally {
+        isLoadingCertificates.value = false;
     }
 };
 
@@ -404,6 +460,29 @@ const completeSession = async () => {
     }
 };
 
+const generateCertificates = async () => {
+    if (!canGenerateCertificates.value) {
+        return;
+    }
+
+    isGeneratingCertificates.value = true;
+
+    try {
+        await ensureCsrf();
+        const response = await axios.post(`/api/sessions/${props.sessionId}/certificates/generate`);
+        const result = response.data.data ?? response.data ?? {};
+        generateCertificatesResult.value = result;
+        toast.success(`สร้างใบรับรองใหม่ ${result.created ?? 0} ใบ (ข้าม ${result.skipped ?? 0} ใบที่มีอยู่แล้ว)`);
+        await fetchCertificates();
+    } catch (error) {
+        console.error('Error generating certificates:', error);
+        const message = error?.response?.data?.message || 'Failed to generate certificates.';
+        toast.error(message);
+    } finally {
+        isGeneratingCertificates.value = false;
+    }
+};
+
 // Load data on mount
 onMounted(() => {
     fetchAttendanceData();
@@ -450,7 +529,25 @@ onMounted(() => {
                         <span v-if="isCompleting">Completing...</span>
                         <span v-else>Complete Session</span>
                     </button>
+                    <button
+                        v-if="canGenerateCertificates"
+                        @click="showGenerateCertificatesModal = true"
+                        :disabled="isGeneratingCertificates"
+                        class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
+                    >
+                        <Award :size="18" />
+                        <span v-if="isGeneratingCertificates">Generating...</span>
+                        <span v-else>Generate Certificates</span>
+                    </button>
                 </div>
+            </div>
+
+            <div
+                v-if="generateCertificatesResult"
+                class="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700"
+            >
+                สร้างใบรับรองใหม่ {{ generateCertificatesResult.created ?? 0 }} ใบ
+                (ข้าม {{ generateCertificatesResult.skipped ?? 0 }} ใบที่มีอยู่แล้ว)
             </div>
 
             <!-- Completed Session Warning -->
@@ -475,6 +572,49 @@ onMounted(() => {
                 </div>
             </div>
 
+            <div class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Certificates ({{ certificates.length }})
+                    </h2>
+                    <span v-if="isLoadingCertificates" class="text-sm text-gray-500">Loading...</span>
+                </div>
+                <div v-if="certificates.length === 0" class="text-sm text-gray-500">
+                    No certificates generated yet.
+                </div>
+                <div v-else class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Recipient</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Code</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Issued</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr v-for="certificate in certificates" :key="certificate.id">
+                                <td class="px-4 py-2 text-gray-900">
+                                    {{ certificate.user?.name || 'Unknown' }}
+                                </td>
+                                <td class="px-4 py-2 text-gray-600">
+                                    {{ certificate.certificate_code || '—' }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    <span class="rounded-full px-2 py-1 text-xs font-semibold"
+                                        :class="certificate.status === 'valid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                                        {{ certificate.status }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 text-gray-600">
+                                    {{ certificate.issued_at || '—' }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Loading State -->
             <div v-if="isLoading" class="bg-white rounded-[25px] shadow-sm p-12 border border-[#dfe5ef] text-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2f837d] mx-auto mb-4"></div>
@@ -488,9 +628,17 @@ onMounted(() => {
             >
                 <div class="flex items-center gap-3 mb-4">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
-                    <h2 class="text-xl font-semibold text-gray-900">
-                        {{ sessionInfo.title || 'Untitled Session' }}
-                    </h2>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h2 class="text-xl font-semibold text-gray-900">
+                            {{ sessionInfo.title || 'Untitled Session' }}
+                        </h2>
+                        <span
+                            class="rounded-full px-3 py-1 text-xs font-semibold capitalize"
+                            :class="sessionStatusBadgeClass"
+                        >
+                            {{ sessionInfo.status || 'unknown' }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -978,6 +1126,17 @@ onMounted(() => {
                 @close="showSortModal = false"
                 @sort="applySort"
                 @reset="resetSort"
+            />
+
+            <ConfirmationDialog
+                :show="showGenerateCertificatesModal"
+                title="Generate Certificates"
+                message="Generate certificates for all eligible trainees in this session?"
+                confirmText="Generate"
+                confirmButtonClass="bg-purple-600 hover:bg-purple-700"
+                @confirm="generateCertificates"
+                @close="showGenerateCertificatesModal = false"
+                @cancel="showGenerateCertificatesModal = false"
             />
         </div>
     </TrainerLayout>

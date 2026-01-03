@@ -724,6 +724,7 @@ const resubmitProgram = async () => {
     }
 };
 
+
 const getCertificateSelectColor = (status: string) => {
     const colors: Record<string, string> = {
         'Approved': 'bg-teal-50 text-teal-700 border-teal-300',
@@ -902,6 +903,7 @@ const getCertificateStatusColor = (status: string) => {
         @close="showAddTraineeModal = false"
         @submit="submitAddTrainee"
     />
+
 
     <!-- Add Session Modal -->
     <SessionModal

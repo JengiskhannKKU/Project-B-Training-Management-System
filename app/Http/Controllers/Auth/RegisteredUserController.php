@@ -62,7 +62,7 @@ class RegisteredUserController extends Controller
         return match ($role) {
             'admin'   => redirect()->route('admin.dashboard'),
             'trainer' => redirect()->route('trainer.dashboard'),
-            default   => redirect()->route('student.dashboard'),
+            default   => redirect()->route('student.programs.index'),
         };
     }
 }

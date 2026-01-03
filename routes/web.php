@@ -16,7 +16,7 @@ $redirectToRoleDashboard = function () {
     return redirect()->route(match ($role) {
         'admin'   => 'admin.dashboard',
         'trainer' => 'trainer.dashboard',
-        default   => 'student.dashboard',
+        default   => 'student.programs.index',
     });
 };
 
