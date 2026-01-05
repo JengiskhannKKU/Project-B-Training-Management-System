@@ -472,6 +472,587 @@ Form-data
 
 ---
 
+## 7. Session Management APIs
+
+### 7.1 Mark Session as Completed
+
+**Endpoint:** `POST /api/sessions/{id}/complete`
+
+**Authorization:** Admin or Session Trainer
+
+**คำอธิบาย:**
+Mark session เป็น completed และ trigger auto-evaluation ของ enrollments ทั้งหมด
+
+**Response (สำเร็จ - 200):**
+```json
+{
+  "message": "Session marked as completed.",
+  "data": {
+    "session": {
+      "id": 1,
+      "title": "Session 1",
+      "status": "completed"
+    },
+    "summary": {
+      "total": 10,
+      "completed": 7
+    }
+  }
+}
+```
+
+**Response (ล้มเหลว - 422):**
+```json
+{
+  "message": "Cannot complete: Session status must be 'open' or 'closed'"
+}
+```
+
+**เงื่อนไข:**
+- Session status ต้องเป็น 'open' หรือ 'closed'
+- ผู้ใช้ต้องเป็น admin หรือ trainer ของ session นั้น
+- เมื่อ mark completed แล้ว:
+  - `session.status = 'completed'`
+  - Auto-evaluate ทุก enrollment ในระบบ
+  - Enrollment ที่มา ≥ 80% จะถูกตั้งเป็น `status = 'completed'`
+
+### 7.2 ดูรายการ Sessions (Admin)
+
+**Endpoint:** `GET /api/admin/sessions`
+
+**Authorization:** Admin
+
+**คำอธิบาย:**
+ดูรายการ programs พร้อม sessions ทั้งหมดในระบบ (สำหรับหน้า Attendance)
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "code": "PRG-001",
+      "name": "Program Name",
+      "request_id": 5,
+      "image_url": "...",
+      "rating": 4.5,
+      "level": "Beginner",
+      "students_count": 25,
+      "price": "Free",
+      "date": "Jan 15 - Jan 20, 2025",
+      "time": "09:00 - 17:00",
+      "location": "Room 201",
+      "category": "Programming",
+      "duration": "40 hours",
+      "status": "active",
+      "sessions": [
+        {
+          "id": 1,
+          "name": "Session 1",
+          "title": "Session 1",
+          "date": "Jan 15, 2025",
+          "start_date": "2025-01-15",
+          "end_date": "2025-01-20",
+          "time": "09:00 - 17:00",
+          "start_time": "09:00",
+          "end_time": "17:00",
+          "location": "Room 201",
+          "capacity": 30,
+          "enrolled": 25,
+          "status": "open"
+        }
+      ]
+    }
+  ],
+  "message": "Admin programs retrieved successfully"
+}
+```
+
+### 7.3 ดูรายการ Sessions (Trainer)
+
+**Endpoint:** `GET /api/trainer/sessions`
+
+**Authorization:** Trainer
+
+**คำอธิบาย:**
+ดูรายการ programs พร้อม sessions ที่ trainer เป็นผู้สร้าง
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "code": "PRG-001",
+      "name": "Program Name",
+      "request_id": 5,
+      "image_url": "...",
+      "sessions": [...]
+    }
+  ],
+  "message": "Trainer programs retrieved successfully"
+}
+```
+
+---
+
+## 8. Attendance Management APIs
+
+### 8.1 ดู Attendance ของ Enrollment (Student)
+
+**Endpoint:** `GET /api/enrollments/{enrollment}/attendances`
+
+**Authorization:** Student (owner) or Admin/Trainer
+
+**คำอธิบาย:**
+Student ดูประวัติการเข้าเรียนของตัวเอง
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "enrollment_id": 10,
+    "session_id": 1,
+    "user_id": 5,
+    "attendance_date": "2025-01-15",
+    "status": "present",
+    "notes": null,
+    "created_at": "2025-01-15T10:00:00.000000Z",
+    "updated_at": "2025-01-15T10:00:00.000000Z"
+  },
+  {
+    "id": 2,
+    "enrollment_id": 10,
+    "session_id": 1,
+    "user_id": 5,
+    "attendance_date": "2025-01-16",
+    "status": "late",
+    "notes": "Arrived 30 minutes late",
+    "created_at": "2025-01-16T10:00:00.000000Z",
+    "updated_at": "2025-01-16T10:00:00.000000Z"
+  }
+]
+```
+
+### 8.2 ดู Enrollments สำหรับบันทึก Attendance
+
+**Endpoint:** `GET /api/sessions/{session}/enrollments-for-attendance`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+ดึงรายชื่อผู้เรียนทั้งหมดใน session สำหรับหน้าบันทึกการเข้าเรียน
+
+**Query Parameters:**
+- `date` (required): วันที่ต้องการบันทึก (YYYY-MM-DD)
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "user_id": 5,
+      "session_id": 1,
+      "status": "confirmed",
+      "user": {
+        "id": 5,
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "attendance": {
+        "id": 1,
+        "attendance_date": "2025-01-15",
+        "status": "present",
+        "notes": null
+      }
+    }
+  ]
+}
+```
+
+**หมายเหตุ:**
+- ถ้ายังไม่มีการบันทึก attendance สำหรับวันนั้น `attendance` จะเป็น `null`
+- ใช้สำหรับแสดงรายชื่อนักเรียนและสถานะการเข้าเรียนในวันที่เลือก
+
+### 8.3 ดู Attendances ทั้งหมดของ Session
+
+**Endpoint:** `GET /api/sessions/{session}/attendances`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+ดู attendance records ทั้งหมดของ session
+
+**Query Parameters:**
+- `date` (optional): กรองตามวันที่ (YYYY-MM-DD)
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "enrollment_id": 10,
+      "user_id": 5,
+      "attendance_date": "2025-01-15",
+      "status": "present",
+      "notes": null,
+      "user": {
+        "id": 5,
+        "name": "John Doe",
+        "email": "john@example.com"
+      }
+    }
+  ]
+}
+```
+
+### 8.4 ดู Attendance Summary
+
+**Endpoint:** `GET /api/sessions/{session}/attendance-summary`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+ดูสรุปการเข้าเรียนของ session (จำนวนที่มา/สาย/ขาด แต่ละวัน)
+
+**Response (200):**
+```json
+{
+  "summary": {
+    "2025-01-15": {
+      "present": 20,
+      "late": 3,
+      "absent": 2,
+      "total": 25
+    },
+    "2025-01-16": {
+      "present": 18,
+      "late": 4,
+      "absent": 3,
+      "total": 25
+    }
+  },
+  "overall": {
+    "total_enrollments": 25,
+    "average_attendance": 88.0
+  }
+}
+```
+
+### 8.5 ดู Eligible Enrollments
+
+**Endpoint:** `GET /api/sessions/{session}/eligible-enrollments`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+ดูรายชื่อผู้เรียนที่สามารถบันทึก attendance ได้ (status = 'confirmed' หรือ 'completed')
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "user_id": 5,
+      "session_id": 1,
+      "status": "confirmed",
+      "user": {
+        "id": 5,
+        "name": "John Doe",
+        "email": "john@example.com"
+      }
+    }
+  ]
+}
+```
+
+### 8.6 บันทึก Attendance (Single)
+
+**Endpoint:** `POST /api/attendances`
+
+**Authorization:** Trainer or Admin
+
+**Request Body:**
+```json
+{
+  "enrollment_id": 10,
+  "session_id": 1,
+  "attendance_date": "2025-01-15",
+  "status": "present",
+  "notes": "Optional notes"
+}
+```
+
+**Response (สำเร็จ - 201):**
+```json
+{
+  "message": "Attendance recorded successfully",
+  "data": {
+    "id": 1,
+    "enrollment_id": 10,
+    "session_id": 1,
+    "user_id": 5,
+    "attendance_date": "2025-01-15",
+    "status": "present",
+    "notes": "Optional notes"
+  }
+}
+```
+
+**Validation:**
+- `enrollment_id` (required): ต้องมี enrollment ที่ระบุ
+- `session_id` (required): ต้องตรงกับ enrollment.session_id
+- `attendance_date` (required): ต้องอยู่ระหว่าง session.start_date และ session.end_date
+- `status` (required): 'present', 'late', หรือ 'absent'
+- `notes` (optional): บันทึกเพิ่มเติม
+
+### 8.7 อัปเดต Attendance
+
+**Endpoint:** `PUT /api/attendances/{attendance}`
+
+**Authorization:** Trainer or Admin
+
+**Request Body:**
+```json
+{
+  "status": "late",
+  "notes": "Arrived 30 minutes late"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Attendance updated successfully",
+  "data": {
+    "id": 1,
+    "enrollment_id": 10,
+    "session_id": 1,
+    "user_id": 5,
+    "attendance_date": "2025-01-15",
+    "status": "late",
+    "notes": "Arrived 30 minutes late"
+  }
+}
+```
+
+### 8.8 บันทึก Attendance (Bulk)
+
+**Endpoint:** `POST /api/sessions/{session}/attendances/bulk`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+บันทึก attendance หลายคนพร้อมกันในวันเดียวกัน
+
+**Request Body:**
+```json
+{
+  "attendance_date": "2025-01-15",
+  "records": [
+    {
+      "enrollment_id": 10,
+      "status": "present",
+      "notes": null
+    },
+    {
+      "enrollment_id": 11,
+      "status": "late",
+      "notes": "Arrived 15 minutes late"
+    },
+    {
+      "enrollment_id": 12,
+      "status": "absent",
+      "notes": null
+    }
+  ]
+}
+```
+
+**Response (สำเร็จ - 200):**
+```json
+{
+  "message": "Bulk attendance recorded successfully",
+  "data": {
+    "created": 15,
+    "updated": 10,
+    "total": 25
+  }
+}
+```
+
+**หมายเหตุ:**
+- ถ้ามี attendance record อยู่แล้วสำหรับ enrollment + date นั้น จะทำการ update แทน
+- ใช้สำหรับบันทึกการเข้าเรียนของนักเรียนทั้งหมดในหนึ่งวัน
+
+---
+
+## 9. Certificate APIs
+
+### 9.1 ดูรายการ Certificates ของตัวเอง (Student)
+
+**Endpoint:** `GET /api/me/certificates`
+
+**Authorization:** Student
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "certificate_code": "CERT-2025-001",
+    "issued_at": "2025-01-20",
+    "enrollment": {
+      "id": 10,
+      "session": {
+        "id": 1,
+        "title": "Session 1",
+        "program": {
+          "id": 1,
+          "name": "Program Name"
+        }
+      }
+    }
+  }
+]
+```
+
+### 9.2 ดูรายละเอียด Certificate
+
+**Endpoint:** `GET /api/certificates/{certificate}`
+
+**Authorization:** Owner, Trainer, or Admin
+
+**Response (200):**
+```json
+{
+  "id": 1,
+  "certificate_code": "CERT-2025-001",
+  "issued_at": "2025-01-20",
+  "enrollment": {
+    "id": 10,
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com"
+    },
+    "session": {
+      "id": 1,
+      "title": "Session 1",
+      "start_date": "2025-01-15",
+      "end_date": "2025-01-20",
+      "program": {
+        "id": 1,
+        "name": "Program Name",
+        "code": "PRG-001"
+      }
+    }
+  }
+}
+```
+
+### 9.3 Download Certificate (PDF)
+
+**Endpoint:** `GET /api/certificates/{certificate}/download`
+
+**Authorization:** Owner, Trainer, or Admin
+
+**Response:**
+- Content-Type: application/pdf
+- Binary PDF file
+
+### 9.4 View Certificate (In Browser)
+
+**Endpoint:** `GET /api/certificates/{certificate}/view`
+
+**Authorization:** Owner, Trainer, or Admin
+
+**Response:**
+- Content-Type: application/pdf
+- Content-Disposition: inline (แสดงใน browser)
+
+### 9.5 Verify Certificate (Public)
+
+**Endpoint:** `GET /api/verify/{certificateCode}`
+
+**Authorization:** None (Public)
+
+**คำอธิบาย:**
+ตรวจสอบความถูกต้องของใบรับรองผ่าน QR code
+
+**Response (200):**
+```json
+{
+  "valid": true,
+  "certificate": {
+    "certificate_code": "CERT-2025-001",
+    "issued_at": "2025-01-20",
+    "holder_name": "John Doe",
+    "program_name": "Program Name",
+    "session_title": "Session 1",
+    "revoked": false
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "valid": false,
+  "message": "Certificate not found"
+}
+```
+
+### 9.6 Generate Certificates for Session
+
+**Endpoint:** `POST /api/sessions/{session}/certificates/generate`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+สร้างใบรับรองสำหรับผู้เรียนทุกคนที่มี enrollment.status = 'completed' ใน session
+
+**Response (200):**
+```json
+{
+  "message": "Certificates generated successfully",
+  "data": {
+    "total": 10,
+    "generated": 7,
+    "skipped": 3,
+    "errors": []
+  }
+}
+```
+
+### 9.7 Generate Certificates for Program
+
+**Endpoint:** `POST /api/programs/{program}/certificates/generate`
+
+**Authorization:** Trainer or Admin
+
+**คำอธิบาย:**
+สร้างใบรับรองสำหรับผู้เรียนทุกคนที่มี enrollment.status = 'completed' ในทุก session ของ program
+
+**Response (200):**
+```json
+{
+  "message": "Certificates generated successfully",
+  "data": {
+    "total": 25,
+    "generated": 20,
+    "skipped": 5,
+    "errors": []
+  }
+}
+```
+
+---
+
 ## สถานะต่างๆ ในระบบ
 
 ### Enrollment Status
@@ -481,16 +1062,26 @@ Form-data
 - `cancelled`: ยกเลิกแล้ว
 
 ### Session Status
-- `pending`: รอการอนุมัติ
+- `upcoming`: กำลังจะมาถึง
 - `open`: เปิดรับสมัคร
 - `closed`: ปิดรับสมัครแล้ว (หลัง end_date)
-- `completed`: เสร็จสิ้นแล้ว (หลังจบ + ประเมินผลแล้ว)
+- `completed`: เสร็จสิ้นแล้ว (ระบบ auto-evaluate enrollments)
 - `cancelled`: ยกเลิก
 
 ### Program Status
 - `draft`: ร่าง (ยังไม่เผยแพร่)
 - `published`: เผยแพร่แล้ว (แสดงใน catalog)
+- `active`: ใช้งาน
 - `archived`: เก็บถาวร
+
+### Attendance Status
+- `present`: มาเรียน (นับเป็นเข้าเรียน ✅)
+- `late`: มาสาย (นับเป็นเข้าเรียน ✅)
+- `absent`: ขาดเรียน (ไม่นับ ❌)
+
+**หมายเหตุ:**
+- Attendance ที่มี status = `present` หรือ `late` จะนับเป็นการเข้าเรียน
+- ใช้ในการคำนวณการผ่านหลักสูตร (80% attendance rule)
 
 ---
 
@@ -525,5 +1116,67 @@ curl -H "Authorization: Bearer your-token-here" \
 
 ---
 
-**อัปเดตล่าสุด:** 2025-01-15
-**เวอร์ชัน:** 1.0
+## API Endpoints Summary
+
+### Authentication
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login
+
+### User Management (Admin)
+- `GET /api/admin/users` - List users
+- `POST /api/admin/users` - Create user
+- `PUT /api/admin/users/{id}` - Update user
+- `DELETE /api/admin/users/{id}` - Delete user
+
+### Profile
+- `GET /api/me` - Get profile
+- `PUT /api/me/profile` - Update profile
+- `POST /api/me/avatar` - Upload avatar
+- `GET /api/me/avatar` - Get avatar
+- `DELETE /api/me/avatar` - Delete avatar
+
+### Programs & Sessions
+- `GET /api/catalog/programs` - List programs (public)
+- `GET /api/catalog/programs/{id}/sessions` - List sessions (public)
+- `GET /api/programs/{id}` - Get program details
+- `GET /api/sessions` - List sessions
+
+### Enrollments
+- `POST /api/enrollments` - Create enrollment (student)
+- `PUT /api/enrollments/{id}/cancel` - Cancel enrollment
+- `GET /api/me/enrollments` - My enrollments
+
+### Sessions (Admin/Trainer)
+- `POST /api/sessions/{id}/complete` - Mark session completed
+- `GET /api/admin/sessions` - Admin view sessions
+- `GET /api/trainer/sessions` - Trainer view sessions
+
+### Attendance (Admin/Trainer)
+- `GET /api/sessions/{session}/enrollments-for-attendance` - Get enrollments for attendance
+- `GET /api/sessions/{session}/attendances` - Get all attendances
+- `GET /api/sessions/{session}/attendance-summary` - Get summary
+- `GET /api/sessions/{session}/eligible-enrollments` - Get eligible students
+- `POST /api/attendances` - Create single attendance
+- `PUT /api/attendances/{id}` - Update attendance
+- `POST /api/sessions/{session}/attendances/bulk` - Bulk create/update
+
+### Attendance (Student)
+- `GET /api/enrollments/{enrollment}/attendances` - View own attendance
+
+### Certificates
+- `GET /api/me/certificates` - My certificates (student)
+- `GET /api/certificates/{id}` - Certificate details
+- `GET /api/certificates/{id}/download` - Download PDF
+- `GET /api/certificates/{id}/view` - View in browser
+- `GET /api/verify/{code}` - Verify certificate (public)
+- `POST /api/sessions/{id}/certificates/generate` - Generate for session
+- `POST /api/programs/{id}/certificates/generate` - Generate for program
+
+---
+
+**อัปเดตล่าสุด:** 2026-01-06
+**เวอร์ชัน:** 2.0
+
+**Changelog:**
+- v2.0 (2026-01-06): เพิ่ม Session Management, Attendance Management และ Certificate APIs
+- v1.0 (2025-01-15): เวอร์ชันแรก - Authentication, User Management, Profile, Enrollment

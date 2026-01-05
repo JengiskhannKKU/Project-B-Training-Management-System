@@ -16,6 +16,7 @@ interface Session {
 interface Props {
     show: boolean;
     courseId: number;
+    requestId?: number;
     courseName: string;
     sessions: Session[];
     baseUrl?: string;
@@ -117,7 +118,7 @@ const programBaseUrl = computed(() => {
                         No sessions are available to display for this course yet.
                     </p>
                     <Link
-                        :href="`${programBaseUrl}/${courseId}`"
+                        :href="`${programBaseUrl}/${requestId || courseId}`"
                         class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#26685f] transition-colors"
                     >
                         Create Session

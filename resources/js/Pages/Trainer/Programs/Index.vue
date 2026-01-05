@@ -580,6 +580,7 @@ const mockPrograms = [
                             v-for="course in paginatedCourses"
                             :key="course.request_id || course.id"
                             :id="course.id"
+                            :href="`/trainer/programs/${course.request_id}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"

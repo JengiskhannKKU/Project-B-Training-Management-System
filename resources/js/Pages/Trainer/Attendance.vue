@@ -565,6 +565,7 @@ const selectedCourseName = computed(() => {
             <SessionsModal
                 :show="showSessionsModal"
                 :courseId="selectedCourse?.id || 0"
+                :requestId="selectedCourse?.request_id"
                 :courseName="selectedCourseName"
                 :sessions="selectedCourseSessions"
                 baseUrl="/trainer"
