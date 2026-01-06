@@ -274,6 +274,232 @@ Scheduler                  Command                  Backend                 Data
 
 ---
 
+## 4. Certificate Generation Flow
+
+### 4.1 Session Completed → Generate Certificates → Student View
+
+```
+Session    Trainer/Admin        Backend              Certificate Service    Database       Student
+  |              |                  |                        |                 |              |
+  |-- status --->|                  |                        |                 |              |
+  |  completed   |                  |                        |                 |              |
+  |              |                  |                        |                 |              |
+  |              |-- Generate Cert ->|                        |                 |              |
+  |              |  POST /sessions/ |                        |                 |              |
+  |              |  {id}/certificates                        |                 |              |
+  |              |  /generate       |                        |                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |-- ตรวจสอบ session -->  |                 |              |
+  |              |                  |   status = completed?  |                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |<-- session valid ------|                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |-- ดึง enrollments -----|---------------->|              |
+  |              |                  |   status = completed   |                 |              |
+  |              |                  |                        |<-- enrollments -|              |
+  |              |                  |                        |                 |              |
+  |              |                  |-- generateCertificates-|                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |                        |-- Loop: each enrollment        |
+  |              |                  |                        |                 |              |
+  |              |                  |                        |-- ตรวจสอบซ้ำ ->|              |
+  |              |                  |                        |   cert exists?  |              |
+  |              |                  |                        |<-- ไม่มี -------|              |
+  |              |                  |                        |                 |              |
+  |              |                  |                        |-- สร้าง cert -->|              |
+  |              |                  |                        |   + code        |              |
+  |              |                  |                        |   + QR code     |              |
+  |              |                  |                        |   + PDF file    |              |
+  |              |                  |                        |<-- cert created |              |
+  |              |                  |                        |                 |              |
+  |              |                  |<-- Result -------------|                 |              |
+  |              |                  |   { created: 10,       |                 |              |
+  |              |                  |     skipped: 0 }       |                 |              |
+  |              |<-- 200 OK -------|                        |                 |              |
+  |              |   Certificates   |                        |                 |              |
+  |              |   generated      |                        |                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |                        |                 |              |
+  |              |                  |                        |                 |    <-- Login Student
+  |              |                  |                        |                 |              |
+  |              |                  |                  <-- GET /me/certificates               |
+  |              |                  |<-- Query certs --------|---------------->|              |
+  |              |                  |   where user_id        |                 |              |
+  |              |                  |                        |<-- certs list --|              |
+  |              |                  |-- Response ------------|-----------------|------------->|
+  |              |                  |   [{ cert_code,        |                 |   แสดง cert |
+  |              |                  |      status: valid,    |                 |   ในหน้า     |
+  |              |                  |      program,          |                 |   dashboard  |
+  |              |                  |      session }]        |                 |              |
+```
+
+**ขั้นตอน:**
+
+1. **Session Completed**
+   - Session มี status = "completed"
+   - Trainer หรือ Admin สามารถ generate certificates ได้
+
+2. **Trainer/Admin Generate Certificates**
+   - กด button "Generate Certificates"
+   - ส่ง `POST /api/sessions/{id}/certificates/generate`
+
+3. **Backend Validation**
+   - ตรวจสอบว่า session status = "completed"
+   - ตรวจสอบว่า user เป็น trainer ของ session หรือ admin
+
+4. **Certificate Service**
+   - ดึง enrollments ที่ status = "completed" จาก database
+   - Loop แต่ละ enrollment:
+     - ตรวจสอบว่ามี certificate อยู่แล้วหรือไม่ (idempotency)
+     - ถ้าไม่มี → สร้าง certificate ใหม่
+     - Generate certificate code (CERT-XXXXXX)
+     - Generate QR code สำหรับ verification
+     - Generate PDF file
+   - Return ผลลัพธ์: `{ created: X, skipped: Y }`
+
+5. **Student View Certificate**
+   - Student login เข้าระบบ
+   - เปิดหน้า "My Certificates"
+   - Frontend เรียก `GET /api/me/certificates`
+   - แสดงรายการ certificates ของ student
+
+**กรณี Special:**
+
+**Idempotency (กด generate ซ้ำ):**
+```
+Trainer          Backend              Database
+  |                  |                    |
+  |-- Generate ----->|                    |
+  |  (2nd time)      |-- ดึง enrollments -|
+  |                  |                    |
+  |                  |-- Loop:            |
+  |                  |   cert exists? --->|
+  |                  |<-- มีแล้ว ---------|
+  |                  |   → skip           |
+  |                  |                    |
+  |                  |-- เจอคนใหม่ 2 คน  |
+  |                  |   → สร้าง 2 ใบ --->|
+  |                  |                    |
+  |<-- created: 2 ---|                    |
+  |    skipped: 10   |                    |
+```
+
+**Program-Level Certificates:**
+```
+Admin            Backend              Database
+  |                  |                    |
+  |-- Generate ----->|                    |
+  |  POST /programs/ |                    |
+  |  {id}/certs/gen  |                    |
+  |                  |-- ดึง enrollments -|
+  |                  |   ทุก sessions     |
+  |                  |   ใน program      |
+  |                  |<-- enrollments ----|
+  |                  |                    |
+  |                  |-- Group by user -->|
+  |                  |   → 1 cert/user   |
+  |                  |   session_id=null |
+  |                  |                    |
+  |<-- created: X ---|                    |
+```
+
+---
+
+### 4.2 Certificate Revocation Flow
+
+```
+Admin            Backend              Database         Student
+  |                  |                    |                |
+  |-- Revoke ------->|                    |                |
+  |  POST /admin/    |                    |                |
+  |  certificates/   |                    |                |
+  |  {id}/revoke     |                    |                |
+  |                  |                    |                |
+  |                  |-- Update status -->|                |
+  |                  |   = revoked        |                |
+  |                  |   + revoked_at     |                |
+  |                  |   + revoked_by     |                |
+  |                  |   + note           |                |
+  |                  |<-- updated --------|                |
+  |                  |                    |                |
+  |<-- 200 OK -------|                    |                |
+  |  Cert revoked    |                    |                |
+  |                  |                    |                |
+  |                  |                    |      <-- Student ดู cert
+  |                  |<-- GET /me/certs --|----------------|
+  |                  |                    |                |
+  |                  |-- Query ---------->|                |
+  |                  |<-- cert with ------|                |
+  |                  |    status=revoked  |                |
+  |                  |                    |                |
+  |                  |-- Response --------|--------------->|
+  |                  |   status: revoked  |    แสดง "Revoked"
+  |                  |   is_valid: false  |    ใน dashboard
+```
+
+---
+
+### 4.3 Certificate Verification Flow (Public)
+
+```
+Public User      Frontend           Backend              Database
+  |                  |                  |                    |
+  |-- สแกน QR ------>|                  |                    |
+  |  on cert         |                  |                    |
+  |                  |                  |                    |
+  |                  |-- Verify ------->|                    |
+  |                  |  GET /certificates                    |
+  |                  |  /verify/{code}  |                    |
+  |                  |                  |                    |
+  |                  |                  |-- Query cert ----->|
+  |                  |                  |   by code          |
+  |                  |                  |<-- cert found? ----|
+  |                  |                  |                    |
+  |                  |<-- Response -----|                    |
+  |                  |  { is_valid,     |                    |
+  |                  |    status,       |                    |
+  |                  |    holder_name,  |                    |
+  |                  |    program }     |                    |
+  |                  |                  |                    |
+  |<-- แสดงผล -------|                  |                    |
+  |  ✅ Valid        |                  |                    |
+  |  🚨 Revoked      |                  |                    |
+  |  ❌ Not Found    |                  |                    |
+```
+
+**Verification Results:**
+
+1. **Valid Certificate:**
+   ```json
+   {
+     "is_valid": true,
+     "status": "valid",
+     "holder_name": "สมชาย ใจดี",
+     "program": "Digital Marketing 101"
+   }
+   ```
+
+2. **Revoked Certificate:**
+   ```json
+   {
+     "is_valid": false,
+     "status": "revoked",
+     "holder_name": "สมชาย ใจดี",
+     "program": "Digital Marketing 101"
+   }
+   ```
+
+3. **Not Found:**
+   ```json
+   {
+     "is_valid": false,
+     "status": "not_found",
+     "certificate_code": "CERT-FAKE999"
+   }
+   ```
+
+---
+
 ## สัญลักษณ์ที่ใช้
 
 - `|` = Timeline
@@ -283,5 +509,5 @@ Scheduler                  Command                  Backend                 Data
 
 ---
 
-**อัปเดตล่าสุด:** 2025-01-15
-**เวอร์ชัน:** 1.0
+**อัปเดตล่าสุด:** 2026-01-06
+**เวอร์ชัน:** 2.0

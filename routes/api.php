@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('me/avatar', [MeController::class, 'deleteAvatar']);
     Route::get('me/enrollments', [EnrollmentController::class, 'myEnrollments']);
     Route::get('me/certificates', [CertificateController::class, 'myCertificates']);
+    Route::get('certificates/verify/{certificateCode}', [CertificateController::class, 'verify']);
     Route::post('enrollments', [EnrollmentController::class, 'store']);
     Route::put('enrollments/{enrollment}/cancel', [EnrollmentController::class, 'cancel']);
     Route::get('certificates/{certificate}', [CertificateController::class, 'show']);

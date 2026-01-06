@@ -977,33 +977,51 @@ Student ดูประวัติการเข้าเรียนของ
 
 ### 9.5 Verify Certificate (Public)
 
-**Endpoint:** `GET /api/verify/{certificateCode}`
+**Endpoint:** `GET /api/certificates/verify/{certificateCode}`
 
 **Authorization:** None (Public)
 
 **คำอธิบาย:**
-ตรวจสอบความถูกต้องของใบรับรองผ่าน QR code
+ตรวจสอบความถูกต้องของใบรับรองผ่าน QR code (เปลี่ยนจาก `/api/verify/{code}`)
 
-**Response (200):**
+**Response (200 - Valid):**
 ```json
 {
-  "valid": true,
-  "certificate": {
+  "data": {
     "certificate_code": "CERT-2025-001",
-    "issued_at": "2025-01-20",
+    "is_valid": true,
+    "status": "valid",
     "holder_name": "John Doe",
-    "program_name": "Program Name",
-    "session_title": "Session 1",
-    "revoked": false
+    "program": "Digital Marketing 101",
+    "session": "Basic Marketing",
+    "issued_at": "2026-01-06 10:00:00"
   }
 }
 ```
 
-**Response (404):**
+**Response (200 - Revoked):**
 ```json
 {
-  "valid": false,
-  "message": "Certificate not found"
+  "data": {
+    "certificate_code": "CERT-2025-001",
+    "is_valid": false,
+    "status": "revoked",
+    "holder_name": "John Doe",
+    "program": "Digital Marketing 101",
+    "session": "Basic Marketing",
+    "issued_at": "2026-01-06 10:00:00"
+  }
+}
+```
+
+**Response (404 - Not Found):**
+```json
+{
+  "data": {
+    "certificate_code": "CERT-FAKE999",
+    "is_valid": false,
+    "status": "not_found"
+  }
 }
 ```
 
@@ -1011,21 +1029,41 @@ Student ดูประวัติการเข้าเรียนของ
 
 **Endpoint:** `POST /api/sessions/{session}/certificates/generate`
 
-**Authorization:** Trainer or Admin
+**Authorization:** Session Trainer or Admin
 
 **คำอธิบาย:**
-สร้างใบรับรองสำหรับผู้เรียนทุกคนที่มี enrollment.status = 'completed' ใน session
+สร้างใบรับรองสำหรับผู้เรียนทุกคนที่มี `enrollment.status = 'completed'` ใน session
+
+**Business Rules:**
+- Session ต้องมี `status = 'completed'`
+- มีการตรวจสอบ idempotency (ถ้ามี cert แล้วจะ skip)
+- ต้องเป็น trainer ของ session หรือ admin เท่านั้น
 
 **Response (200):**
 ```json
 {
-  "message": "Certificates generated successfully",
+  "message": "Certificates generated successfully.",
   "data": {
-    "total": 10,
-    "generated": 7,
-    "skipped": 3,
-    "errors": []
+    "created": 7,
+    "skipped": 3
   }
+}
+```
+
+**Response (422 - Session Not Completed):**
+```json
+{
+  "message": "Validation error",
+  "errors": {
+    "status": ["Session must be completed before generating certificates."]
+  }
+}
+```
+
+**Response (403 - Forbidden):**
+```json
+{
+  "message": "Only the session trainer or admin can generate certificates."
 }
 ```
 
@@ -1033,20 +1071,152 @@ Student ดูประวัติการเข้าเรียนของ
 
 **Endpoint:** `POST /api/programs/{program}/certificates/generate`
 
-**Authorization:** Trainer or Admin
+**Authorization:** Program Owner or Admin
 
 **คำอธิบาย:**
-สร้างใบรับรองสำหรับผู้เรียนทุกคนที่มี enrollment.status = 'completed' ในทุก session ของ program
+สร้างใบรับรอง **ระดับ Program** สำหรับผู้เรียนทุกคนที่จบ session ในโปรแกรม
+
+**Business Rules:**
+- Program ต้องมี `approval_status = 'approved'` และ `status = 'active'`
+- เลือก enrollments ที่ `status = 'completed'` จากทุก sessions ใน program
+- **Deduplication:** ถ้า student เรียนจบหลาย sessions → สร้างเพียง **1 ใบต่อคน**
+- Certificate ที่สร้างจะมี `session_id = null` (program-level)
 
 **Response (200):**
 ```json
 {
-  "message": "Certificates generated successfully",
+  "message": "Certificates generated successfully.",
   "data": {
-    "total": 25,
-    "generated": 20,
-    "skipped": 5,
-    "errors": []
+    "created": 15,
+    "skipped": 5
+  }
+}
+```
+
+**Response (422 - Program Not Approved):**
+```json
+{
+  "message": "Validation error",
+  "errors": {
+    "program_id": ["Program must be approved before generating certificates."]
+  }
+}
+```
+
+### 9.8 ดูรายการ Certificates ของ Session (Trainer/Admin)
+
+**Endpoint:** `GET /api/sessions/{session}/certificates`
+
+**Authorization:** Session Trainer or Admin
+
+**คำอธิบาย:**
+ดูรายการใบรับรองทั้งหมดที่ออกให้กับ session นี้
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "certificate_code": "CERT-ABC123",
+      "status": "valid",
+      "user_id": 5,
+      "user": {
+        "id": 5,
+        "name": "สมชาย ใจดี",
+        "email": "somchai@example.com"
+      },
+      "program_id": 1,
+      "session_id": 1,
+      "issued_at": "2026-01-06 10:00:00",
+      "issued_by": 2
+    },
+    {
+      "id": 2,
+      "certificate_code": "CERT-XYZ789",
+      "status": "revoked",
+      "user_id": 6,
+      "user": {
+        "id": 6,
+        "name": "สมหญิง ดีมาก",
+        "email": "somying@example.com"
+      },
+      "program_id": 1,
+      "session_id": 1,
+      "issued_at": "2026-01-05 14:30:00",
+      "revoked_at": "2026-01-06 09:00:00",
+      "revoked_by": 1
+    }
+  ]
+}
+```
+
+### 9.9 ดูรายการ Certificates ของ Program
+
+**Endpoint:** `GET /api/programs/{program}/certificates`
+
+**Authorization:** Program Trainer or Admin
+
+**คำอธิบาย:**
+ดูรายการใบรับรองทั้งหมดของ program (รวมทั้ง session-level และ program-level)
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "certificate_code": "CERT-PRG001",
+      "status": "valid",
+      "user_id": 5,
+      "user": {
+        "name": "สมชาย ใจดี"
+      },
+      "program_id": 1,
+      "session_id": null,  // Program-level certificate
+      "issued_at": "2026-01-06 10:00:00"
+    }
+  ]
+}
+```
+
+### 9.10 Revoke Certificate (Admin Only)
+
+**Endpoint:** `POST /api/admin/certificates/{certificate}/revoke`
+
+**Authorization:** Admin Only
+
+**คำอธิบาย:**
+เพิกถอนใบรับรอง (เช่น กรณีพนักงานทุจริต หรือไม่ผ่านเกณฑ์)
+
+**Request Body:**
+```json
+{
+  "note": "พนักงานทุจริตการสอบ"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Certificate revoked successfully.",
+  "data": {
+    "id": 1,
+    "certificate_code": "CERT-ABC123",
+    "status": "revoked",
+    "revoked_at": "2026-01-06 11:00:00",
+    "revoked_by": 1
+  }
+}
+```
+
+**Response (200 - Already Revoked):**
+```json
+{
+  "message": "Certificate already revoked.",
+  "data": {
+    "id": 1,
+    "status": "revoked"
   }
 }
 ```

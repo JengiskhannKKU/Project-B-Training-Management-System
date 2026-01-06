@@ -23,13 +23,23 @@ class CertificateGenerationService
 
     public function getEligibleEnrollmentsForProgram(int $programId): Collection
     {
-        return Enrollment::query()
+        // For program-level certificates, we want ONE certificate per user
+        // Select the most recent completed enrollment for each user
+        $enrollments = Enrollment::query()
             ->where('status', 'completed')
             ->whereHas('session', function ($builder) use ($programId) {
                 $builder->where('program_id', $programId);
             })
             ->with('session')
             ->get();
+
+        // Group by user_id and get the most recent enrollment for each user
+        $uniqueEnrollments = $enrollments->groupBy('user_id')->map(function ($userEnrollments) {
+            // Return the most recent enrollment for this user
+            return $userEnrollments->sortByDesc('completed_at')->first();
+        });
+
+        return $uniqueEnrollments->values();
     }
 
     public function generateCertificatesForSession(TrainingSession $session, int $issuedBy): array

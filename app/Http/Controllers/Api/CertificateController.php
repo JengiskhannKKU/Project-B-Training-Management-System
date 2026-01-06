@@ -134,19 +134,24 @@ class CertificateController extends Controller
             'session:id,title',
         ])->where('certificate_code', $certificateCode)->first();
 
-        if (!$certificate || $certificate->status !== 'valid') {
+        if (!$certificate) {
             return response()->json([
-                'is_valid' => false,
-            ]);
+                'data' => [
+                    'certificate_code' => $certificateCode,
+                    'is_valid' => false,
+                    'status' => 'not_found',
+                ],
+            ], 404);
         }
 
-        return response()->json([
-            'is_valid' => true,
+        return $this->successResponse([
+            'certificate_code' => $certificate->certificate_code,
+            'is_valid' => $certificate->status === 'valid',
+            'status' => $certificate->status,
             'holder_name' => $certificate->user?->name,
             'program' => $certificate->program?->name,
             'session' => $certificate->session?->title,
             'issued_at' => $certificate->issued_at,
-            'status' => $certificate->status,
         ]);
     }
 
