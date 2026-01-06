@@ -26,7 +26,8 @@ class CertificateController extends Controller
         ])
             ->where('user_id', $user->id)
             ->latest()
-            ->get();
+            ->get()
+            ->makeHidden(['file_data', 'background_image']);
 
         return $this->successResponse($certificates, 'Certificates retrieved successfully.');
     }
@@ -47,7 +48,8 @@ class CertificateController extends Controller
         ])
             ->where('session_id', $session->id)
             ->latest()
-            ->get();
+            ->get()
+            ->makeHidden(['file_data', 'background_image']);
 
         return $this->successResponse($certificates, 'Session certificates retrieved successfully.');
     }
@@ -68,7 +70,8 @@ class CertificateController extends Controller
         ])
             ->where('program_id', $program->id)
             ->latest()
-            ->get();
+            ->get()
+            ->makeHidden(['file_data', 'background_image']);
 
         return $this->successResponse($certificates, 'Program certificates retrieved successfully.');
     }
@@ -103,7 +106,7 @@ class CertificateController extends Controller
             $query->where('issued_by', $request->integer('issued_by'));
         }
 
-        $certificates = $query->get();
+        $certificates = $query->get()->makeHidden(['file_data', 'background_image']);
 
         return $this->successResponse($certificates, 'Certificates retrieved successfully.');
     }
@@ -122,6 +125,8 @@ class CertificateController extends Controller
         if (!$this->canAccessCertificate($user, $certificate)) {
             return $this->forbiddenResponse('You are not allowed to view this certificate.');
         }
+
+        $certificate->makeHidden(['file_data', 'background_image']);
 
         return $this->successResponse($certificate, 'Certificate retrieved successfully.');
     }
@@ -162,6 +167,7 @@ class CertificateController extends Controller
         ]);
 
         if ($certificate->status === 'revoked') {
+            $certificate->makeHidden(['file_data', 'background_image']);
             return $this->successResponse($certificate, 'Certificate already revoked.');
         }
 
@@ -172,7 +178,10 @@ class CertificateController extends Controller
             'revoked_note' => $data['note'] ?? null,
         ]);
 
-        return $this->successResponse($certificate->fresh(), 'Certificate revoked successfully.');
+        $revoked = $certificate->fresh();
+        $revoked->makeHidden(['file_data', 'background_image']);
+
+        return $this->successResponse($revoked, 'Certificate revoked successfully.');
     }
 
     public function download(Request $request, Certificate $certificate, CertificateFileService $fileService)
@@ -247,10 +256,12 @@ class CertificateController extends Controller
             ]);
         }
 
-        $result = DB::transaction(function () use ($session, $user, $certificateService) {
+        $eagerGeneration = $request->boolean('eager_generation', false);
+
+        $result = DB::transaction(function () use ($session, $user, $certificateService, $eagerGeneration) {
             $this->logAutoCertificateRequest($user->id, 'session', null, $session->id);
 
-            return $certificateService->generateCertificatesForSession($session, $user->id);
+            return $certificateService->generateCertificatesForSession($session, $user->id, $eagerGeneration);
         });
 
         return $this->successResponse($result, 'Certificates generated successfully.');
@@ -280,10 +291,12 @@ class CertificateController extends Controller
             ]);
         }
 
-        $result = DB::transaction(function () use ($program, $user, $certificateService) {
+        $eagerGeneration = $request->boolean('eager_generation', false);
+
+        $result = DB::transaction(function () use ($program, $user, $certificateService, $eagerGeneration) {
             $this->logAutoCertificateRequest($user->id, 'program', $program->id, null);
 
-            return $certificateService->generateCertificatesForProgram($program, $user->id);
+            return $certificateService->generateCertificatesForProgram($program, $user->id, $eagerGeneration);
         });
 
         return $this->successResponse($result, 'Certificates generated successfully.');

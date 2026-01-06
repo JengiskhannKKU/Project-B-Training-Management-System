@@ -25,6 +25,14 @@ class CertificateTemplate extends Model
         'is_active',
     ];
 
+    /**
+     * Attributes that should be hidden from JSON serialization.
+     * Binary background_image field cannot be JSON encoded.
+     */
+    protected $hidden = [
+        'background_image',
+    ];
+
     protected $casts = [
         'layout_config' => 'array',
         'is_active' => 'boolean',

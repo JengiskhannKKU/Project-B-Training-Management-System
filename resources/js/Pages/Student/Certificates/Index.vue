@@ -13,8 +13,14 @@ const fetchCertificates = async () => {
     isLoading.value = true;
     try {
         const { data } = await axios.get("/api/me/certificates");
+        console.log("API Response:", data);
+        console.log("Certificates data:", data?.data);
+        console.log("Is array?", Array.isArray(data?.data));
         certificates.value = Array.isArray(data?.data) ? data.data : [];
+        console.log("Final certificates:", certificates.value);
     } catch (error) {
+        console.error("Error fetching certificates:", error);
+        console.error("Error response:", error.response);
         certificates.value = [];
     } finally {
         isLoading.value = false;

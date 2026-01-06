@@ -593,4 +593,312 @@ class CertificateGenerationTest extends TestCase
                 ],
             ]);
     }
+
+    /**
+     * Test: KAN-388 - Eager generation creates PDF files immediately
+     */
+    public function test_eager_generation_creates_files_immediately(): void
+    {
+        // Arrange: Create a global template so it has a template_id
+        $globalTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Global Template',
+            'scope' => 'global',
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 24,
+            'text_color' => '#0000ff',
+            'is_active' => true,
+        ]);
+
+        // Act: Generate certificates with eager generation enabled
+        $response = $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Generation successful
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Certificates generated successfully.',
+                'data' => [
+                    'created' => 1,
+                    'skipped' => 0,
+                ],
+            ]);
+
+        // Verify certificate was created with file data
+        $certificate = \App\Models\Certificate::where('user_id', $this->student->id)
+            ->where('session_id', $this->completedSession->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertNotNull($certificate->certificate_code);
+        $this->assertNotNull($certificate->file_data, 'File data should be generated immediately with eager generation');
+        $this->assertNotNull($certificate->file_mime_type, 'File MIME type should be set');
+        $this->assertNotNull($certificate->file_size, 'File size should be set');
+        $this->assertNotNull($certificate->generated_at, 'Generated timestamp should be set');
+        $this->assertEquals($globalTemplate->id, $certificate->template_id, 'Template ID should be set to global template');
+    }
+
+    /**
+     * Test: KAN-388 - Lazy generation (default) does not create PDF files immediately
+     */
+    public function test_lazy_generation_does_not_create_files_immediately(): void
+    {
+        // Act: Generate certificates without eager generation (default)
+        $response = $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate");
+
+        // Assert: Generation successful
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Certificates generated successfully.',
+                'data' => [
+                    'created' => 1,
+                    'skipped' => 0,
+                ],
+            ]);
+
+        // Verify certificate was created without file data
+        $certificate = \App\Models\Certificate::where('user_id', $this->student->id)
+            ->where('session_id', $this->completedSession->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertNotNull($certificate->certificate_code);
+        $this->assertNull($certificate->file_data, 'File data should NOT be generated immediately with lazy generation');
+        $this->assertNull($certificate->file_mime_type, 'File MIME type should NOT be set');
+        $this->assertNull($certificate->file_size, 'File size should NOT be set');
+        $this->assertNull($certificate->generated_at, 'Generated timestamp should NOT be set');
+    }
+
+    /**
+     * Test: KAN-388 - Program-level eager generation creates files for all certificates
+     */
+    public function test_program_level_eager_generation_creates_files(): void
+    {
+        // Arrange: Create additional completed session
+        $session2 = TrainingSession::factory()->create([
+            'program_id' => $this->program->id,
+            'trainer_id' => $this->trainer->id,
+            'status' => 'completed',
+            'approval_status' => 'approved',
+        ]);
+
+        Enrollment::create([
+            'user_id' => $this->student->id,
+            'session_id' => $session2->id,
+            'status' => 'completed',
+            'enrolled_at' => now(),
+            'completed_at' => now(),
+        ]);
+
+        // Act: Generate program-level certificates with eager generation
+        $response = $this->actingAs($this->admin)
+            ->postJson("/api/programs/{$this->program->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Generation successful
+        $response->assertStatus(200);
+
+        // Verify program-level certificate has file data
+        $certificate = \App\Models\Certificate::where('user_id', $this->student->id)
+            ->where('program_id', $this->program->id)
+            ->whereNull('session_id')
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertNotNull($certificate->file_data, 'Program certificate should have file data with eager generation');
+        $this->assertNotNull($certificate->file_mime_type);
+        $this->assertNotNull($certificate->generated_at);
+    }
+
+    /**
+     * Test: KAN-390 - Session template takes priority over program template
+     */
+    public function test_session_template_takes_priority_over_program_template(): void
+    {
+        // Arrange: Create session template and program template
+        $sessionTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Session Template',
+            'scope' => 'session',
+            'session_id' => $this->completedSession->id,
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 32,
+            'text_color' => '#ff0000',
+            'is_active' => true,
+        ]);
+
+        $programTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Program Template',
+            'scope' => 'program',
+            'program_id' => $this->program->id,
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 28,
+            'text_color' => '#00ff00',
+            'is_active' => true,
+        ]);
+
+        // Act: Generate certificates with eager generation
+        $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Certificate uses session template (not program template)
+        $certificate = \App\Models\Certificate::where('session_id', $this->completedSession->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertEquals($sessionTemplate->id, $certificate->template_id, 'Certificate should use session template');
+    }
+
+    /**
+     * Test: KAN-390 - Program template takes priority over global template
+     */
+    public function test_program_template_takes_priority_over_global_template(): void
+    {
+        // Arrange: Create global template and program template (no session template)
+        $globalTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Global Template',
+            'scope' => 'global',
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 24,
+            'text_color' => '#0000ff',
+            'is_active' => true,
+        ]);
+
+        $programTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Program Template',
+            'scope' => 'program',
+            'program_id' => $this->program->id,
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 28,
+            'text_color' => '#00ff00',
+            'is_active' => true,
+        ]);
+
+        // Act: Generate certificates with eager generation
+        $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Certificate uses program template (not global template)
+        $certificate = \App\Models\Certificate::where('session_id', $this->completedSession->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertEquals($programTemplate->id, $certificate->template_id, 'Certificate should use program template');
+    }
+
+    /**
+     * Test: KAN-390 - Global template is used when no session or program template exists
+     */
+    public function test_global_template_is_used_when_no_specific_template_exists(): void
+    {
+        // Arrange: Create only a global template (no session or program template)
+        $globalTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Global Template',
+            'scope' => 'global',
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 24,
+            'text_color' => '#0000ff',
+            'is_active' => true,
+        ]);
+
+        // Act: Generate certificates with eager generation
+        $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Certificate uses global template
+        $certificate = \App\Models\Certificate::where('session_id', $this->completedSession->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertEquals($globalTemplate->id, $certificate->template_id, 'Certificate should use global template');
+    }
+
+    /**
+     * Test: KAN-391 - Fallback template is used when no template exists at all
+     */
+    public function test_fallback_template_is_used_when_no_templates_exist(): void
+    {
+        // Arrange: Ensure no templates exist in database
+        \App\Models\CertificateTemplate::query()->delete();
+
+        // Act: Generate certificates with eager generation
+        $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Certificate is generated successfully with fallback template
+        $certificate = \App\Models\Certificate::where('session_id', $this->completedSession->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertNull($certificate->template_id, 'Certificate should use fallback template (no template_id)');
+        $this->assertNotNull($certificate->file_data, 'File should be generated even with fallback template');
+        $this->assertNotNull($certificate->file_mime_type);
+        $this->assertNotNull($certificate->generated_at);
+    }
+
+    /**
+     * Test: KAN-390 - Complete template selection order verification
+     */
+    public function test_template_selection_order_all_templates_present(): void
+    {
+        // Arrange: Create all types of templates
+        $sessionTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Session Template',
+            'scope' => 'session',
+            'session_id' => $this->completedSession->id,
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 32,
+            'text_color' => '#ff0000',
+            'is_active' => true,
+        ]);
+
+        $programTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Program Template',
+            'scope' => 'program',
+            'program_id' => $this->program->id,
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 28,
+            'text_color' => '#00ff00',
+            'is_active' => true,
+        ]);
+
+        $globalTemplate = \App\Models\CertificateTemplate::create([
+            'name' => 'Global Template',
+            'scope' => 'global',
+            'layout_config' => ['canvas' => ['width' => 1600, 'height' => 1200]],
+            'font_size' => 24,
+            'text_color' => '#0000ff',
+            'is_active' => true,
+        ]);
+
+        // Act: Generate certificates
+        $this->actingAs($this->trainer)
+            ->postJson("/api/sessions/{$this->completedSession->id}/certificates/generate", [
+                'eager_generation' => true,
+            ]);
+
+        // Assert: Session template should be selected (highest priority)
+        $certificate = \App\Models\Certificate::where('session_id', $this->completedSession->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+
+        $this->assertNotNull($certificate);
+        $this->assertEquals($sessionTemplate->id, $certificate->template_id);
+        $this->assertNotEquals($programTemplate->id, $certificate->template_id);
+        $this->assertNotEquals($globalTemplate->id, $certificate->template_id);
+    }
 }

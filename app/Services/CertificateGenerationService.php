@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 
 class CertificateGenerationService
 {
+    public function __construct(
+        private CertificateFileService $fileService
+    ) {
+    }
     public function getEligibleEnrollmentsForSession(int $sessionId): Collection
     {
         return Enrollment::query()
@@ -42,7 +46,7 @@ class CertificateGenerationService
         return $uniqueEnrollments->values();
     }
 
-    public function generateCertificatesForSession(TrainingSession $session, int $issuedBy): array
+    public function generateCertificatesForSession(TrainingSession $session, int $issuedBy, bool $eagerGeneration = false): array
     {
         $enrollments = $this->getEligibleEnrollmentsForSession($session->id);
 
@@ -50,10 +54,10 @@ class CertificateGenerationService
             'program_id' => $session->program_id,
             'session_id' => $session->id,
             'issued_by' => $issuedBy,
-        ]);
+        ], $eagerGeneration);
     }
 
-    public function generateCertificatesForProgram(Program $program, int $issuedBy): array
+    public function generateCertificatesForProgram(Program $program, int $issuedBy, bool $eagerGeneration = false): array
     {
         $enrollments = $this->getEligibleEnrollmentsForProgram($program->id);
 
@@ -61,7 +65,7 @@ class CertificateGenerationService
             'program_id' => $program->id,
             'session_id' => null,
             'issued_by' => $issuedBy,
-        ]);
+        ], $eagerGeneration);
     }
 
     public function getEligibleEnrollmentsForRequest(int $certificateRequestId): Collection
@@ -75,7 +79,7 @@ class CertificateGenerationService
         return $this->getEligibleEnrollmentsForProgram($request->program_id);
     }
 
-    public function generateCertificates(int $certificateRequestId, int $issuedBy): array
+    public function generateCertificates(int $certificateRequestId, int $issuedBy, bool $eagerGeneration = false): array
     {
         $request = CertificateRequest::findOrFail($certificateRequestId);
         $enrollments = $this->getEligibleEnrollmentsForRequest($certificateRequestId);
@@ -107,11 +111,15 @@ class CertificateGenerationService
                 $certificate->update($payload);
                 $updated++;
             } else {
-                Certificate::create([
+                $certificate = Certificate::create([
                     'enrollment_id' => $enrollment->id,
                     ...$payload,
                 ]);
                 $created++;
+            }
+
+            if ($eagerGeneration) {
+                $this->fileService->generateAndStoreFile($certificate);
             }
         }
 
@@ -122,7 +130,7 @@ class CertificateGenerationService
         ];
     }
 
-    private function issueCertificates(Collection $enrollments, array $context): array
+    private function issueCertificates(Collection $enrollments, array $context, bool $eagerGeneration = false): array
     {
         $created = 0;
         $skipped = 0;
@@ -152,10 +160,14 @@ class CertificateGenerationService
             if ($certificate) {
                 $certificate->update($payload);
             } else {
-                Certificate::create([
+                $certificate = Certificate::create([
                     'enrollment_id' => $enrollment->id,
                     ...$payload,
                 ]);
+            }
+
+            if ($eagerGeneration) {
+                $this->fileService->generateAndStoreFile($certificate);
             }
 
             $created++;

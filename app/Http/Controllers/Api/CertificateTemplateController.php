@@ -160,12 +160,15 @@ class CertificateTemplateController extends Controller
 
     private function validatePayload(Request $request, bool $isCreate): array
     {
+        // KAN-393: Get max background image size from config
+        $maxBackgroundSize = config('certificates.max_file_sizes.background_image', 5120);
+
         $rules = [
             'name' => [$isCreate ? 'required' : 'sometimes', 'string', 'max:255'],
             'scope' => [$isCreate ? 'required' : 'sometimes', Rule::in(['global', 'program', 'session'])],
             'program_id' => ['nullable', 'integer', 'exists:programs,id'],
             'session_id' => ['nullable', 'integer', 'exists:training_sessions,id'],
-            'background_image' => ['nullable', 'image', 'max:4096'],
+            'background_image' => ['nullable', 'image', "max:{$maxBackgroundSize}"],
             'layout_config' => ['nullable'],
             'font_family' => ['nullable', 'string', 'max:255'],
             'font_size' => ['nullable', 'integer', 'min:1', 'max:200'],

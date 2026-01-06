@@ -30,6 +30,16 @@ class Certificate extends Model
         'revoked_note',
     ];
 
+    /**
+     * Attributes that should be hidden from JSON serialization.
+     * Binary fields (file_data, background_image) cannot be JSON encoded
+     * and should only be accessed through dedicated download/view endpoints.
+     */
+    protected $hidden = [
+        'file_data',
+        'background_image',
+    ];
+
     protected $casts = [
         'issued_at' => 'datetime',
         'generated_at' => 'datetime',
