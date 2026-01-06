@@ -23,6 +23,13 @@ class AdminRequestActionController extends Controller
         return $this->successResponse($requests, 'Requests retrieved successfully');
     }
 
+    public function getPendingCount()
+    {
+        $count = AdminRequest::where('status', 'pending')->count();
+
+        return $this->successResponse(['count' => $count], 'Pending request count retrieved successfully');
+    }
+
     public function reject(Request $request, AdminRequest $adminRequest)
     {
         $data = $request->validate([

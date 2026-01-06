@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { ChevronDown, ChevronUp, Eye } from 'lucide-vue-next';
 import ActionsDropdown from './ActionsDropdown.vue';
 
@@ -38,6 +38,12 @@ const toggleSessions = () => {
     isExpanded.value = !isExpanded.value;
     emit('toggle-sessions', props.course.id);
 };
+
+// Count pending sessions
+const pendingSessionsCount = computed(() => {
+    if (!props.course.sessions) return 0;
+    return props.course.sessions.filter(s => s.status === 'pending').length;
+});
 
 const handleStatusChange = ({ requestId, status }) => {
     emit('status-change', { requestId, status });
@@ -110,11 +116,22 @@ const handleToggleDropdown = ({ requestId, event }) => {
                 <button
                     v-if="course.sessions?.length"
                     @click="toggleSessions"
-                    class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                    :class="[
+                        'inline-flex items-center gap-1 rounded-md border px-3 py-1 text-sm font-medium transition-colors relative',
+                        pendingSessionsCount > 0
+                            ? 'border-amber-500 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                    ]"
                 >
                     <ChevronDown v-if="!isExpanded" class="h-4 w-4" />
                     <ChevronUp v-else class="h-4 w-4" />
                     Sessions ({{ course.sessions.length }})
+                    <span
+                        v-if="pendingSessionsCount > 0"
+                        class="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-amber-600 rounded-full"
+                    >
+                        {{ pendingSessionsCount }} pending
+                    </span>
                 </button>
 
                 <!-- View Button -->

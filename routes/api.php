@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('users/{user}/avatar', [MeController::class, 'showUserAvatar']);
 
         Route::get('admin/requests', [AdminRequestActionController::class, 'index']);
+        Route::get('admin/requests/pending-count', [AdminRequestActionController::class, 'getPendingCount']);
         Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
         Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
 

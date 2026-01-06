@@ -63,7 +63,7 @@ const menuItemClass = props.size === 'sm'
         <Teleport to="body">
             <div
                 v-if="isOpen"
-                class="actions-dropdown-menu fixed rounded-lg bg-white shadow-lg border border-gray-200 z-50"
+                class="actions-dropdown-menu fixed rounded-lg bg-white shadow-lg border border-gray-200 z-50 max-h-60 overflow-y-auto"
                 :class="menuWidth"
                 :style="{
                     top: position.top + 'px',

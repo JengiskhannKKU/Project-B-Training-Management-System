@@ -61,6 +61,7 @@ const confirmRequestId = ref(null);
 // Dropdown state
 const openDropdownId = ref(null);
 const dropdownPosition = ref({ top: 0, left: 0 });
+const dropdownCleanupFns = ref([]);
 
 // Computed
 const categories = computed(() => {
@@ -206,7 +207,7 @@ const programRows = computed(() => {
         .filter((req) => req.target_type === "session")
         .map(mapRequestToRow);
 
-    return programRequests.map((programRow) => {
+    const programsWithSessions = programRequests.map((programRow) => {
         const sessions = sessionRequests.filter((session) => {
             if (!session.parent_program_id) {
                 return false;
@@ -219,10 +220,28 @@ const programRows = computed(() => {
             return parentId === String(programRow.request_id);
         });
 
+        // Find the most recent date between program and its sessions
+        let mostRecentDate = programRow.created_at;
+        if (sessions.length > 0) {
+            sessions.forEach(session => {
+                if (session.created_at > mostRecentDate) {
+                    mostRecentDate = session.created_at;
+                }
+            });
+        }
+
         return {
             ...programRow,
             sessions,
+            most_recent_date: mostRecentDate,
         };
+    });
+
+    // Sort by most recent date (program or any of its sessions)
+    return programsWithSessions.sort((a, b) => {
+        const dateA = new Date(a.most_recent_date || a.created_at);
+        const dateB = new Date(b.most_recent_date || b.created_at);
+        return dateB - dateA; // Newest first
     });
 });
 
@@ -237,17 +256,36 @@ watch([searchQuery, selectedCategory, selectedStatus], () => {
     currentPage.value = 1;
 });
 
-// Close dropdown when clicking outside
-watch(openDropdownId, (newVal) => {
+// Close dropdown when clicking outside, scrolling, or resizing
+watch(openDropdownId, (newVal, oldVal) => {
+    // Cleanup previous event listeners
+    if (oldVal && dropdownCleanupFns.value.length > 0) {
+        dropdownCleanupFns.value.forEach(fn => fn());
+        dropdownCleanupFns.value = [];
+    }
+
     if (newVal) {
         const handleClickOutside = (e) => {
             if (!e.target.closest('.actions-dropdown-trigger') && !e.target.closest('.actions-dropdown-menu')) {
                 openDropdownId.value = null;
-                document.removeEventListener('click', handleClickOutside);
             }
         };
+
+        const handleScrollOrResize = () => {
+            openDropdownId.value = null;
+        };
+
         setTimeout(() => {
             document.addEventListener('click', handleClickOutside);
+            window.addEventListener('scroll', handleScrollOrResize, true);
+            window.addEventListener('resize', handleScrollOrResize);
+
+            // Store cleanup functions
+            dropdownCleanupFns.value = [
+                () => document.removeEventListener('click', handleClickOutside),
+                () => window.removeEventListener('scroll', handleScrollOrResize, true),
+                () => window.removeEventListener('resize', handleScrollOrResize)
+            ];
         }, 0);
     }
 });
@@ -380,13 +418,43 @@ const onToggleDropdown = ({ requestId, event }) => {
         openDropdownId.value = null;
     } else {
         openDropdownId.value = requestId;
-        const rect = event.target.closest('button').getBoundingClientRect();
-        const isSmall = event.target.closest('button').classList.contains('text-xs');
+        const button = event.target.closest('button');
+        const rect = button.getBoundingClientRect();
+        const isSmall = button.classList.contains('text-xs');
         const width = isSmall ? 160 : 176; // w-40 = 160px, w-44 = 176px
-        dropdownPosition.value = {
-            top: rect.bottom + window.scrollY,
-            left: rect.right + window.scrollX - width,
-        };
+        const estimatedHeight = 120; // Approximate dropdown height
+
+        // Calculate available space
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+
+        // Determine if dropdown should open upward or downward
+        const shouldOpenUpward = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+        // Calculate vertical position (fixed positioning, so no scroll offset needed)
+        let top;
+        if (shouldOpenUpward) {
+            // Position above the button
+            top = rect.top - estimatedHeight;
+        } else {
+            // Position below the button
+            top = rect.bottom;
+        }
+
+        // Calculate horizontal position (align to right edge of button)
+        let left = rect.right - width;
+
+        // Ensure dropdown doesn't overflow left edge of viewport
+        if (left < 10) {
+            left = 10;
+        }
+
+        // Ensure dropdown doesn't overflow right edge of viewport
+        if (left + width > window.innerWidth - 10) {
+            left = window.innerWidth - width - 10;
+        }
+
+        dropdownPosition.value = { top, left };
     }
 };
 
@@ -405,6 +473,9 @@ const onConfirmAction = async (adminNote) => {
     }
 
     await handleStatusChange(confirmRequestId.value, confirmAction.value, adminNote);
+
+    // Trigger refresh of pending count in the layout
+    window.dispatchEvent(new CustomEvent('refresh-pending-count'));
 
     showConfirm.value = false;
     confirmRequestId.value = null;

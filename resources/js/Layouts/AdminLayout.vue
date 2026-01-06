@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -13,10 +13,12 @@ import {
     FileCheck,
     Award,
 } from "lucide-vue-next";
+import axios from "axios";
 
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
+const pendingRequestCount = ref(0);
 const page = usePage();
 
 const currentPath = computed(() => page.url);
@@ -87,6 +89,26 @@ const roleColor = computed(() => {
     return 'text-gray-600';
 });
 
+const fetchPendingRequestCount = async () => {
+    try {
+        const response = await axios.get('/api/admin/requests/pending-count');
+        if (response.data?.data?.count !== undefined) {
+            pendingRequestCount.value = response.data.data.count;
+        }
+    } catch (error) {
+        console.error('Error fetching pending request count:', error);
+    }
+};
+
+onMounted(() => {
+    fetchPendingRequestCount();
+    // Refresh count every 30 seconds
+    setInterval(fetchPendingRequestCount, 30000);
+
+    // Listen for manual refresh events from the Requests page
+    window.addEventListener('refresh-pending-count', fetchPendingRequestCount);
+});
+
 </script>
 
 <template>
@@ -125,7 +147,13 @@ const roleColor = computed(() => {
                                             : 'text-gray-500 group-hover:text-gray-900',
                                     ]"
                                 />
-                                <span class="ml-3">{{ item.name }}</span>
+                                <span class="ml-3 flex-1">{{ item.name }}</span>
+                                <span
+                                    v-if="item.name === 'Requests' && pendingRequestCount > 0"
+                                    class="ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full"
+                                >
+                                    {{ pendingRequestCount }}
+                                </span>
                             </Link>
                         </li>
                     </ul>
