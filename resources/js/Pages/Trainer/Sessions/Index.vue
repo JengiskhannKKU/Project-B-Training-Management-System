@@ -1,14 +1,15 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import { Calendar, Search } from "lucide-vue-next";
-import AdminLayout from "@/Layouts/AdminLayout.vue";
+import { Calendar, Search, Plus } from "lucide-vue-next";
+import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import PageHeader from "@/Components/PageHeader.vue";
 import SimplePagination from "@/Components/SimplePagination.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import StandardButton from "@/Components/StandardButton.vue";
 
 const toast = useToast();
 
@@ -33,7 +34,7 @@ const fetchSessions = async () => {
         if (filters.value.search) params.append("search", filters.value.search);
         params.append("page", currentPage.value);
 
-        const { data } = await axios.get(`/api/admin/attendance/sessions?${params.toString()}`);
+        const { data } = await axios.get(`/api/trainer/attendance/sessions?${params.toString()}`);
 
         sessions.value = data?.data?.data || [];
         totalPages.value = data?.data?.last_page || 1;
@@ -88,10 +89,9 @@ const formatDate = (value) => {
     });
 };
 
-const getAttendanceRate = (session) => {
-    if (!session.enrollments_count || session.enrollments_count === 0) return "—";
-    const rate = (session.attendances_count / session.enrollments_count) * 100;
-    return `${rate.toFixed(0)}%`;
+const formatTime = (start, end) => {
+    if (!start || !end) return "—";
+    return `${start} - ${end}`;
 };
 
 onMounted(() => {
@@ -101,13 +101,20 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Attendance Management" />
-    <AdminLayout>
+    <Head title="Sessions Management" />
+    <TrainerLayout>
         <div class="space-y-6">
             <PageHeader
-                title="Attendance Management"
-                description="View and manage attendance for all training sessions."
-            />
+                title="Sessions Management"
+                description="View and manage all your training sessions."
+            >
+                <template #actions>
+                    <StandardButton variant="primary" @click="() => {}">
+                        <Plus class="h-4 w-4" />
+                        Create Session
+                    </StandardButton>
+                </template>
+            </PageHeader>
 
             <!-- Filters -->
             <div class="rounded-lg border border-gray-200 bg-white p-4">
@@ -224,27 +231,22 @@ onMounted(() => {
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                 >
-                                    Date
+                                    Date Range
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                 >
-                                    Trainer
+                                    Time
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                >
+                                    Capacity
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                 >
                                     Enrolled
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Present
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Rate
                                 </th>
                                 <th
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -271,19 +273,16 @@ onMounted(() => {
                                     {{ session.program?.name || "—" }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ formatDate(session.start_date) }}
+                                    {{ formatDate(session.start_date) }} - {{ formatDate(session.end_date) }}
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    {{ session.trainer?.name || "—" }}
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ formatTime(session.start_time, session.end_time) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ session.capacity || "—" }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {{ session.enrollments_count || 0 }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ session.attendances_count || 0 }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ getAttendanceRate(session) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <StatusBadge :status="session.status || 'upcoming'" />
@@ -291,12 +290,17 @@ onMounted(() => {
                                 <td
                                     class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
                                 >
-                                    <Link
-                                        :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
-                                        class="text-[#2f837d] hover:text-[#266a66]"
-                                    >
-                                        Mark Attendance
-                                    </Link>
+                                    <div class="flex justify-end gap-3">
+                                        <Link
+                                            :href="`/trainer/${session.program_id}/sessions/${session.id}/attendance`"
+                                            class="text-[#2f837d] hover:text-[#266a66]"
+                                        >
+                                            Attendance
+                                        </Link>
+                                        <button class="text-gray-600 hover:text-gray-900">
+                                            Edit
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -312,5 +316,5 @@ onMounted(() => {
                 />
             </div>
         </div>
-    </AdminLayout>
+    </TrainerLayout>
 </template>

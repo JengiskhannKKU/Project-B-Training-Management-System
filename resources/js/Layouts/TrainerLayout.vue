@@ -6,9 +6,11 @@ import {
     BookOpen,
     BookCheck,
     Award,
+    FileBadge,
     MessageSquare,
     Settings,
     LogOut,
+    Calendar,
 } from "lucide-vue-next";
 
 const showingSidebar = ref(true);
@@ -30,6 +32,11 @@ const navigationItems = [
         icon: BookOpen,
     },
     {
+        name: "Sessions",
+        path: "/trainer/sessions",
+        icon: Calendar,
+    },
+    {
         name: "Attendance",
         path: "/trainer/attendance",
         icon: BookCheck,
@@ -38,6 +45,11 @@ const navigationItems = [
         name: "Certificate Templates",
         path: "/trainer/certificate-templates",
         icon: Award,
+    },
+    {
+        name: "Certificate Requests",
+        path: "/trainer/certificate-requests",
+        icon: FileBadge,
     },
     {
         name: "Feedback",
@@ -168,7 +180,7 @@ const roleColor = computed(() => {
             </header>
 
             <!-- Page Content -->
-            <div class="p-4">
+            <div class="p-8">
                 <slot />
             </div>
         </div>

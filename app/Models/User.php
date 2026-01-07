@@ -63,6 +63,24 @@ class User extends Authenticatable
         return $this->role && $this->role->name === $role;
     }
 
+    /**
+     * Check if user has the given role or a superior role (admin = superuser)
+     */
+    public function hasRoleOrHigher(string $role): bool
+    {
+        if (!$this->role) {
+            return false;
+        }
+
+        // Admin has all permissions
+        if ($this->role->name === 'admin') {
+            return true;
+        }
+
+        // Match exact role
+        return $this->role->name === $role;
+    }
+
     public function createdPrograms(): HasMany
     {
         return $this->hasMany(Program::class, 'created_by');

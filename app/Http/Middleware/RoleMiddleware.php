@@ -21,7 +21,13 @@ class RoleMiddleware
 
         $roleNames = $roles ?: [];
 
-        if (!in_array($user->role->name, $roleNames, true)) {
+        // Admin inheritance: if 'trainer' is allowed, also allow 'admin'
+        $allowedRoles = $roleNames;
+        if (in_array('trainer', $roleNames, true) && !in_array('admin', $roleNames, true)) {
+            $allowedRoles[] = 'admin';
+        }
+
+        if (!in_array($user->role->name, $allowedRoles, true)) {
             abort(403, 'Unauthorized');
         }
 

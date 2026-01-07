@@ -345,4 +345,38 @@ class TrainingSessionController extends Controller
 
         return $this->successResponse($programs, 'Admin programs retrieved successfully');
     }
+
+    /**
+     * Get sessions for attendance management (session-first view).
+     */
+    public function sessionsForAttendance(Request $request): JsonResponse
+    {
+        $query = TrainingSession::with(['program', 'trainer'])
+            ->withCount(['enrollments', 'attendances']);
+
+        // Apply filters
+        if ($request->filled('program_id')) {
+            $query->where('program_id', $request->program_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('start_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('start_date', '<=', $request->date_to);
+        }
+
+        // Order by date (most recent first)
+        $query->orderBy('start_date', 'desc');
+
+        // Paginate results
+        $sessions = $query->paginate(20);
+
+        return $this->successResponse($sessions, 'Sessions retrieved successfully');
+    }
 }

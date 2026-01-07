@@ -115,6 +115,10 @@ Route::get('/admin/my-courses/{id}', function ($id) {
         ]);
     })->name('admin.attendance.session');
 
+    Route::get('/admin/sessions', function () {
+        return Inertia::render('Admin/Sessions/Index');
+    })->name('admin.sessions.index');
+
     Route::get('/admin/feedback', function () {
         return Inertia::render('Admin/Feedback');
     })->name('admin.feedback');
@@ -140,6 +144,17 @@ Route::get('/admin/my-courses/{id}', function ($id) {
             'templateId' => $id,
         ]);
     })->name('admin.certificate-templates.edit');
+
+    // Certificate Request Routes
+    Route::get('/admin/certificate-requests', function () {
+        return Inertia::render('Admin/CertificateRequests/Index');
+    })->name('admin.certificate-requests.index');
+
+    Route::get('/admin/certificate-requests/{id}', function ($id) {
+        return Inertia::render('Admin/CertificateRequests/Show', [
+            'id' => $id,
+        ]);
+    })->name('admin.certificate-requests.show');
 });
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
@@ -185,6 +200,10 @@ Route::get('/trainer/programs/{id}', function ($id) {
         ]);
     })->name('trainer.attendance.session');
 
+    Route::get('/trainer/sessions', function () {
+        return Inertia::render('Trainer/Sessions/Index');
+    })->name('trainer.sessions.index');
+
     Route::get('/trainer/feedback', function () {
         return Inertia::render('Trainer/Feedback');
     })->name('trainer.feedback');
@@ -206,6 +225,17 @@ Route::get('/trainer/programs/{id}', function ($id) {
             'templateId' => $id,
         ]);
     })->name('trainer.certificate-templates.edit');
+
+    // Certificate Request Routes
+    Route::get('/trainer/certificate-requests', function () {
+        return Inertia::render('Trainer/CertificateRequests/Index');
+    })->name('trainer.certificate-requests.index');
+
+    Route::get('/trainer/certificate-requests/{id}', function ($id) {
+        return Inertia::render('Trainer/CertificateRequests/Show', [
+            'id' => $id,
+        ]);
+    })->name('trainer.certificate-requests.show');
 
     Route::get('/sessions/{id}/certificates', function ($id) {
         return Inertia::render('Certificates/SessionCertificates', [

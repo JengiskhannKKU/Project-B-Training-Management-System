@@ -231,18 +231,18 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
     isSubmittingProgram.value = true;
     try {
         await axios.get('/sanctum/csrf-cookie');
-        await axios.post('/api/admin/program-requests', {
-            action: 'create',
-            payload,
-        });
-        toast.success('Program request sent for approval.');
+
+        // Admin creates program directly (no approval needed)
+        await axios.post('/api/admin/programs', payload);
+
+        toast.success('Program created successfully!');
         showCreateModal.value = false;
         await fetchPrograms();
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            'Unable to submit program request.';
+            'Failed to create program.';
         toast.error(message);
         if ([401, 403, 419].includes(error?.response?.status)) {
             showApiLogin.value = true;
@@ -313,12 +313,13 @@ const fetchPrograms = async () => {
     isLoadingPrograms.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get('/api/admin/requests');
+
+        // Fetch actual programs (not admin requests)
+        const { data } = await axios.get('/api/programs');
         const list = data?.data || data || [];
-        // Filter to get only programs created by the current admin user
-        programs.value = list
-            .filter((r: any) => r.target_type === 'program')
-            .map(mapProgramFromRequest);
+
+        // Programs are already approved, no need to map from requests
+        programs.value = list;
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||

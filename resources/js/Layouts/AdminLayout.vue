@@ -11,7 +11,9 @@ import {
     Settings,
     LogOut,
     FileCheck,
+    FileBadge,
     Award,
+    Calendar,
 } from "lucide-vue-next";
 import axios from "axios";
 
@@ -50,9 +52,19 @@ const navigationItems = [
         icon: Award,
     },
     {
+        name: "Certificate Requests",
+        path: "/admin/certificate-requests",
+        icon: FileBadge,
+    },
+    {
         name: "My Courses",
         path: "/admin/my-courses",
         icon: BookOpen,
+    },
+    {
+        name: "Sessions",
+        path: "/admin/sessions",
+        icon: Calendar,
     },
     {
         name: "Attendance",
@@ -91,12 +103,15 @@ const roleColor = computed(() => {
 
 const fetchPendingRequestCount = async () => {
     try {
+        // Ensure CSRF cookie is set for Sanctum
+        await axios.get('/sanctum/csrf-cookie');
         const response = await axios.get('/api/admin/requests/pending-count');
         if (response.data?.data?.count !== undefined) {
             pendingRequestCount.value = response.data.data.count;
         }
     } catch (error) {
         console.error('Error fetching pending request count:', error);
+        // Silently fail - this is just a badge count
     }
 };
 
