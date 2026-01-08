@@ -18,6 +18,7 @@ import {
 import axios from "axios";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
 import NotificationBadge from "@/Components/NotificationBadge.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import Snackbar from "@/Components/Snackbar.vue";
 import { useSnackbar } from "@/composables/useSnackbar";
 
@@ -194,7 +195,7 @@ onMounted(() => {
                                             : 'text-gray-500 group-hover:text-gray-900',
                                     ]"
                                 />
-                                <span class="ml-3 flex-1">{{ item.name }}</span>
+                                <span class="ml-3 flex-1">{{ $t(item.name) }}</span>
                                 <NotificationBadge
                                     v-if="item.name === 'Requests' && pendingRequestCount > 0"
                                     :count="pendingRequestCount"
@@ -216,7 +217,7 @@ onMounted(() => {
                         class="flex items-center p-2 w-full rounded-lg group transition-colors text-[#2F837D] hover:bg-[#2F837D]/20"
                     >
                         <LogOut class="w-5 h-5 transition duration-75" />
-                        <span class="ml-3">Logout</span>
+                        <span class="ml-3">{{ $t('Logout') }}</span>
                     </Link>
                 </div>
             </div>
@@ -238,6 +239,10 @@ onMounted(() => {
                             @delete="handleDeleteNotification"
                             @clear-all="handleClearAllNotifications"
                         />
+
+                        <!-- Language Switcher -->
+                        <LanguageSwitcher />
+
                         <!-- Avatar with online indicator -->
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
@@ -261,7 +266,7 @@ onMounted(() => {
                                 {{ page.props.auth?.user?.email }}
                             </p>
                             <p class="text-xs font-medium" :class="roleColor">
-                                Role: {{ userRole }}
+                                {{ $t('Role') }}: {{ userRole }}
                             </p>
                         </div>
                     </div>

@@ -21,6 +21,7 @@ const isLoading = ref(false);
 const errorMessage = ref(null);
 const searchQuery = ref("");
 const selectedCategory = ref([]);
+const selectedStatus = ref([]);
 const sortColumn = ref("");
 const sortDirection = ref("asc");
 const showExportModal = ref(false);
@@ -94,6 +95,7 @@ const handleSort = ({ column, direction }) => {
 
 const resetFilters = () => {
     selectedCategory.value = [];
+    selectedStatus.value = [];
 };
 
 const resetSort = () => {
@@ -209,6 +211,7 @@ const exportToPDF = () => {
                     <div class="flex items-center gap-2">
                         <FilterDropdown
                             v-model:selectedDepartment="selectedCategory"
+                            v-model:selectedStatus="selectedStatus"
                             :departments="categories"
                             departmentLabel="Category"
                             @reset="resetFilters"
@@ -216,12 +219,12 @@ const exportToPDF = () => {
                             <template #trigger>
                                 <button
                                     class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm transition-colors"
-                                    :class="selectedCategory.length > 0 ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                                    :class="(selectedCategory.length > 0 || selectedStatus.length > 0) ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'bg-white text-gray-600 hover:bg-gray-50'"
                                 >
                                     <ListFilterIcon class="h-4 w-4" />
                                     Filter
-                                    <span v-if="selectedCategory.length > 0" class="ml-1 font-semibold">
-                                        ({{ selectedCategory.length }})
+                                    <span v-if="selectedCategory.length > 0 || selectedStatus.length > 0" class="ml-1 font-semibold">
+                                        ({{ selectedCategory.length + selectedStatus.length }})
                                     </span>
                                 </button>
                             </template>

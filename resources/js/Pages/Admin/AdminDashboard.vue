@@ -137,11 +137,10 @@ const topTrainers = [
             <!-- Header -->
             <div class="space-y-1">
                 <h1 class="text-3xl font-bold tracking-tight text-gray-900">
-                    Dashboard
+                    {{ $t('Dashboard') }}
                 </h1>
                 <p class="text-sm text-gray-600">
-                    Welcome back! Here's an overview of your training management
-                    system.
+                    {{ $t('Admin Welcome') }}
                 </p>
             </div>
 
@@ -153,7 +152,7 @@ const topTrainers = [
                 >
                     <!-- Total Trainers Card -->
                     <StatsCard
-                        title="Total Trainers"
+                        :title="$t('Total Trainers')"
                         :value="stats.trainers.value"
                         :growth="stats.trainers.growth"
                         hover-color="emerald"
@@ -167,7 +166,7 @@ const topTrainers = [
 
                     <!-- Total Trainees Card -->
                     <StatsCard
-                        title="Total Trainees"
+                        :title="$t('Total Trainees')"
                         :value="stats.trainees.value.toLocaleString()"
                         :growth="stats.trainees.growth"
                         :icon="Award"
@@ -181,12 +180,12 @@ const topTrainers = [
 
                     <!-- Courses Card -->
                     <StatsCard
-                        title="Courses"
+                        :title="$t('Courses')"
                         :value="stats.courses.total"
                         :icon="BookOpen"
                         icon-color="purple"
                         hover-color="purple"
-                        :badge="`${stats.courses.pending} pending`"
+                        :badge="`${stats.courses.pending} ${$t('Pending')}`"
                     />
                 </div>
 
@@ -196,7 +195,7 @@ const topTrainers = [
                 >
                     <!-- Completion Rate Card -->
                     <StatsCard
-                        title="Completion Rate"
+                        :title="$t('Completion Rate')"
                         :value="`${stats.completion.percentage}%`"
                         :growth="stats.completion.growth"
                         hover-color="emerald"
@@ -209,12 +208,12 @@ const topTrainers = [
 
                     <!-- Satisfaction Card -->
                     <StatsCard
-                        title="Satisfaction"
+                        :title="$t('Satisfaction')"
                         :value="stats.satisfaction.rating"
                         hover-color="amber"
                         :stars="stats.satisfaction.rating"
                         :max-stars="stats.satisfaction.maxRating"
-                        :subtitle="`Based on ${stats.satisfaction.totalReviews.toLocaleString()} reviews`"
+                        :subtitle="$t('Based on reviews', { count: stats.satisfaction.totalReviews.toLocaleString() })"
                     >
                         <template #stars>
                             <Star

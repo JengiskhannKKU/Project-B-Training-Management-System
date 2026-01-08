@@ -396,9 +396,9 @@ onMounted(() => {
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">All Courses</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ $t('All Courses') }}</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage and track all courses
+                        {{ $t('Manage and track all courses') }}
                     </p>
                 </div>
                 <button
@@ -406,7 +406,7 @@ onMounted(() => {
                     class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
                 >
                     <Plus :size="20" />
-                    <span>Create Course</span>
+                    <span>{{ $t('Create Course') }}</span>
                 </button>
             </div>
 
@@ -419,18 +419,18 @@ onMounted(() => {
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
-                    API auth required (fallback)
+                    {{ $t('API Auth Required') }}
                 </div>
                 <p class="text-sm">
-                    Your browser session isn't reaching the API. Enter admin credentials to store an API token (Bearer) and retry.
+                    {{ $t('API Auth Description') }}
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs text-gray-700">Email</label>
+                        <label class="text-xs text-gray-700">{{ $t('Email') }}</label>
                         <input v-model="apiEmail" type="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
                     </div>
                     <div>
-                        <label class="text-xs text-gray-700">Password</label>
+                        <label class="text-xs text-gray-700">{{ $t('Password') }}</label>
                         <input v-model="apiPassword" type="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
                     </div>
                 </div>
@@ -441,7 +441,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-2 rounded-md bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-60"
                     >
                         <span v-if="apiLoginLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                        Save API Token
+                        {{ $t('Save API Token') }}
                     </button>
                     <p v-if="apiLoginError" class="text-sm text-red-600">{{ apiLoginError }}</p>
                 </div>
@@ -454,9 +454,9 @@ onMounted(() => {
                 <div class="flex items-center gap-3 mb-6">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <h2 class="text-xl font-semibold text-gray-900">
-                        All Programs ({{ totalCoursesCount }})
+                        {{ $t('All Programs') }} ({{ totalCoursesCount }})
                     </h2>
-                    <span v-if="isLoadingPrograms" class="text-sm text-gray-500">Loading...</span>
+                    <span v-if="isLoadingPrograms" class="text-sm text-gray-500">{{ $t('Loading...') }}</span>
                 </div>
 
                 <div
@@ -467,7 +467,7 @@ onMounted(() => {
                         <input
                             v-model="searchQuery"
                             type="text"
-                            placeholder="Search courses..."
+                            :placeholder="$t('Search courses...')"
                             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         />
                         <Search
@@ -495,7 +495,7 @@ onMounted(() => {
                                 >
                                     <ListFilterIcon class="h-4 w-4" />
                                     <p>
-                                        Filter
+                                        {{ $t('Filter') }}
                                         <span v-if="selectedDepartment.length + selectedStatus.length > 0" class="ml-1 font-semibold">
                                             ({{ selectedDepartment.length + selectedStatus.length }})
                                         </span>
@@ -524,7 +524,7 @@ onMounted(() => {
                                 >
                                     <ArrowDownNarrowWide class="h-4 w-4" />
                                     <p>
-                                        Sort
+                                        {{ $t('Sort') }}
                                         <span v-if="sortColumn" class="ml-1 font-medium text-xs opacity-90">
                                             : {{ sortColumn.charAt(0).toUpperCase() + sortColumn.slice(1) }}
                                         </span>
@@ -539,7 +539,7 @@ onMounted(() => {
                             class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                         >
                             <Share class="h-4 w-4" />
-                            <p>Export</p>
+                            <p>{{ $t('Export') }}</p>
                         </button>
                     </div>
                 </div>
@@ -577,10 +577,10 @@ onMounted(() => {
                     >
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            No courses found
+                            {{ $t('No courses found') }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Try adjusting your search or filter criteria.
+                            {{ $t('Adjust criteria') }}
                         </p>
                     </div>
 
@@ -603,7 +603,7 @@ onMounted(() => {
                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
                                 ]"
                             >
-                                Previous
+                                {{ $t('Previous') }}
                             </button>
 
                             <div class="flex items-center gap-1">
@@ -650,7 +650,7 @@ onMounted(() => {
                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
                                 ]"
                             >
-                                Next
+                                {{ $t('Next') }}
                             </button>
                         </div>
 
@@ -658,8 +658,7 @@ onMounted(() => {
                         <div
                             class="text-sm text-gray-600 text-center sm:text-right"
                         >
-                            Showing {{ startResult }}-{{ endResult }} of
-                            {{ totalResults }} results
+                            {{ $t('Showing results', { start: String(startResult), end: String(endResult), total: String(totalResults) }) }}
                         </div>
                     </div>
                 </div>

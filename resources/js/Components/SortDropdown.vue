@@ -74,7 +74,7 @@ onUnmounted(() => {
                     class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                 >
                     <ArrowDownNarrowWide class="h-4 w-4" />
-                    <p>Sort</p>
+                    <p>{{ $t('Sort') }}</p>
                 </button>
             </slot>
         </div>
@@ -85,13 +85,13 @@ onUnmounted(() => {
             class="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 py-2"
         >
             <div class="px-4 py-2 border-b border-gray-100 flex justify-between items-center mb-1">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sort By</span>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ $t('Sort By') }}</span>
                 <button 
                     v-if="sortColumn" 
                     @click.stop="handleReset"
                     class="text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
                 >
-                    Clear
+                    {{ $t('Clear') }}
                 </button>
             </div>
             
@@ -107,7 +107,7 @@ onUnmounted(() => {
                         class="text-sm font-medium transition-colors"
                         :class="sortColumn === option.value ? 'text-[#2f837d]' : 'text-gray-700'"
                     >
-                        {{ option.label }}
+                        {{ $t(option.label) }}
                     </span>
                     
                     <div v-if="sortColumn === option.value" class="text-[#2f837d] animate-in fade-in zoom-in duration-200">
