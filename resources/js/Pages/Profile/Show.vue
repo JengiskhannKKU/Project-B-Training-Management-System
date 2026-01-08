@@ -6,7 +6,7 @@ import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import StudentLayout from '@/Layouts/StudentLayout.vue';
-import LoadingSpinner from '@/Components/LoadingSpinner.vue';
+import ProfileSkeleton from '@/Pages/Profile/Partials/ProfileSkeleton.vue';
 import ConfirmationDialog from '@/Components/ConfirmationDialog.vue';
 import ImagePreviewModal from '@/Components/ImagePreviewModal.vue';
 import {
@@ -261,7 +261,8 @@ const triggerFileUpload = () => {
 
     <Head title="Profile & Settings" />
     <component :is="LayoutComponent">
-        <div class="space-y-6">
+        <ProfileSkeleton v-if="isLoadingProfile" />
+        <div v-else class="space-y-6">
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -578,7 +579,7 @@ const triggerFileUpload = () => {
             </div>
         </div>
 
-        <LoadingSpinner :show="isLoadingProfile" overlay size="xl" text="Loading profile..." />
+
         <ConfirmationDialog :show="showConfirmDialog" :title="confirmDialogConfig.title"
             :message="confirmDialogConfig.message" :confirm-text="confirmDialogConfig.confirmText"
             :cancel-text="confirmDialogConfig.cancelText" :confirm-button-class="confirmDialogConfig.confirmButtonClass"
