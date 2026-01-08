@@ -15,8 +15,8 @@ import {
     Trash2,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
-import FilterModal from "@/Components/FilterModal.vue";
-import SortModal from "@/Components/SortModal.vue";
+import FilterDropdown from "@/Components/FilterDropdown.vue";
+import SortDropdown from "@/Components/SortDropdown.vue";
 import EditUserModal from "@/Components/EditUserModal.vue";
 import TableActionButton from "@/Components/TableActionButton.vue";
 
@@ -76,14 +76,12 @@ const users = ref([
 ]);
 
 const searchQuery = ref("");
-const selectedDepartment = ref("all");
-const selectedStatus = ref("all");
+const selectedDepartment = ref([]);
+const selectedStatus = ref([]);
 const activeTab = ref("trainees");
 const sortColumn = ref("");
 const sortDirection = ref("asc");
 const showExportModal = ref(false);
-const showFilterModal = ref(false);
-const showSortModal = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const openStatusDropdown = ref(null);
@@ -157,15 +155,17 @@ const filteredUsers = computed(() => {
     }
 
     // Filter by department
-    if (selectedDepartment.value !== "all") {
-        result = result.filter(
-            (user) => user.department === selectedDepartment.value
+    if (selectedDepartment.value.length > 0) {
+        result = result.filter((user) =>
+            selectedDepartment.value.includes(user.department)
         );
     }
 
     // Filter by status
-    if (selectedStatus.value !== "all") {
-        result = result.filter((user) => user.status === selectedStatus.value);
+    if (selectedStatus.value.length > 0) {
+        result = result.filter((user) =>
+            selectedStatus.value.includes(user.status)
+        );
     }
 
     // Sort
@@ -238,7 +238,7 @@ watch(openStatusDropdown, (newVal) => {
     }
 });
 
-// Sort function
+// Sort function (for headers - toggles)
 const sort = (column) => {
     if (sortColumn.value === column) {
         sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
@@ -246,6 +246,12 @@ const sort = (column) => {
         sortColumn.value = column;
         sortDirection.value = "asc";
     }
+};
+
+// Sort handler for Dropdown (explicit direction)
+const handleSort = ({ column, direction }) => {
+    sortColumn.value = column;
+    sortDirection.value = direction;
 };
 
 // Export to CSV
@@ -281,36 +287,16 @@ const exportToPDF = () => {
     showExportModal.value = false;
 };
 
-// Apply filters
-const applyFilters = (department, status) => {
-    selectedDepartment.value = department;
-    selectedStatus.value = status;
-    showFilterModal.value = false;
-};
-
-// Apply sort
-const applySort = (column) => {
-    if (sortColumn.value === column) {
-        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
-    } else {
-        sortColumn.value = column;
-        sortDirection.value = "asc";
-    }
-    showSortModal.value = false;
-};
-
 // Reset filters
 const resetFilters = () => {
-    selectedDepartment.value = "all";
-    selectedStatus.value = "all";
-    showFilterModal.value = false;
+    selectedDepartment.value = [];
+    selectedStatus.value = [];
 };
 
 // Reset sort
 const resetSort = () => {
     sortColumn.value = "";
     sortDirection.value = "asc";
-    showSortModal.value = false;
 };
 
 // Toggle status dropdown
@@ -506,22 +492,50 @@ watch(
                     <!-- Right: Filter, Sort, Export buttons -->
                     <div class="flex flex-row gap-4">
                         <!-- Filter button -->
-                        <button
-                            @click="showFilterModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                        <FilterDropdown
+                            v-model:selectedDepartment="selectedDepartment"
+                            v-model:selectedStatus="selectedStatus"
+                            :departments="departments"
+                            @reset="resetFilters"
                         >
-                            <ListFilterIcon class="h-4 w-4" />
-                            <p>Filter</p>
-                        </button>
+                            <template #trigger>
+                                <button
+                                    class="rounded-lg border transition-all duration-200 inline-flex gap-2 items-center px-4 py-2"
+                                    :class="selectedDepartment.length + selectedStatus.length > 0 ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'border-[#d5dde7] hover:bg-gray-50 text-gray-700'"
+                                >
+                                    <ListFilterIcon class="h-4 w-4" />
+                                    <p>
+                                        Filter
+                                        <span v-if="selectedDepartment.length + selectedStatus.length > 0" class="ml-1 font-semibold">
+                                            ({{ selectedDepartment.length + selectedStatus.length }})
+                                        </span>
+                                    </p>
+                                </button>
+                            </template>
+                        </FilterDropdown>
 
                         <!-- Sort button -->
-                        <button
-                            @click="showSortModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                        <SortDropdown
+                            :sortColumn="sortColumn"
+                            :sortDirection="sortDirection"
+                            @sort="handleSort"
+                            @reset="resetSort"
                         >
-                            <ArrowDownNarrowWide class="h-4 w-4" />
-                            <p>Sort</p>
-                        </button>
+                            <template #trigger>
+                                <button
+                                    class="rounded-lg border transition-all duration-200 inline-flex gap-2 items-center px-4 py-2"
+                                    :class="sortColumn ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'border-[#d5dde7] hover:bg-gray-50 text-gray-700'"
+                                >
+                                    <ArrowDownNarrowWide class="h-4 w-4" />
+                                    <p>
+                                        Sort
+                                        <span v-if="sortColumn" class="ml-1 font-medium text-xs opacity-90">
+                                            : {{ sortColumn.charAt(0).toUpperCase() + sortColumn.slice(1) }}
+                                        </span>
+                                    </p>
+                                </button>
+                            </template>
+                        </SortDropdown>
 
                         <!-- Share/Export button -->
                         <button
@@ -884,33 +898,7 @@ watch(
                 @exportPDF="exportToPDF"
             />
 
-            <FilterModal
-                :show="showFilterModal"
-                title="Filter Users"
-                v-model:selectedDepartment="selectedDepartment"
-                v-model:selectedStatus="selectedStatus"
-                :departments="departments"
-                :statusOptions="['Active', 'Inactive']"
-                departmentLabel="Department"
-                @close="showFilterModal = false"
-                @reset="resetFilters"
-            />
 
-            <SortModal
-                :show="showSortModal"
-                title="Sort Users"
-                :sortColumn="sortColumn"
-                :sortDirection="sortDirection"
-                :sortOptions="[
-                    { value: 'name', label: 'Name', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'email', label: 'Email', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'department', label: 'Department', directionLabels: { asc: 'A-Z', desc: 'Z-A' } },
-                    { value: 'status', label: 'Status', directionLabels: { asc: 'Active First', desc: 'Inactive First' } },
-                ]"
-                @close="showSortModal = false"
-                @sort="applySort"
-                @reset="resetSort"
-            />
 
             <!-- Edit User Modal -->
             <EditUserModal
