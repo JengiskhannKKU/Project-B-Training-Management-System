@@ -24,6 +24,8 @@ import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
 import { formatDate, formatTime } from "@/utils/dateFormatter";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 // Props from route
 const props = defineProps({
@@ -296,8 +298,49 @@ const exportToCSV = () => {
 
 // Export to PDF
 const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text(`Session Attendance Report`, 14, 20);
+
+        // Add session info
+        doc.setFontSize(10);
+        if (sessionInfo.value.title) {
+            doc.text(`Session: ${sessionInfo.value.title}`, 14, 28);
+        }
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 34);
+
+        // Prepare table data with null-safe values
+        const headers = [["ID", "Name", "Email", "Contact", "Department", "Status"]];
+        const data = filteredTrainees.value.map((trainee) => [
+            trainee.id ?? '',
+            trainee.name ?? '',
+            trainee.email ?? '',
+            trainee.contact ?? '',
+            trainee.department ?? '',
+            trainee.status ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 9 },
+        });
+
+        // Save the PDF
+        doc.save("session-attendance.pdf");
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 // Apply sort

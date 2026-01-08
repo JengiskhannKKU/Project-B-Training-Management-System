@@ -19,6 +19,8 @@ import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import EditUserModal from "@/Components/EditUserModal.vue";
 import TableActionButton from "@/Components/TableActionButton.vue";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const props = defineProps({
     editUserId: {
@@ -283,8 +285,46 @@ const exportToCSV = () => {
 
 // Export to PDF
 const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text("Users Report", 14, 20);
+
+        // Add generation date
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        // Prepare table data with null-safe values
+        const headers = [["ID", "Name", "Email", "Contact", "Department", "Status"]];
+        const data = filteredUsers.value.map((user) => [
+            user.id ?? '',
+            user.name ?? '',
+            user.email ?? '',
+            user.contact ?? '',
+            user.department ?? '',
+            user.status ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 9 },
+        });
+
+        // Save the PDF
+        doc.save("users.pdf");
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}. Please check the console for details.`);
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 // Reset filters

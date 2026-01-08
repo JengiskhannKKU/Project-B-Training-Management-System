@@ -23,6 +23,8 @@
     },
     "dependencies": {
         "apexcharts": "^5.3.6",
+        "jspdf": "^2.5.2",
+        "jspdf-autotable": "^3.8.4",
         "laravel-vue-i18n": "^2.8.0",
         "lucide-vue-next": "^0.561.0",
         "sweetalert2": "^11.26.10",

@@ -19,6 +19,8 @@ import CourseModal from "@/Components/CourseModal.vue";
 import ProgramRequestRow from "@/Components/Admin/ProgramRequestRow.vue";
 import ConfirmActionModal from "@/Components/Admin/ConfirmActionModal.vue";
 import { useAdminRequests } from "@/composables/useAdminRequests";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 // Use composable for API logic
 const {
@@ -329,8 +331,45 @@ const exportToCSV = () => {
 };
 
 const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Course Requests Report', 14, 20);
+
+        // Add generation date
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        // Prepare table data with null-safe values
+        const headers = [['ID', 'Course Title', 'Category', 'Status', 'Requester']];
+        const data = filteredCourses.value.map((course) => [
+            course.id ?? '',
+            course.title ?? '',
+            course.category ?? '',
+            course.status ?? '',
+            course.requester_name ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 9 },
+        });
+
+        // Save the PDF
+        doc.save('requests.pdf');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 const handleSort = ({ column, direction }) => {

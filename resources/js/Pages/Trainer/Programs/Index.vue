@@ -19,6 +19,8 @@ import {
 import ExportModal from '@/Components/ExportModal.vue';
 import FilterDropdown from '@/Components/FilterDropdown.vue';
 import SortDropdown from '@/Components/SortDropdown.vue';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 defineProps<{
     programs: Array<{
@@ -206,8 +208,48 @@ const exportToCSV = () => {
 
 // Export to PDF
 const exportToPDF = () => {
-    alert('PDF export functionality - requires a PDF library like jsPDF');
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Trainer Courses Report', 14, 20);
+
+        // Add generation date
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        // Prepare table data with null-safe values
+        const headers = [['ID', 'Course Name', 'Level', 'Students', 'Date', 'Time', 'Location', 'Status']];
+        const data = filteredCourses.value.map((course) => [
+            course.id ?? '',
+            course.name ?? '',
+            course.level ?? '',
+            course.students_count ?? 0,
+            course.date ?? '',
+            course.time ?? '',
+            course.location ?? '',
+            course.status ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 8 },
+        });
+
+        // Save the PDF
+        doc.save('trainer-courses.pdf');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 // Apply sort

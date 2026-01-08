@@ -16,6 +16,8 @@ import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import SessionsModal from "@/Components/SessionsModal.vue";
 import axios from "axios";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const courses = ref([]);
 const loading = ref(true);
@@ -197,8 +199,50 @@ const exportToCSV = () => {
 
 // Export to PDF
 const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF('l'); // Landscape orientation for more columns
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Attendance Courses Report', 14, 20);
+
+        // Add generation date
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        // Prepare table data with null-safe values
+        const headers = [['ID', 'Code', 'Course Name', 'Category', 'Level', 'Students', 'Date', 'Time', 'Location', 'Status']];
+        const data = filteredCourses.value.map((course) => [
+            course.id ?? '',
+            course.code ?? '',
+            course.name ?? '',
+            course.category ?? '',
+            course.level ?? '',
+            course.students_count ?? 0,
+            course.date ?? '',
+            course.time ?? '',
+            course.location ?? '',
+            course.status ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 7 },
+        });
+
+        // Save the PDF
+        doc.save('attendance-courses.pdf');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 // Apply sort
