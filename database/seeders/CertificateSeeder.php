@@ -1,8 +1,11 @@
 <?php
 
+
 namespace Database\Seeders;
 
 use App\Models\Certificate;
+use App\Models\Enrollment;
+use App\Models\CertificateTemplate;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -10,80 +13,46 @@ class CertificateSeeder extends Seeder
 {
     public function run(): void
     {
-        $certificates = [
-            // Certificates for Session 3 - Data Science (Completed)
-            [
-                'enrollment_id' => 6,
-                'user_id' => 6,
-                'program_id' => 3,
-                'session_id' => 3,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(7),
-                'certificate_code' => 'CERT-DS-2025-001',
-                'file_url' => 'certificates/CERT-DS-2025-001.pdf',
-                'status' => 'valid',
-            ],
-            [
-                'enrollment_id' => 7,
-                'user_id' => 7,
-                'program_id' => 3,
-                'session_id' => 3,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(7),
-                'certificate_code' => 'CERT-DS-2025-002',
-                'file_url' => 'certificates/CERT-DS-2025-002.pdf',
-                'status' => 'valid',
-            ],
-            [
-                'enrollment_id' => 8,
-                'user_id' => 8,
-                'program_id' => 3,
-                'session_id' => 3,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(7),
-                'certificate_code' => 'CERT-DS-2025-003',
-                'file_url' => 'certificates/CERT-DS-2025-003.pdf',
-                'status' => 'valid',
-            ],
-            [
-                'enrollment_id' => 9,
-                'user_id' => 9,
-                'program_id' => 3,
-                'session_id' => 3,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(7),
-                'certificate_code' => 'CERT-DS-2025-004',
-                'file_url' => 'certificates/CERT-DS-2025-004.pdf',
-                'status' => 'valid',
-            ],
+        // Find completed enrollments
+        $completedEnrollments = Enrollment::whereNotNull('completed_at')
+            ->where('status', 'completed')
+            ->with(['session', 'session.program'])
+            ->get();
 
-            // Certificates for Session 6 - Web Dev Winter (Completed)
-            [
-                'enrollment_id' => 11,
-                'user_id' => 5,
-                'program_id' => 1,
-                'session_id' => 6,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(47),
-                'certificate_code' => 'CERT-WEB-2024-001',
-                'file_url' => 'certificates/CERT-WEB-2024-001.pdf',
-                'status' => 'valid',
-            ],
-            [
-                'enrollment_id' => 12,
-                'user_id' => 10,
-                'program_id' => 1,
-                'session_id' => 6,
-                'issued_by' => 1,
-                'issued_at' => Carbon::now()->subDays(47),
-                'certificate_code' => 'CERT-WEB-2024-002',
-                'file_url' => 'certificates/CERT-WEB-2024-002.pdf',
-                'status' => 'revoked',
-            ],
-        ];
+        $globalTemplate = CertificateTemplate::where('scope', 'global')->first();
 
-        foreach ($certificates as $certificate) {
-            Certificate::create($certificate);
+        foreach ($completedEnrollments as $enrollment) {
+            // Find specific template or global
+            $template = CertificateTemplate::where('program_id', $enrollment->session->program_id)->first() ?? $globalTemplate;
+
+            // Randomly decide if certificate is issued provided it's completed (most should be)
+            if (rand(0, 100) > 10) { // 90% chance
+                Certificate::updateOrCreate(
+                    ['enrollment_id' => $enrollment->id],
+                    [
+                        'user_id' => $enrollment->user_id,
+                        'program_id' => $enrollment->session->program_id,
+                        'session_id' => $enrollment->session_id,
+                        'template_id' => $template?->id,
+                        'issued_by' => 1, // Assuming admin ID 1 exists, or could fetch.
+                        'issued_at' => $enrollment->completed_at->addDays(1),
+                        'certificate_code' => 'CERT-' . strtoupper(\Illuminate\Support\Str::random(8)),
+                        'file_url' => 'certificates/demo.pdf', // Mock
+                        'status' => 'valid',
+                    ]
+                );
+            }
+        }
+
+        // Ensure at least one revoked certificate for testing
+        // Removed duplicate creation block to avoid integrity violation
+
+        // Actually, let's just make the last one revoked if we have multiple
+        $validCert = Certificate::first();
+        $lastCert = Certificate::latest()->first();
+        if ($lastCert && $lastCert->id !== $validCert?->id) {
+            $lastCert->update(['status' => 'revoked']);
         }
     }
 }
+

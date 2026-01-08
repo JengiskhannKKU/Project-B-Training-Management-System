@@ -18,6 +18,7 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 import EditUserModal from "@/Components/EditUserModal.vue";
+import TableActionButton from "@/Components/TableActionButton.vue";
 
 const props = defineProps({
     editUserId: {
@@ -765,19 +766,17 @@ watch(
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-6"
                                     >
-                                        <button
-                                            class="text-gray-600 hover:text-red-800 transition-colors inline-flex items-center gap-1"
+                                        <TableActionButton
+                                            :icon="Trash2"
+                                            variant="delete"
                                             title="Delete"
-                                        >
-                                            <Trash2 class="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            @click="openEditModal(user)"
-                                            class="text-gray-600 hover:text-[#257067] transition-colors inline-flex items-center gap-1"
+                                        />
+                                        <TableActionButton
+                                            :icon="Pencil"
+                                            variant="edit"
                                             title="Edit"
-                                        >
-                                            <Pencil class="h-4 w-4" />
-                                        </button>
+                                            @click="openEditModal(user)"
+                                        />
                                     </td>
                                 </tr>
                             </tbody>

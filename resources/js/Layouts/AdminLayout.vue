@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -11,15 +11,28 @@ import {
     Settings,
     LogOut,
     FileCheck,
+    FileBadge,
     Award,
+    Calendar,
 } from "lucide-vue-next";
 import axios from "axios";
+import NotificationCenter from "@/Components/NotificationCenter.vue";
+import NotificationBadge from "@/Components/NotificationBadge.vue";
+import Snackbar from "@/Components/Snackbar.vue";
+import { useSnackbar } from "@/composables/useSnackbar";
 
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
 const pendingRequestCount = ref(0);
 const page = usePage();
+const snackbar = useSnackbar();
+
+// Notification Center state
+const notifications = ref([
+    // Example notifications - replace with actual data from API
+    // { id: 1, title: 'New Request', message: 'You have a new program request', time: '5 min ago', read: false, type: 'info' },
+]);
 
 const currentPath = computed(() => page.url);
 
@@ -50,9 +63,19 @@ const navigationItems = [
         icon: Award,
     },
     {
-        name: "My Courses",
+        name: "Certificate Requests",
+        path: "/admin/certificate-requests",
+        icon: FileBadge,
+    },
+    {
+        name: "All Courses",
         path: "/admin/my-courses",
         icon: BookOpen,
+    },
+    {
+        name: "Sessions",
+        path: "/admin/sessions",
+        icon: Calendar,
     },
     {
         name: "Attendance",
@@ -97,16 +120,40 @@ const fetchPendingRequestCount = async () => {
         }
     } catch (error) {
         console.error('Error fetching pending request count:', error);
+        // Silently fail - this is just a badge count
     }
+};
+
+const handleMarkAsRead = (notificationId) => {
+    const notification = notifications.value.find(n => n.id === notificationId);
+    if (notification) {
+        notification.read = true;
+        // TODO: Make API call to mark as read
+    }
+};
+
+const handleDeleteNotification = (notificationId) => {
+    notifications.value = notifications.value.filter(n => n.id !== notificationId);
+    // TODO: Make API call to delete notification
+};
+
+const handleClearAllNotifications = () => {
+    notifications.value = [];
+    // TODO: Make API call to clear all notifications
 };
 
 onMounted(() => {
     fetchPendingRequestCount();
     // Refresh count every 30 seconds
-    setInterval(fetchPendingRequestCount, 30000);
+    const intervalId = setInterval(fetchPendingRequestCount, 30000);
 
     // Listen for manual refresh events from the Requests page
     window.addEventListener('refresh-pending-count', fetchPendingRequestCount);
+
+    onUnmounted(() => {
+        clearInterval(intervalId);
+        window.removeEventListener('refresh-pending-count', fetchPendingRequestCount);
+    });
 });
 
 </script>
@@ -148,12 +195,13 @@ onMounted(() => {
                                     ]"
                                 />
                                 <span class="ml-3 flex-1">{{ item.name }}</span>
-                                <span
+                                <NotificationBadge
                                     v-if="item.name === 'Requests' && pendingRequestCount > 0"
-                                    class="ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full"
-                                >
-                                    {{ pendingRequestCount }}
-                                </span>
+                                    :count="pendingRequestCount"
+                                    color="danger"
+                                    size="sm"
+                                    class="ml-2"
+                                />
                             </Link>
                         </li>
                     </ul>
@@ -182,7 +230,14 @@ onMounted(() => {
             <!-- Header with Profile -->
             <header>
                 <div class="px-8 py-4 flex justify-end items-center">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-4">
+                        <!-- Notification Center -->
+                        <NotificationCenter
+                            :notifications="notifications"
+                            @mark-as-read="handleMarkAsRead"
+                            @delete="handleDeleteNotification"
+                            @clear-all="handleClearAllNotifications"
+                        />
                         <!-- Avatar with online indicator -->
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
@@ -218,5 +273,16 @@ onMounted(() => {
                 <slot />
             </div>
         </div>
+
+        <!-- Global Snackbar -->
+        <Snackbar
+            :show="snackbar.state.value.show"
+            :message="snackbar.state.value.message"
+            :variant="snackbar.state.value.variant"
+            :action="snackbar.state.value.action"
+            :position="snackbar.state.value.position"
+            :duration="snackbar.state.value.duration"
+            @close="snackbar.hide()"
+        />
     </div>
 </template>

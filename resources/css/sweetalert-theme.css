@@ -1,0 +1,142 @@
+/* SweetAlert2 Custom Theme - Teal/Cyan Brand Colors */
+
+/* Apply Prompt font family */
+.swal2-popup {
+    font-family: 'Prompt', sans-serif !important;
+}
+
+/* Success icon - Teal color */
+.swal2-icon.swal2-success {
+    border-color: #2f837d !important;
+}
+
+.swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: #2f837d !important;
+}
+
+.swal2-icon.swal2-success .swal2-success-ring {
+    border-color: rgba(47, 131, 125, 0.3) !important;
+}
+
+/* Question icon - Teal color */
+.swal2-icon.swal2-question {
+    border-color: #2f837d !important;
+    color: #2f837d !important;
+}
+
+/* Error icon - Red color */
+.swal2-icon.swal2-error {
+    border-color: #dc2626 !important;
+}
+
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: #dc2626 !important;
+}
+
+/* Warning icon - Amber color */
+.swal2-icon.swal2-warning {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+}
+
+/* Info icon - Blue color */
+.swal2-icon.swal2-info {
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+
+/* Backdrop */
+.swal2-container {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Popup container */
+.swal2-popup {
+    border-radius: 1rem !important; /* rounded-2xl */
+}
+
+/* Title */
+.swal2-title {
+    font-weight: 600 !important; /* font-semibold */
+    color: #111827 !important; /* gray-900 */
+}
+
+/* Content text */
+.swal2-html-container {
+    color: #4b5563 !important; /* gray-600 */
+    font-size: 0.875rem !important; /* text-sm */
+}
+
+/* Buttons container */
+.swal2-actions {
+    gap: 0.75rem !important;
+}
+
+/* Focus ring for buttons */
+.swal2-confirm:focus,
+.swal2-cancel:focus {
+    outline: 2px solid #3D9792 !important;
+    outline-offset: 2px !important;
+}
+
+/* Active state for buttons */
+.swal2-confirm:active {
+    transform: scale(0.95) !important;
+}
+
+.swal2-cancel:active {
+    transform: scale(0.95) !important;
+}
+
+/* Loading state */
+.swal2-loader {
+    border-color: #2f837d transparent #2f837d transparent !important;
+}
+
+/* Input fields */
+.swal2-input,
+.swal2-textarea {
+    border: 1px solid #d1d5db !important; /* gray-300 */
+    border-radius: 0.375rem !important; /* rounded-md */
+    font-family: 'Prompt', sans-serif !important;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus {
+    border-color: #2f837d !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(47, 131, 125, 0.1) !important;
+}
+
+/* Validation message */
+.swal2-validation-message {
+    background-color: #fee2e2 !important; /* red-100 */
+    color: #991b1b !important; /* red-800 */
+    border-radius: 0.375rem !important;
+}
+
+/* Animation timing */
+.swal2-show {
+    animation: swal2-show 200ms ease-out !important;
+}
+
+.swal2-hide {
+    animation: swal2-hide 150ms ease-in !important;
+}
+
+/* Footer */
+.swal2-footer {
+    border-top: 1px solid #e5e7eb !important; /* gray-200 */
+    color: #6b7280 !important; /* gray-500 */
+    font-size: 0.875rem !important;
+}
+
+/* Close button (X) */
+.swal2-close {
+    color: #9ca3af !important; /* gray-400 */
+    transition: color 200ms ease-in-out !important;
+}
+
+.swal2-close:hover {
+    color: #4b5563 !important; /* gray-600 */
+}

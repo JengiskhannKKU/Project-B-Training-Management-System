@@ -26,6 +26,7 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
 import SortModal from "@/Components/SortModal.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import { formatDate, formatTime } from "@/utils/dateFormatter";
 
 // Props from route
 const props = defineProps({
@@ -492,14 +493,13 @@ onMounted(() => {
 </script>
 
 <template>
+
     <Head title="Session Attendance" />
     <TrainerLayout>
         <div class="space-y-6">
             <!-- Go Back Button -->
-            <Link
-                href="/trainer/attendance"
-                class="inline-flex items-center gap-2 text-[#2f837d] hover:text-[#26685f] font-medium transition-colors"
-            >
+            <Link href="/trainer/attendance"
+                class="inline-flex items-center gap-2 text-[#2f837d] hover:text-[#26685f] font-medium transition-colors">
                 <ArrowLeft :size="20" />
                 <span>Go back to courses</span>
             </Link>
@@ -516,27 +516,21 @@ onMounted(() => {
                 </div>
                 <div class="flex items-center gap-3">
                     <!-- Auto-save indicator -->
-                    <div v-if="lastAutoSaved" class="text-sm text-gray-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                    <div v-if="lastAutoSaved"
+                        class="text-sm text-gray-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
                         <CheckCircle :size="16" class="text-green-600" />
                         <span class="font-medium">Auto-saved</span>
                     </div>
                     <!-- Complete Session Button -->
-                    <button
-                        v-if="!isSessionCompleted"
-                        @click="completeSession"
-                        :disabled="isCompleting || isLoading"
-                        class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button v-if="!isSessionCompleted" @click="completeSession" :disabled="isCompleting || isLoading"
+                        class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                         <CheckCircle :size="20" />
                         <span v-if="isCompleting">Completing...</span>
                         <span v-else>Complete Session</span>
                     </button>
-                    <button
-                        v-if="canGenerateCertificates"
-                        @click="showGenerateCertificatesModal = true"
+                    <button v-if="canGenerateCertificates" @click="showGenerateCertificatesModal = true"
                         :disabled="isGeneratingCertificates"
-                        class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60"
-                    >
+                        class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
                         <Award :size="18" />
                         <span v-if="isGeneratingCertificates">Generating...</span>
                         <span v-else>Generate Certificates</span>
@@ -544,19 +538,14 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div
-                v-if="generateCertificatesResult"
-                class="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700"
-            >
+            <div v-if="generateCertificatesResult"
+                class="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700">
                 สร้างใบรับรองใหม่ {{ generateCertificatesResult.created ?? 0 }} ใบ
                 (ข้าม {{ generateCertificatesResult.skipped ?? 0 }} ใบที่มีอยู่แล้ว)
             </div>
 
             <!-- Completed Session Warning -->
-            <div
-                v-if="isSessionCompleted"
-                class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg"
-            >
+            <div v-if="isSessionCompleted" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg">
                 <div class="flex items-start gap-3">
                     <AlertTriangle class="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div class="flex-1">
@@ -581,10 +570,8 @@ onMounted(() => {
                     </h2>
                     <span v-if="isLoadingCertificates" class="text-sm text-gray-500">Loading...</span>
                 </div>
-                <div
-                    v-if="!isSessionCompleted"
-                    class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700"
-                >
+                <div v-if="!isSessionCompleted"
+                    class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
                     ต้องปิด Session (Completed) ก่อนออกใบรับรอง
                 </div>
                 <div v-if="certificates.length === 0" class="text-sm text-gray-500">
@@ -649,20 +636,15 @@ onMounted(() => {
             </div>
 
             <!-- Session Info Card -->
-            <div
-                v-else
-                class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
-            >
+            <div v-else class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]">
                 <div class="flex items-center gap-3 mb-4">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <div class="flex flex-wrap items-center gap-3">
                         <h2 class="text-xl font-semibold text-gray-900">
                             {{ sessionInfo.title || 'Untitled Session' }}
                         </h2>
-                        <span
-                            class="rounded-full px-3 py-1 text-xs font-semibold capitalize"
-                            :class="sessionStatusBadgeClass"
-                        >
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold capitalize"
+                            :class="sessionStatusBadgeClass">
                             {{ sessionInfo.status || 'unknown' }}
                         </span>
                     </div>
@@ -679,14 +661,14 @@ onMounted(() => {
                         <p class="text-sm text-gray-500 mb-1">Date</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Calendar :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.start_date || 'Not found' }}
+                            {{ formatDate(sessionInfo.start_date) || 'Not found' }}
                         </p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Time</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Clock :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.start_time || 'Not found' }}
+                            {{ formatTime(sessionInfo.start_time) || 'Not found' }}
                         </p>
                     </div>
                     <div>
@@ -738,50 +720,34 @@ onMounted(() => {
             </div>
 
             <!-- Search, Filter, and Export Controls -->
-            <div
-                class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
-            >
-                <div
-                    class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6"
-                >
+            <div class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]">
+                <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6">
                     <!-- Left: Search Bar -->
                     <div class="relative w-full lg:max-w-md">
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search trainees..."
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                        />
-                        <Search
-                            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                        />
+                        <input v-model="searchQuery" type="text" placeholder="Search trainees..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent" />
+                        <Search class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                     </div>
 
                     <!-- Right: Filter, Sort, Export buttons -->
                     <div class="flex flex-row gap-4">
                         <!-- Filter button -->
-                        <button
-                            @click="showFilterModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
+                        <button @click="showFilterModal = true"
+                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors">
                             <ListFilterIcon class="h-4 w-4" />
                             <p>Filter</p>
                         </button>
 
                         <!-- Sort button -->
-                        <button
-                            @click="showSortModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
+                        <button @click="showSortModal = true"
+                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors">
                             <ArrowDownNarrowWide class="h-4 w-4" />
                             <p>Sort</p>
                         </button>
 
                         <!-- Share/Export button -->
-                        <button
-                            @click="showExportModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
+                        <button @click="showExportModal = true"
+                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors">
                             <Share class="h-4 w-4" />
                             <p>Export</p>
                         </button>
@@ -789,126 +755,84 @@ onMounted(() => {
                 </div>
 
                 <!-- Trainees Table -->
-                <div
-                    class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden"
-                >
+                <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th
-                                        @click="sort('id')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                    >
+                                    <th @click="sort('id')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             ID
-                                            <ChevronUp
-                                                v-if="sortColumn === 'id'"
-                                                class="h-4 w-4"
-                                                :class="{
-                                                    'rotate-180':
-                                                        sortDirection === 'desc',
-                                                }"
-                                            />
+                                            <ChevronUp v-if="sortColumn === 'id'" class="h-4 w-4" :class="{
+                                                'rotate-180':
+                                                    sortDirection === 'desc',
+                                            }" />
                                         </div>
                                     </th>
-                                    <th
-                                        @click="sort('name')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                    >
+                                    <th @click="sort('name')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Name
-                                            <ChevronUp
-                                                v-if="sortColumn === 'name'"
-                                                class="h-4 w-4"
-                                                :class="{
-                                                    'rotate-180':
-                                                        sortDirection === 'desc',
-                                                }"
-                                            />
+                                            <ChevronUp v-if="sortColumn === 'name'" class="h-4 w-4" :class="{
+                                                'rotate-180':
+                                                    sortDirection === 'desc',
+                                            }" />
                                         </div>
                                     </th>
-                                    <th
-                                        @click="sort('contact')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                    >
+                                    <th @click="sort('contact')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Contact
-                                            <ChevronUp
-                                                v-if="sortColumn === 'contact'"
-                                                class="h-4 w-4"
-                                                :class="{
-                                                    'rotate-180':
-                                                        sortDirection === 'desc',
-                                                }"
-                                            />
+                                            <ChevronUp v-if="sortColumn === 'contact'" class="h-4 w-4" :class="{
+                                                'rotate-180':
+                                                    sortDirection === 'desc',
+                                            }" />
                                         </div>
                                     </th>
-                                    <th
-                                        @click="sort('department')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                    >
+                                    <th @click="sort('department')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Department
-                                            <ChevronUp
-                                                v-if="sortColumn === 'department'"
-                                                class="h-4 w-4"
-                                                :class="{
-                                                    'rotate-180':
-                                                        sortDirection === 'desc',
-                                                }"
-                                            />
+                                            <ChevronUp v-if="sortColumn === 'department'" class="h-4 w-4" :class="{
+                                                'rotate-180':
+                                                    sortDirection === 'desc',
+                                            }" />
                                         </div>
                                     </th>
-                                    <th
-                                        @click="sort('status')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                    >
+                                    <th @click="sort('status')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Status
-                                            <ChevronUp
-                                                v-if="sortColumn === 'status'"
-                                                class="h-4 w-4"
-                                                :class="{
-                                                    'rotate-180':
-                                                        sortDirection === 'desc',
-                                                }"
-                                            />
+                                            <ChevronUp v-if="sortColumn === 'status'" class="h-4 w-4" :class="{
+                                                'rotate-180':
+                                                    sortDirection === 'desc',
+                                            }" />
                                         </div>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Mark Attendance
                                     </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <tr
-                                    v-for="(trainee, index) in paginatedTrainees"
-                                    :key="trainee.id"
-                                    :class="[
-                                        'transition-colors',
-                                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
-                                        'hover:bg-gray-100'
-                                    ]"
-                                >
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
+                                <tr v-for="(trainee, index) in paginatedTrainees" :key="trainee.id" :class="[
+                                    'transition-colors',
+                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                    'hover:bg-gray-100'
+                                ]">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ trainee.id }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div
-                                                class="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold"
-                                            >
+                                                class="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                                                 {{ trainee.name.charAt(0) }}
                                             </div>
                                             <div class="ml-4">
-                                                <div
-                                                    class="text-sm font-medium text-gray-900"
-                                                >
+                                                <div class="text-sm font-medium text-gray-900">
                                                     {{ trainee.name }}
                                                 </div>
                                                 <div class="text-sm text-gray-500">
@@ -917,9 +841,7 @@ onMounted(() => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                                    >
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ formatPhoneNumber(trainee.contact) }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
@@ -928,40 +850,32 @@ onMounted(() => {
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            :class="[
-                                                'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
-                                                trainee.status === 'present'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : trainee.status === 'absent'
+                                        <span :class="[
+                                            'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                            trainee.status === 'present'
+                                                ? 'bg-green-100 text-green-800'
+                                                : trainee.status === 'absent'
                                                     ? 'bg-red-100 text-red-800'
                                                     : 'bg-gray-100 text-gray-800'
-                                            ]"
-                                        >
-                                            <component
-                                                :is="trainee.status === 'present' ? CheckCircle : XCircle"
-                                                :size="14"
-                                            />
+                                        ]">
+                                            <component :is="trainee.status === 'present' ? CheckCircle : XCircle"
+                                                :size="14" />
                                             {{
                                                 trainee.status === 'present' ? 'Present' :
-                                                trainee.status === 'absent' ? 'Absent' :
-                                                'Not Marked'
+                                                    trainee.status === 'absent' ? 'Absent' :
+                                                        'Not Marked'
                                             }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center gap-2">
                                             <!-- Present Button -->
-                                            <button
-                                                @click="setAttendanceStatus(trainee.id, 'present')"
-                                                :class="[
-                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
-                                                    trainee.status === 'present'
-                                                        ? 'bg-green-600 text-white shadow-md'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600'
-                                                ]"
-                                                title="Mark as present"
-                                            >
+                                            <button @click="setAttendanceStatus(trainee.id, 'present')" :class="[
+                                                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                trainee.status === 'present'
+                                                    ? 'bg-green-600 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600'
+                                            ]" title="Mark as present">
                                                 <div class="flex items-center gap-1">
                                                     <CheckCircle :size="14" />
                                                     <span>Present</span>
@@ -969,16 +883,12 @@ onMounted(() => {
                                             </button>
 
                                             <!-- Absent Button -->
-                                            <button
-                                                @click="setAttendanceStatus(trainee.id, 'absent')"
-                                                :class="[
-                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
-                                                    trainee.status === 'absent'
-                                                        ? 'bg-red-600 text-white shadow-md'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
-                                                ]"
-                                                title="Mark as absent"
-                                            >
+                                            <button @click="setAttendanceStatus(trainee.id, 'absent')" :class="[
+                                                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                trainee.status === 'absent'
+                                                    ? 'bg-red-600 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                            ]" title="Mark as absent">
                                                 <div class="flex items-center gap-1">
                                                     <XCircle :size="14" />
                                                     <span>Absent</span>
@@ -986,16 +896,12 @@ onMounted(() => {
                                             </button>
 
                                             <!-- Not Marked Button -->
-                                            <button
-                                                @click="setAttendanceStatus(trainee.id, 'not_marked')"
-                                                :class="[
-                                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
-                                                    trainee.status === 'not_marked'
-                                                        ? 'bg-gray-600 text-white shadow-md'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                ]"
-                                                title="Clear marking"
-                                            >
+                                            <button @click="setAttendanceStatus(trainee.id, 'not_marked')" :class="[
+                                                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
+                                                trainee.status === 'not_marked'
+                                                    ? 'bg-gray-600 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            ]" title="Clear marking">
                                                 <span>Clear</span>
                                             </button>
                                         </div>
@@ -1006,10 +912,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Empty State -->
-                    <div
-                        v-if="filteredTrainees.length === 0"
-                        class="text-center py-12"
-                    >
+                    <div v-if="filteredTrainees.length === 0" class="text-center py-12">
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">
                             No trainees found
@@ -1020,68 +923,49 @@ onMounted(() => {
                     </div>
 
                     <!-- Pagination and Result Counter -->
-                    <div
-                        v-if="filteredTrainees.length > 0"
-                        class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200"
-                    >
+                    <div v-if="filteredTrainees.length > 0"
+                        class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200">
                         <!-- Pagination (Left) -->
-                        <div
-                            class="flex items-center gap-2 flex-wrap justify-center"
-                        >
-                            <button
-                                @click="goToPage(currentPage - 1)"
-                                :disabled="currentPage === 1"
-                                :class="[
-                                    'px-3 py-1 rounded border transition-colors text-sm',
-                                    currentPage === 1
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                ]"
-                            >
+                        <div class="flex items-center gap-2 flex-wrap justify-center">
+                            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" :class="[
+                                'px-3 py-1 rounded border transition-colors text-sm',
+                                currentPage === 1
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                            ]">
                                 Previous
                             </button>
 
                             <div class="flex items-center gap-1">
                                 <template v-for="page in totalPages" :key="page">
-                                    <button
-                                        v-if="
-                                            page === 1 ||
-                                            page === totalPages ||
-                                            (page >= currentPage - 1 &&
-                                                page <= currentPage + 1)
-                                        "
-                                        @click="goToPage(page)"
-                                        :class="[
-                                            'px-3 py-1 rounded border transition-colors text-sm',
-                                            currentPage === page
-                                                ? 'bg-[#2f837d] text-white border-[#2f837d]'
-                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                        ]"
-                                    >
+                                    <button v-if="
+                                        page === 1 ||
+                                        page === totalPages ||
+                                        (page >= currentPage - 1 &&
+                                            page <= currentPage + 1)
+                                    " @click="goToPage(page)" :class="[
+                                        'px-3 py-1 rounded border transition-colors text-sm',
+                                        currentPage === page
+                                            ? 'bg-[#2f837d] text-white border-[#2f837d]'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                                    ]">
                                         {{ page }}
                                     </button>
-                                    <span
-                                        v-else-if="
-                                            page === currentPage - 2 ||
-                                            page === currentPage + 2
-                                        "
-                                        class="px-2 text-gray-500 text-sm"
-                                    >
+                                    <span v-else-if="
+                                        page === currentPage - 2 ||
+                                        page === currentPage + 2
+                                    " class="px-2 text-gray-500 text-sm">
                                         ...
                                     </span>
                                 </template>
                             </div>
 
-                            <button
-                                @click="goToPage(currentPage + 1)"
-                                :disabled="currentPage === totalPages"
-                                :class="[
-                                    'px-3 py-1 rounded border transition-colors text-sm',
-                                    currentPage === totalPages
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                ]"
-                            >
+                            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" :class="[
+                                'px-3 py-1 rounded border transition-colors text-sm',
+                                currentPage === totalPages
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                            ]">
                                 Next
                             </button>
                         </div>
@@ -1096,33 +980,16 @@ onMounted(() => {
             </div>
 
             <!-- Modals -->
-            <ExportModal
-                :show="showExportModal"
-                activeTab="trainees"
-                dataType="attendance"
-                @close="showExportModal = false"
-                @exportCSV="exportToCSV"
-                @exportPDF="exportToPDF"
-            />
+            <ExportModal :show="showExportModal" activeTab="trainees" dataType="attendance"
+                @close="showExportModal = false" @exportCSV="exportToCSV" @exportPDF="exportToPDF" />
 
-            <FilterModal
-                :show="showFilterModal"
-                title="Filter Trainees"
-                v-model:selectedDepartment="selectedDepartment"
-                v-model:selectedStatus="selectedStatus"
-                :departments="departments"
-                :statusOptions="['present', 'absent', 'not_marked']"
-                departmentLabel="Department"
-                @close="showFilterModal = false"
-                @reset="resetFilters"
-            />
+            <FilterModal :show="showFilterModal" title="Filter Trainees" v-model:selectedDepartment="selectedDepartment"
+                v-model:selectedStatus="selectedStatus" :departments="departments"
+                :statusOptions="['present', 'absent', 'not_marked']" departmentLabel="Department"
+                @close="showFilterModal = false" @reset="resetFilters" />
 
-            <SortModal
-                :show="showSortModal"
-                title="Sort Trainees"
-                :sortColumn="sortColumn"
-                :sortDirection="sortDirection"
-                :sortOptions="[
+            <SortModal :show="showSortModal" title="Sort Trainees" :sortColumn="sortColumn"
+                :sortDirection="sortDirection" :sortOptions="[
                     {
                         value: 'name',
                         label: 'Name',
@@ -1149,22 +1016,12 @@ onMounted(() => {
                             desc: 'Absent First',
                         },
                     },
-                ]"
-                @close="showSortModal = false"
-                @sort="applySort"
-                @reset="resetSort"
-            />
+                ]" @close="showSortModal = false" @sort="applySort" @reset="resetSort" />
 
-            <ConfirmationDialog
-                :show="showGenerateCertificatesModal"
-                title="Generate Certificates"
-                message="Generate certificates for all eligible trainees in this session?"
-                confirmText="Generate"
-                confirmButtonClass="bg-purple-600 hover:bg-purple-700"
-                @confirm="generateCertificates"
-                @close="showGenerateCertificatesModal = false"
-                @cancel="showGenerateCertificatesModal = false"
-            />
+            <ConfirmationDialog :show="showGenerateCertificatesModal" title="Generate Certificates"
+                message="Generate certificates for all eligible trainees in this session?" confirmText="Generate"
+                confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
+                @close="showGenerateCertificatesModal = false" @cancel="showGenerateCertificatesModal = false" />
         </div>
     </TrainerLayout>
 </template>

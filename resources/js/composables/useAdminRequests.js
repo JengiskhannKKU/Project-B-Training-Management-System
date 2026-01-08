@@ -1,9 +1,9 @@
 import { ref } from 'vue';
 import axios from 'axios';
-import { useToast } from 'vue-toastification';
+import { useNotification } from './useNotification';
 
 export function useAdminRequests() {
-    const toast = useToast();
+    const notify = useNotification();
     const rawRequests = ref([]);
     const isLoading = ref(false);
     const showApiLogin = ref(false);
@@ -21,7 +21,7 @@ export function useAdminRequests() {
             if ([401, 403, 419].includes(error?.response?.status)) {
                 showApiLogin.value = true;
             }
-            toast.error(
+            notify.error(
                 error?.response?.data?.message ||
                     error?.message ||
                     'Unable to load requests.'
@@ -37,13 +37,13 @@ export function useAdminRequests() {
             await axios.post(`/api/admin/requests/${id}/approve`, {
                 admin_note: adminNote,
             });
-            toast.success('Request approved.');
+            notify.success('Request approved.');
             await fetchRequests();
         } catch (error) {
             if ([401, 403, 419].includes(error?.response?.status)) {
                 showApiLogin.value = true;
             }
-            toast.error(
+            notify.error(
                 error?.response?.data?.message ||
                     error?.message ||
                     'Unable to approve request.'
@@ -57,13 +57,13 @@ export function useAdminRequests() {
             await axios.post(`/api/admin/requests/${id}/reject`, {
                 admin_note: adminNote,
             });
-            toast.success('Request rejected.');
+            notify.success('Request rejected.');
             await fetchRequests();
         } catch (error) {
             if ([401, 403, 419].includes(error?.response?.status)) {
                 showApiLogin.value = true;
             }
-            toast.error(
+            notify.error(
                 error?.response?.data?.message ||
                     error?.message ||
                     'Unable to reject request.'
@@ -77,13 +77,13 @@ export function useAdminRequests() {
             await axios.post(`/api/admin/requests/${id}/pending`, {
                 admin_note: adminNote,
             });
-            toast.success('Request set to pending.');
+            notify.success('Request set to pending.');
             await fetchRequests();
         } catch (error) {
             if ([401, 403, 419].includes(error?.response?.status)) {
                 showApiLogin.value = true;
             }
-            toast.error(
+            notify.error(
                 error?.response?.data?.message ||
                     error?.message ||
                     'Unable to set request to pending.'
@@ -120,7 +120,7 @@ export function useAdminRequests() {
             const token = data?.data?.token || data?.token;
             if (token) {
                 setBearerToken(token);
-                toast.success('API token saved. Retry your action.');
+                notify.success('API token saved. Retry your action.');
                 showApiLogin.value = false;
                 return { success: true };
             } else {

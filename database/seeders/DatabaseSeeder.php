@@ -9,6 +9,7 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
+
     /**
      * Seed the application's database.
      */
@@ -16,8 +17,16 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AuthLoginSeeder::class,
+            ProgramSeeder::class,
+            TrainingSessionSeeder::class,
+            EnrollmentSeeder::class,
+            AttendanceSeeder::class,
+            CertificateTemplateSeeder::class,
+            CertificateSeeder::class,
+            CertificateRequestSeeder::class,
+            AdminRequestSeeder::class,
         ]);
 
-        $this->command->info('Auth login seed completed.');
+        $this->command->info('Database seeded successfully with comprehensive test data.');
     }
 }

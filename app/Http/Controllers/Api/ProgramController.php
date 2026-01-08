@@ -31,7 +31,7 @@ class ProgramController extends Controller
             'category' => ['required', 'string', 'max:100'],
             'level' => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'duration_hours' => ['required', 'integer', 'min:1'],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
 
@@ -62,7 +62,7 @@ class ProgramController extends Controller
             'category' => ['sometimes', 'required', 'string', 'max:100'],
             'level' => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'duration_hours' => ['sometimes', 'required', 'integer', 'min:1'],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'approval_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
             'approved_by' => ['nullable', 'integer', 'exists:users,id'],
             'approved_at' => ['nullable', 'date'],

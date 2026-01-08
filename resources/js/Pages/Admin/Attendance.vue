@@ -1,137 +1,29 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
-import { Head } from "@inertiajs/vue3";
-import AdminLayout from "@/Layouts/AdminLayout.vue";
-import AttendanceCourseCard from "@/Components/AttendanceCourseCard.vue";
-import {
-    Search,
-    Archive,
-    Calendar,
-    ListFilterIcon,
-    ArrowDownNarrowWide,
-    Share,
-} from "lucide-vue-next";
-import ExportModal from "@/Components/ExportModal.vue";
-import FilterModal from "@/Components/FilterModal.vue";
-import SortModal from "@/Components/SortModal.vue";
-import SessionsModal from "@/Components/SessionsModal.vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
+import { useToast } from "vue-toastification";
+import { Calendar, Search, ClipboardCheck } from "lucide-vue-next";
+import AdminLayout from "@/Layouts/AdminLayout.vue";
+import PageHeader from "@/Components/PageHeader.vue";
+import StatusBadge from "@/Components/StatusBadge.vue";
+import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter";
 
-const courses = ref([]);
-const loading = ref(true);
-const error = ref(null);
+const toast = useToast();
 
-// Fetch admin's courses from API
-const fetchCourses = async () => {
-    try {
-        loading.value = true;
-        error.value = null;
-        const response = await axios.get("/api/admin/sessions");
-
-        if (response.data && response.data.data) {
-            courses.value = response.data.data;
-        }
-    } catch (err) {
-        console.error("Error fetching courses:", err);
-        error.value = err.response?.data?.message || "Failed to load courses";
-    } finally {
-        loading.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchCourses();
-});
-
-const searchQuery = ref("");
-const selectedDepartment = ref("all");
-const selectedStatus = ref("all");
-const sortColumn = ref("");
-const sortDirection = ref("asc");
-const showExportModal = ref(false);
-const showFilterModal = ref(false);
-const showSortModal = ref(false);
-const showSessionsModal = ref(false);
-const selectedCourse = ref(null);
+const sessions = ref([]);
+const programs = ref([]);
+const isLoading = ref(false);
 const currentPage = ref(1);
-const itemsPerPage = ref(9); // 9 cards per page for grid layout
+const totalPages = ref(1);
+const totalResults = ref(0);
+const itemsPerPage = ref(10);
 
-// Get unique departments for filter
-const departments = computed(() => {
-    return [...new Set(courses.value.map((course) => course.department))];
-});
-
-// Count courses
-const totalCoursesCount = computed(() => {
-    return courses.value.length;
-});
-
-const activeCoursesCount = computed(() => {
-    return courses.value.filter((course) => course.status === "Active").length;
-});
-
-// Filtered and sorted courses
-const filteredCourses = computed(() => {
-    let result = courses.value;
-
-    // Filter by search query
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        result = result.filter(
-            (course) =>
-                course.name.toLowerCase().includes(query) ||
-                course.instructor.toLowerCase().includes(query) ||
-                course.location.toLowerCase().includes(query) ||
-                course.department.toLowerCase().includes(query)
-        );
-    }
-
-    // Filter by department
-    if (selectedDepartment.value !== "all") {
-        result = result.filter(
-            (course) => course.department === selectedDepartment.value
-        );
-    }
-
-    // Filter by status
-    if (selectedStatus.value !== "all") {
-        result = result.filter(
-            (course) => course.status === selectedStatus.value
-        );
-    }
-
-    // Sort
-    if (sortColumn.value) {
-        result.sort((a, b) => {
-            let aVal = a[sortColumn.value];
-            let bVal = b[sortColumn.value];
-
-            if (typeof aVal === "string") {
-                aVal = aVal.toLowerCase();
-                bVal = bVal.toLowerCase();
-            }
-
-            if (sortDirection.value === "asc") {
-                return aVal > bVal ? 1 : -1;
-            } else {
-                return aVal < bVal ? 1 : -1;
-            }
-        });
-    }
-
-    return result;
-});
-
-// Pagination
-const totalResults = computed(() => filteredCourses.value.length);
-const totalPages = computed(() =>
-    Math.ceil(totalResults.value / itemsPerPage.value)
-);
-
-const paginatedCourses = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return filteredCourses.value.slice(start, end);
+const filters = ref({
+    program_id: "",
+    status: "",
+    search: "",
 });
 
 const startResult = computed(() => {
@@ -147,428 +39,292 @@ const endResult = computed(() => {
 const goToPage = (page) => {
     if (page >= 1 && page <= totalPages.value) {
         currentPage.value = page;
+        fetchSessions();
     }
 };
 
-// Reset to first page when filters change
-watch([searchQuery, selectedDepartment, selectedStatus], () => {
+const fetchSessions = async () => {
+    isLoading.value = true;
+    try {
+        const params = new URLSearchParams();
+        if (filters.value.program_id) params.append("program_id", filters.value.program_id);
+        if (filters.value.status) params.append("status", filters.value.status);
+        if (filters.value.search) params.append("search", filters.value.search);
+        params.append("page", currentPage.value);
+
+        const { data } = await axios.get(`/api/admin/attendance/sessions?${params.toString()}`);
+
+        sessions.value = data?.data?.data || [];
+        totalPages.value = data?.data?.last_page || 1;
+        currentPage.value = data?.data?.current_page || 1;
+        totalResults.value = data?.data?.total || 0;
+        itemsPerPage.value = data?.data?.per_page || 10;
+    } catch (error) {
+        toast.error(error?.response?.data?.message || "Failed to load sessions");
+        sessions.value = [];
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const fetchPrograms = async () => {
+    try {
+        const { data } = await axios.get("/api/programs");
+        programs.value = data?.data || [];
+    } catch (error) {
+        toast.error("Failed to load programs");
+    }
+};
+
+const applyFilters = () => {
     currentPage.value = 1;
-});
-
-// Export to CSV
-const exportToCSV = () => {
-    const headers = [
-        "ID",
-        "Course Name",
-        "Instructor",
-        "Department",
-        "Students",
-        "Date",
-        "Time",
-        "Location",
-        "Status",
-    ];
-    const csvData = filteredCourses.value.map((course) => [
-        course.id,
-        course.name,
-        course.instructor,
-        course.department,
-        course.students_count,
-        course.date,
-        course.time,
-        course.location,
-        course.status,
-    ]);
-
-    const csvContent = [
-        headers.join(","),
-        ...csvData.map((row) => row.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "attendance-courses.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
-    showExportModal.value = false;
+    fetchSessions();
 };
 
-// Export to PDF
-const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
-};
-
-// Apply filters
-const applyFilters = (department, status) => {
-    selectedDepartment.value = department;
-    selectedStatus.value = status;
-    showFilterModal.value = false;
-};
-
-// Apply sort
-const applySort = (column) => {
-    if (sortColumn.value === column) {
-        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
-    } else {
-        sortColumn.value = column;
-        sortDirection.value = "asc";
-    }
-    showSortModal.value = false;
-};
-
-// Reset filters
 const resetFilters = () => {
-    selectedDepartment.value = "all";
-    selectedStatus.value = "all";
-    showFilterModal.value = false;
+    filters.value = {
+        program_id: "",
+        status: "",
+        search: "",
+    };
+    currentPage.value = 1;
+    fetchSessions();
 };
 
-// Reset sort
-const resetSort = () => {
-    sortColumn.value = "";
-    sortDirection.value = "asc";
-    showSortModal.value = false;
+
+const formatDate = (value) => {
+    if (!value) return "—";
+    return formatDateUtil(value) || "—";
 };
 
-// Handle view sessions
-const handleViewSessions = (courseOrId) => {
-    if (courseOrId && typeof courseOrId === "object") {
-        selectedCourse.value = courseOrId;
-        showSessionsModal.value = true;
-        return;
-    }
-
-    const targetId = String(courseOrId);
-    const course = courses.value.find((c) => String(c.id) === targetId);
-    if (course) {
-        selectedCourse.value = course;
-        showSessionsModal.value = true;
-    }
+const getAttendanceRate = (session) => {
+    if (!session.enrollments_count || session.enrollments_count === 0) return "—";
+    const rate = (session.attendances_count / session.enrollments_count) * 100;
+    return `${rate.toFixed(0)}%`;
 };
 
-// Get selected course data
-const selectedCourseSessions = computed(() => {
-    return selectedCourse.value?.sessions || [];
-});
-
-const selectedCourseName = computed(() => {
-    return selectedCourse.value?.name || "";
+onMounted(() => {
+    fetchSessions();
+    fetchPrograms();
 });
 </script>
 
 <template>
-    <Head title="Attendance" />
+
+    <Head title="Attendance Management" />
     <AdminLayout>
         <div class="space-y-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Attendance</h1>
-                    <p class="mt-2 text-sm text-gray-600">
-                        Track and manage attendance for all courses
+            <PageHeader title="Attendance Management"
+                description="View and manage attendance for all training sessions." />
+
+            <!-- Filters -->
+            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div>
+                        <label for="program-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                            Program
+                        </label>
+                        <select id="program-filter" v-model="filters.program_id"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]">
+                            <option value="">All Programs</option>
+                            <option v-for="program in programs" :key="program.id" :value="program.id">
+                                {{ program.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                            Status
+                        </label>
+                        <select id="status-filter" v-model="filters.status"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]">
+                            <option value="">All Statuses</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="open">Open</option>
+                            <option value="closed">Closed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="search-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                            Search
+                        </label>
+                        <div class="relative">
+                            <input id="search-filter" v-model="filters.search" type="text"
+                                placeholder="Session title..."
+                                class="w-full rounded-lg border-gray-300 pl-10 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
+                                @keyup.enter="applyFilters" />
+                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        </div>
+                    </div>
+
+                    <div class="flex items-end gap-2">
+                        <button @click="applyFilters"
+                            class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]">
+                            Apply
+                        </button>
+                        <button @click="resetFilters"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessions Table -->
+            <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
+                <LoadingSpinner v-if="isLoading" />
+
+                <div v-else-if="sessions.length === 0" class="p-8 text-center">
+                    <Calendar class="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 class="mt-2 text-sm font-semibold text-gray-900">No sessions found</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        No training sessions match your current filters.
                     </p>
                 </div>
-            </div>
 
-            <!-- Search, Filter, and Export Controls -->
-            <div
-                class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]"
-            >
-                <div class="flex items-center gap-3 mb-6">
-                    <Calendar class="h-6 w-6 text-[#2f837d]" />
-                    <h2 class="text-xl font-semibold text-gray-900">
-                        All Courses ({{ totalCoursesCount }})
-                    </h2>
+                <div v-else class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Session
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Program
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Trainer
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Enrolled
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Present
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Rate
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr v-for="(session, index) in sessions" :key="session.id" :class="[
+                                'transition-colors',
+                                index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                'hover:bg-gray-100'
+                            ]">
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                                    {{ session.title }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    {{ session.program?.name || "—" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ formatDate(session.start_date) }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">
+                                    {{ session.trainer?.name || "—" }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ session.enrollments_count || 0 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ session.attendances_count || 0 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ getAttendanceRate(session) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <StatusBadge :status="session.status || 'upcoming'" />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <Link :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
+                                        class="inline-flex items-center gap-1.5 text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
+                                        title="Mark Attendance">
+                                        <ClipboardCheck class="h-5 w-5" />
+                                    </Link>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div
-                    class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6"
-                >
-                    <!-- Left: Search Bar -->
-                    <div class="relative w-full lg:max-w-md">
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search courses..."
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                        />
-                        <Search
-                            class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                        />
-                    </div>
-
-                    <!-- Right: Filter, Sort, Export buttons -->
-                    <div class="flex flex-row gap-4">
-                        <!-- Filter button -->
-                        <button
-                            @click="showFilterModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
-                            <ListFilterIcon class="h-4 w-4" />
-                            <p>Filter</p>
+                <!-- Pagination and Result Counter -->
+                <div v-if="sessions.length > 0"
+                    class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
+                    <!-- Pagination (Left) -->
+                    <div class="flex items-center gap-2">
+                        <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" :class="[
+                            'px-3 py-1 rounded border transition-colors',
+                            currentPage === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                        ]">
+                            Previous
                         </button>
 
-                        <!-- Sort button -->
-                        <button
-                            @click="showSortModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
-                            <ArrowDownNarrowWide class="h-4 w-4" />
-                            <p>Sort</p>
-                        </button>
-
-                        <!-- Share/Export button -->
-                        <button
-                            @click="showExportModal = true"
-                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
-                        >
-                            <Share class="h-4 w-4" />
-                            <p>Export</p>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Courses Grid -->
-                <div
-                    class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden p-6"
-                >
-                    <!-- Loading State -->
-                    <div v-if="loading" class="text-center py-12">
-                        <div
-                            class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"
-                        ></div>
-                        <p class="mt-4 text-sm text-gray-600">
-                            Loading courses...
-                        </p>
-                    </div>
-
-                    <!-- Error State -->
-                    <div v-else-if="error" class="text-center py-12">
-                        <div
-                            class="mx-auto h-12 w-12 text-red-500 flex items-center justify-center"
-                        >
-                            <svg
-                                class="h-12 w-12"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                        </div>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            Error loading courses
-                        </h3>
-                        <p class="mt-1 text-sm text-gray-500">{{ error }}</p>
-                        <button
-                            @click="fetchCourses"
-                            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            Try Again
-                        </button>
-                    </div>
-
-                    <!-- Grid of Course Cards -->
-                    <div
-                        v-else-if="paginatedCourses.length > 0"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    >
-                        <AttendanceCourseCard
-                            v-for="course in paginatedCourses"
-                            :key="course.id"
-                            :id="course.id"
-                            :name="course.name"
-                            :image_url="course.image_url"
-                            :rating="course.rating"
-                            :level="course.level"
-                            :students_count="course.students_count"
-                            :price="course.price"
-                            :date="course.date"
-                            :time="course.time"
-                            :location="course.location"
-                            @viewSessions="() => handleViewSessions(course)"
-                        />
-                    </div>
-
-                    <!-- Empty State -->
-                    <div
-                        v-else-if="!loading && filteredCourses.length === 0"
-                        class="text-center py-12"
-                    >
-                        <Archive class="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            No courses found
-                        </h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Try adjusting your search or filter criteria.
-                        </p>
-                    </div>
-
-                    <!-- Pagination and Result Counter -->
-                    <div
-                        v-if="filteredCourses.length > 0"
-                        class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200"
-                    >
-                        <!-- Pagination (Left) -->
-                        <div
-                            class="flex items-center gap-2 flex-wrap justify-center"
-                        >
-                            <button
-                                @click="goToPage(currentPage - 1)"
-                                :disabled="currentPage === 1"
-                                :class="[
-                                    'px-3 py-1 rounded border transition-colors text-sm',
-                                    currentPage === 1
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                        <div class="flex items-center gap-1">
+                            <template v-for="page in totalPages" :key="page">
+                                <button v-if="
+                                    page === 1 ||
+                                    page === totalPages ||
+                                    (page >= currentPage - 1 &&
+                                        page <= currentPage + 1)
+                                " @click="goToPage(page)" :class="[
+                                    'px-3 py-1 rounded border transition-colors',
+                                    currentPage === page
+                                        ? 'bg-[#2f837d] text-white border-[#2f837d]'
                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                ]"
-                            >
-                                Previous
-                            </button>
-
-                            <div class="flex items-center gap-1">
-                                <template
-                                    v-for="page in totalPages"
-                                    :key="page"
-                                >
-                                    <button
-                                        v-if="
-                                            page === 1 ||
-                                            page === totalPages ||
-                                            (page >= currentPage - 1 &&
-                                                page <= currentPage + 1)
-                                        "
-                                        @click="goToPage(page)"
-                                        :class="[
-                                            'px-3 py-1 rounded border transition-colors text-sm',
-                                            currentPage === page
-                                                ? 'bg-[#2f837d] text-white border-[#2f837d]'
-                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                        ]"
-                                    >
-                                        {{ page }}
-                                    </button>
-                                    <span
-                                        v-else-if="
-                                            page === currentPage - 2 ||
-                                            page === currentPage + 2
-                                        "
-                                        class="px-2 text-gray-500 text-sm"
-                                    >
-                                        ...
-                                    </span>
-                                </template>
-                            </div>
-
-                            <button
-                                @click="goToPage(currentPage + 1)"
-                                :disabled="currentPage === totalPages"
-                                :class="[
-                                    'px-3 py-1 rounded border transition-colors text-sm',
-                                    currentPage === totalPages
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                ]"
-                            >
-                                Next
-                            </button>
+                                ]">
+                                    {{ page }}
+                                </button>
+                                <span v-else-if="
+                                    page === currentPage - 2 ||
+                                    page === currentPage + 2
+                                " class="px-2 text-gray-500">
+                                    ...
+                                </span>
+                            </template>
                         </div>
 
-                        <!-- Result Counter (Right) -->
-                        <div
-                            class="text-sm text-gray-600 text-center sm:text-right"
-                        >
-                            Showing {{ startResult }}-{{ endResult }} of
-                            {{ totalResults }} results
-                        </div>
+                        <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" :class="[
+                            'px-3 py-1 rounded border transition-colors',
+                            currentPage === totalPages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                        ]">
+                            Next
+                        </button>
+                    </div>
+
+                    <!-- Result Counter (Right) -->
+                    <div class="text-sm text-gray-600">
+                        Showing {{ startResult }}-{{ endResult }} of
+                        {{ totalResults }} results
                     </div>
                 </div>
             </div>
-
-            <!-- Modals -->
-            <ExportModal
-                :show="showExportModal"
-                activeTab="courses"
-                dataType="courses"
-                @close="showExportModal = false"
-                @exportCSV="exportToCSV"
-                @exportPDF="exportToPDF"
-            />
-
-            <FilterModal
-                :show="showFilterModal"
-                title="Filter Courses"
-                v-model:selectedDepartment="selectedDepartment"
-                v-model:selectedStatus="selectedStatus"
-                :departments="departments"
-                :statusOptions="['Active', 'Upcoming', 'Completed']"
-                departmentLabel="Department"
-                @close="showFilterModal = false"
-                @reset="resetFilters"
-            />
-
-            <SortModal
-                :show="showSortModal"
-                title="Sort Courses"
-                :sortColumn="sortColumn"
-                :sortDirection="sortDirection"
-                :sortOptions="[
-                    {
-                        value: 'name',
-                        label: 'Course Name',
-                        directionLabels: { asc: 'A-Z', desc: 'Z-A' },
-                    },
-                    {
-                        value: 'instructor',
-                        label: 'Instructor',
-                        directionLabels: { asc: 'A-Z', desc: 'Z-A' },
-                    },
-                    {
-                        value: 'students_count',
-                        label: 'Students',
-                        directionLabels: {
-                            asc: 'Low to High',
-                            desc: 'High to Low',
-                        },
-                    },
-                    {
-                        value: 'rating',
-                        label: 'Rating',
-                        directionLabels: {
-                            asc: 'Low to High',
-                            desc: 'High to Low',
-                        },
-                    },
-                    {
-                        value: 'status',
-                        label: 'Status',
-                        directionLabels: {
-                            asc: 'Active First',
-                            desc: 'Upcoming First',
-                        },
-                    },
-                ]"
-                @close="showSortModal = false"
-                @sort="applySort"
-                @reset="resetSort"
-            />
-
-            <SessionsModal
-                :show="showSessionsModal"
-                :courseId="selectedCourse?.id || 0"
-                :requestId="selectedCourse?.request_id"
-                :courseName="selectedCourseName"
-                :sessions="selectedCourseSessions"
-                baseUrl="/admin"
-                @close="showSessionsModal = false"
-            />
         </div>
     </AdminLayout>
 </template>

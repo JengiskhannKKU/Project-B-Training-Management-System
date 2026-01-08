@@ -33,9 +33,9 @@ class FileUploadController extends Controller
             return $this->errorResponse('Failed to upload image', 500);
         }
         
-        // Return the public URL
-        $url = Storage::disk('public')->url($path);
-        
+        // Return relative URL path (works regardless of APP_URL/port)
+        $url = '/storage/' . $path;
+
         return $this->successResponse([
             'url' => $url,
             'path' => $path,

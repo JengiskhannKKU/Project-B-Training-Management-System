@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import CourseCard from '@/Components/CourseCard.vue';
 import CourseModal from '@/Components/CourseModal.vue';
@@ -13,16 +13,19 @@ import {
     ListFilterIcon,
     ArrowDownNarrowWide,
     Share,
+    Plus,
 } from 'lucide-vue-next';
 import ExportModal from '@/Components/ExportModal.vue';
 import FilterModal from '@/Components/FilterModal.vue';
 import SortModal from '@/Components/SortModal.vue';
 
 const toast = useToast();
+const page = usePage();
 
 const searchQuery = ref('');
 const selectedDepartment = ref('all');
 const selectedStatus = ref('all');
+const selectedAssignment = ref('all');
 const sortColumn = ref('');
 const sortDirection = ref('asc');
 const showExportModal = ref(false);
@@ -74,6 +77,19 @@ const filteredCourses = computed(() => {
                 course.name.toLowerCase().includes(query) ||
                 (course.location && course.location.toLowerCase().includes(query)) ||
                 (course.department && course.department.toLowerCase().includes(query))
+        );
+    }
+
+    // Filter by assignment (My Courses vs All Courses)
+    if (selectedAssignment.value === 'my') {
+        // Filter to show only courses created by or assigned to the current admin
+        // Note: Adjust the field name based on your API response structure
+        // Common field names: created_by_id, admin_id, trainer_id, owner_id
+        const currentUserId = page.props.auth?.user?.id;
+        result = result.filter(
+            (course) => course.created_by_id === currentUserId ||
+                       course.admin_id === currentUserId ||
+                       course.trainer_id === currentUserId
         );
     }
 
@@ -142,7 +158,7 @@ const goToPage = (page: number) => {
 };
 
 // Reset to first page when filters change
-watch([searchQuery, selectedDepartment, selectedStatus], () => {
+watch([searchQuery, selectedDepartment, selectedStatus, selectedAssignment], () => {
     currentPage.value = 1;
 });
 
@@ -212,6 +228,7 @@ const applySort = (column: string) => {
 const resetFilters = () => {
     selectedDepartment.value = 'all';
     selectedStatus.value = 'all';
+    selectedAssignment.value = 'all';
     showFilterModal.value = false;
 };
 
@@ -231,18 +248,18 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
     isSubmittingProgram.value = true;
     try {
         await axios.get('/sanctum/csrf-cookie');
-        await axios.post('/api/admin/program-requests', {
-            action: 'create',
-            payload,
-        });
-        toast.success('Program request sent for approval.');
+
+        // Admin creates program directly (no approval needed)
+        await axios.post('/api/admin/programs', payload);
+
+        toast.success('Program created successfully!');
         showCreateModal.value = false;
         await fetchPrograms();
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            'Unable to submit program request.';
+            'Failed to create program.';
         toast.error(message);
         if ([401, 403, 419].includes(error?.response?.status)) {
             showApiLogin.value = true;
@@ -313,12 +330,21 @@ const fetchPrograms = async () => {
     isLoadingPrograms.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get('/api/admin/requests');
+
+        // Fetch actual programs (not admin requests)
+        const { data } = await axios.get('/api/programs');
         const list = data?.data || data || [];
-        // Filter to get only programs created by the current admin user
-        programs.value = list
-            .filter((r: any) => r.target_type === 'program')
-            .map(mapProgramFromRequest);
+
+        // Sort programs by ID or created_at in descending order (newest first)
+        const sortedList = list.sort((a: any, b: any) => {
+            // Try to sort by created_at if available, otherwise by id
+            if (a.created_at && b.created_at) {
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            }
+            return (b.id || 0) - (a.id || 0);
+        });
+
+        programs.value = sortedList;
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
@@ -339,22 +365,22 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="My Courses" />
+    <Head title="All Courses" />
     <AdminLayout>
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">My Courses</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">All Courses</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage and track all your courses
+                        Manage and track all courses
                     </p>
                 </div>
                 <button
                     @click="showCreateModal = true"
-                    class="inline-flex items-center gap-2 rounded-full bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#266a66]"
+                    class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
                 >
-                    <span class="text-lg leading-none">+</span>
-                    Create Course
+                    <Plus :size="20" />
+                    <span>Create Course</span>
                 </button>
             </div>
 
@@ -402,7 +428,7 @@ onMounted(() => {
                 <div class="flex items-center gap-3 mb-6">
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <h2 class="text-xl font-semibold text-gray-900">
-                        My Programs ({{ totalCoursesCount }})
+                        All Programs ({{ totalCoursesCount }})
                     </h2>
                     <span v-if="isLoadingPrograms" class="text-sm text-gray-500">Loading...</span>
                 </div>
@@ -467,7 +493,7 @@ onMounted(() => {
                             v-for="course in paginatedCourses"
                             :key="course.request_id || course.id"
                             :id="course.id"
-                            :href="`/admin/my-courses/${course.request_id}`"
+                            :href="`/admin/my-courses/${course.id}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"
@@ -590,9 +616,11 @@ onMounted(() => {
                 title="Filter Courses"
                 v-model:selectedDepartment="selectedDepartment"
                 v-model:selectedStatus="selectedStatus"
+                v-model:selectedAssignment="selectedAssignment"
                 :departments="departments"
                 :statusOptions="['Active', 'Upcoming', 'Completed']"
                 departmentLabel="Department"
+                :showAssignmentFilter="true"
                 @close="showFilterModal = false"
                 @reset="resetFilters"
             />
