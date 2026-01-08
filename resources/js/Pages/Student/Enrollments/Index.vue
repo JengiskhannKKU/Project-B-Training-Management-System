@@ -264,7 +264,6 @@ onMounted(fetchEnrollments);
                 </div>
 
                 <div class="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                <div class="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 text-pink-600">
                             <Award class="h-5 w-5" />
@@ -272,11 +271,6 @@ onMounted(fetchEnrollments);
                         <div>
                             <div class="text-xl font-semibold text-gray-900">
                                 {{ certificateCount }}
-                            </div>
-                            <div class="text-sm text-gray-500">Certificates</div>
-                        </div>
-                    </div>
-                </div>
                             </div>
                             <div class="text-sm text-gray-500">Certificates</div>
                         </div>

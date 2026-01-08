@@ -31,24 +31,21 @@ const submit = () => {
 <template>
     <Head :title="$t('Log in')" />
 
-    <div class="pt-4 pl-6 z-50 w-auto">
-        <img
-            src="/images/project_logo.png"
-            alt="Project Logo"
-            class="h-16 w-auto"
-        />
-    </div>
-
     <!-- Parent Grid Container -->
-    <div class="grid min-h-screen lg:grid-cols-2 grid-cols-1 gap-0 bg-white">
+    <div class="relative grid min-h-screen grid-cols-1 gap-0 bg-white lg:grid-cols-[1.8fr_1.2fr]">
+        <div class="absolute left-6 top-4 z-20">
+            <img
+                src="/images/project_logo.png"
+                alt="Project Logo"
+                class="h-14 w-auto"
+            />
+        </div>
         <!-- div1: Left Side (Hidden on mobile) -->
         <div
-            class="hidden lg:flex items-center justify-center p-8 bg-white relative overflow-hidden"
+            class="relative hidden items-center justify-center overflow-hidden bg-[#f8f7fb] p-8 lg:flex"
+            style="background-image: url('/images/login-illustration.png'); background-size: contain; background-repeat: no-repeat; background-position: center;"
         >
-            <div class="absolute inset-0 opacity-10">
-                <div class="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-                <div class="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-            </div>
+            <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-white/10 to-transparent"></div>
         </div>
 
         <!-- div2: Right Side with Login Form -->

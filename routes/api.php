@@ -11,13 +11,12 @@ use App\Http\Controllers\Api\TrainerRequestController;
 use App\Http\Controllers\Api\AdminRequestActionController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
-use App\Http\Controllers\Api\CertificateRequestController;
-use App\Http\Controllers\Api\TrainerCertificateRequestController;
-use App\Http\Controllers\Api\AdminCertificateRequestController;
+
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\CertificateTemplateController;
 use App\Http\Controllers\Api\AdminProgramController;
 use App\Http\Controllers\Api\AdminSessionController;
+use App\Http\Controllers\Api\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -49,6 +48,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('programs', ProgramController::class);
     Route::apiResource('sessions', TrainingSessionController::class);
 
+    // Reviews
+    Route::get('programs/{program}/reviews', [ReviewController::class, 'programReviews']);
+    Route::get('sessions/{session}/reviews', [ReviewController::class, 'sessionReviews']);
+    Route::post('reviews', [ReviewController::class, 'store']);
+    Route::put('reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('reviews/{review}', [ReviewController::class, 'destroy']);
+
     Route::middleware('role:trainer,admin')->group(function () {
         Route::post('sessions/{session}/complete', [TrainingSessionController::class, 'complete']);
         Route::get('sessions/{session}/enrollments-for-attendance', [AttendanceController::class, 'enrollmentsForAttendance']);
@@ -69,19 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::middleware('role:trainer,admin')->group(function () {
-        Route::post('certificate-requests', [CertificateRequestController::class, 'store']);
-
         Route::prefix('trainer')->group(function () {
             Route::get('requests', [TrainerRequestController::class, 'index']);
             Route::post('program-requests', [TrainerRequestController::class, 'program']);
             Route::post('session-requests', [TrainerRequestController::class, 'session']);
             Route::post('trainee-requests', [TrainerRequestController::class, 'trainee']);
 
-            // Certificate Request Management (NEW - Trainer can view, approve, reject)
-            Route::get('certificate-requests', [TrainerCertificateRequestController::class, 'index']);
-            Route::get('certificate-requests/{certificateRequest}', [TrainerCertificateRequestController::class, 'show']);
-            Route::post('certificate-requests/{certificateRequest}/approve', [TrainerCertificateRequestController::class, 'approve']);
-            Route::post('certificate-requests/{certificateRequest}/reject', [TrainerCertificateRequestController::class, 'reject']);
+
 
             Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             Route::get('sessions', [TrainingSessionController::class, 'trainerSessions']);
@@ -107,11 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
         Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
 
-        // Certificate Request Management (REFACTORED - Uses shared service)
-        Route::get('admin/certificate-requests', [AdminCertificateRequestController::class, 'index']);
-        Route::get('admin/certificate-requests/{certificateRequest}', [AdminCertificateRequestController::class, 'show']);
-        Route::post('admin/certificate-requests/{certificateRequest}/approve', [AdminCertificateRequestController::class, 'approve']);
-        Route::post('admin/certificate-requests/{certificateRequest}/reject', [AdminCertificateRequestController::class, 'reject']);
+
         Route::get('admin/certificates', [CertificateController::class, 'adminIndex']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
         Route::apiResource('admin/certificate-templates', CertificateTemplateController::class)

@@ -85,4 +85,9 @@ class TrainingSession extends Model
             ->where('is_active', true)
             ->latestOfMany();
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'session_id');
+    }
 }

@@ -52,6 +52,7 @@ const handleStatusChange = ({ requestId, status }) => {
 const handleToggleDropdown = ({ requestId, event }) => {
     emit('toggle-dropdown', { requestId, event });
 };
+
 </script>
 
 <template>
@@ -136,7 +137,6 @@ const handleToggleDropdown = ({ requestId, event }) => {
 
                 <!-- View Button -->
                 <a
-                    v-if="course.target_type !== 'session'"
                     :href="course.admin_link"
                     target="_blank"
                     rel="noopener"

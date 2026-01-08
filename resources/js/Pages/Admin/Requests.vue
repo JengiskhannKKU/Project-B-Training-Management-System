@@ -163,6 +163,11 @@ const mapRequestToRow = (req) => {
                 ? `0/${payload.capacity}`
                 : "";
 
+    const programRequestLink =
+        req.target_type === "program"
+            ? `/admin/my-courses/${req.id}`
+            : null;
+
     return {
         id: req.id,
         request_id: req.id,
@@ -195,7 +200,7 @@ const mapRequestToRow = (req) => {
         created_at: req.created_at,
         target_type: req.target_type,
         action: req.action,
-        admin_link: `/admin/my-courses/${req.id}`,
+        admin_link: programRequestLink,
     };
 };
 
@@ -420,6 +425,7 @@ const handleCourseModalClose = () => {
     showCourseModal.value = false;
 };
 
+
 const handleCreateProgram = async (payload) => {
     if (!payload) return;
 
@@ -435,6 +441,7 @@ const handleCreateProgram = async (payload) => {
         console.error('Error creating program:', error);
     }
 };
+
 
 // Dropdown toggle handler
 const onToggleDropdown = ({ requestId, event }) => {

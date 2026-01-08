@@ -50,4 +50,9 @@ class Enrollment extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(Review::class);
+    }
 }

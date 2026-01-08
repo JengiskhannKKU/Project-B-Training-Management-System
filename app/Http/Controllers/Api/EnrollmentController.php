@@ -110,6 +110,7 @@ class EnrollmentController extends Controller
 
         $enrollments = Enrollment::with([
             'session.program',
+            'review',
         ])
             ->where('user_id', $user->id)
             ->latest()
