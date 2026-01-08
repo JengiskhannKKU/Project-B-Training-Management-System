@@ -1,7 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
-import axios from "axios";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
@@ -13,12 +12,16 @@ const props = defineProps({
         type: [Number, String],
         required: true,
     },
+    certificate: {
+        type: Object,
+        default: null,
+    },
 });
 
 const page = usePage();
-const certificate = ref(null);
+const certificate = ref(props.certificate);
 const isLoading = ref(false);
-const errorMessage = ref("");
+const errorMessage = ref(props.certificate ? "" : "Certificate not found");
 
 const roleName = computed(
     () =>
@@ -32,25 +35,6 @@ const LayoutComponent = computed(() => {
     if (roleName.value === "trainer") return TrainerLayout;
     return StudentLayout;
 });
-
-const fetchCertificate = async () => {
-    isLoading.value = true;
-    errorMessage.value = "";
-    try {
-        const { data } = await axios.get(
-            `/api/certificates/${props.certificateId}`
-        );
-        certificate.value = data?.data || null;
-    } catch (error) {
-        certificate.value = null;
-        errorMessage.value =
-            error?.response?.data?.message ||
-            error?.message ||
-            "Unable to load certificate.";
-    } finally {
-        isLoading.value = false;
-    }
-};
 
 const formatDate = (value) => {
     if (!value) return "—";
@@ -93,10 +77,6 @@ const downloadLabel = computed(() =>
     hasFile.value ? "Download" : "Generate & Download"
 );
 
-const viewLabel = computed(() =>
-    hasFile.value ? "View" : "Generate & View"
-);
-
 const backLink = computed(() => {
     if (!certificate.value) return "/me/certificates";
     if (roleName.value === "admin") return "/admin/certificates";
@@ -115,8 +95,6 @@ const backLink = computed(() => {
 const backLabel = computed(() =>
     roleName.value === "admin" ? "Back to Certificates" : "Back to My Certificates"
 );
-
-onMounted(fetchCertificate);
 </script>
 
 <template>
@@ -202,27 +180,58 @@ onMounted(fetchCertificate);
                     </div>
                 </div>
 
-                <div class="mt-6 flex flex-wrap items-center gap-3">
-                    <a
-                        v-if="certificate"
-                        :href="`/api/certificates/${certificate.id}/view`"
-                        target="_blank"
-                        rel="noopener"
-                        class="inline-flex items-center gap-2 rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                    >
-                        <Eye class="h-4 w-4" />
-                        {{ viewLabel }}
-                    </a>
-                    <a
-                        v-if="certificate"
-                        :href="`/api/certificates/${certificate.id}/download`"
-                        class="inline-flex items-center gap-2 rounded-full border border-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
-                    >
-                        <Download class="h-4 w-4" />
-                        {{ downloadLabel }}
-                    </a>
-                    <div v-if="!hasFile" class="text-xs text-gray-500">
-                        File will be generated when you view or download.
+                <!-- Certificate Preview/Embed Section -->
+                <div v-if="certificate" class="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700">Certificate Preview</h3>
+                        <div class="flex items-center gap-2">
+                            <a
+                                :href="`/api/certificates/${certificate.id}/view`"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                <Eye class="h-4 w-4" />
+                                Open in New Tab
+                            </a>
+                            <a
+                                :href="`/api/certificates/${certificate.id}/download`"
+                                class="inline-flex items-center gap-2 rounded-lg border border-emerald-400 px-4 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                            >
+                                <Download class="h-4 w-4" />
+                                {{ downloadLabel }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- PDF/Image Embed Viewer -->
+                    <div class="rounded-lg border border-gray-300 bg-white overflow-hidden">
+                        <div v-if="!hasFile" class="flex flex-col items-center justify-center py-16 text-gray-500">
+                            <Award class="h-16 w-16 mb-4 text-gray-400" />
+                            <p class="text-sm font-medium">Certificate not generated yet</p>
+                            <p class="text-xs mt-1">Click "Open in New Tab" to generate and view</p>
+                        </div>
+                        <div v-else class="relative w-full" style="min-height: 600px;">
+                            <!-- PDF Viewer using iframe -->
+                            <iframe
+                                v-if="certificate.file_mime_type?.includes('pdf') || !certificate.file_mime_type"
+                                :src="`/api/certificates/${certificate.id}/view`"
+                                class="w-full h-full border-0"
+                                style="min-height: 800px;"
+                                title="Certificate PDF Viewer"
+                            ></iframe>
+                            <!-- PNG/Image Viewer -->
+                            <img
+                                v-else-if="certificate.file_mime_type?.includes('image')"
+                                :src="`/api/certificates/${certificate.id}/view`"
+                                alt="Certificate"
+                                class="w-full h-auto"
+                            />
+                            <!-- Fallback for unknown types -->
+                            <div v-else class="flex items-center justify-center py-16 text-gray-500">
+                                <p class="text-sm">Unsupported file type. Please download to view.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

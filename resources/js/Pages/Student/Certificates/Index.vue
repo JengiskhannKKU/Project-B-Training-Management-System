@@ -1,31 +1,19 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
-import axios from "axios";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import { Award, Download, Eye } from "lucide-vue-next";
 
-const certificates = ref([]);
-const isLoading = ref(false);
-
-const fetchCertificates = async () => {
-    isLoading.value = true;
-    try {
-        const { data } = await axios.get("/api/me/certificates");
-        console.log("API Response:", data);
-        console.log("Certificates data:", data?.data);
-        console.log("Is array?", Array.isArray(data?.data));
-        certificates.value = Array.isArray(data?.data) ? data.data : [];
-        console.log("Final certificates:", certificates.value);
-    } catch (error) {
-        console.error("Error fetching certificates:", error);
-        console.error("Error response:", error.response);
-        certificates.value = [];
-    } finally {
-        isLoading.value = false;
+const props = defineProps({
+    certificates: {
+        type: Array,
+        default: () => []
     }
-};
+});
+
+const certificates = ref(props.certificates || []);
+const isLoading = ref(false);
 
 const formatDate = (value) => {
     if (!value) return "—";
@@ -57,8 +45,6 @@ const resolveProgramName = (certificate) => {
 const resolveSessionTitle = (certificate) => {
     return certificate?.session?.title || "—";
 };
-
-onMounted(fetchCertificates);
 </script>
 
 <template>
