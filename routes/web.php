@@ -14,9 +14,9 @@ $redirectToRoleDashboard = function () {
     $role = Auth::user()->role->name ?? 'student';
 
     return redirect()->route(match ($role) {
-        'admin'   => 'admin.dashboard',
+        'admin' => 'admin.dashboard',
         'trainer' => 'trainer.dashboard',
-        default   => 'student.programs.index',
+        default => 'student.programs.index',
     });
 };
 
@@ -84,25 +84,29 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/MyCourses');
     })->name('admin.my-courses');
 
-Route::get('/admin/my-courses/{id}', function ($id) {
-    return Inertia::render('Trainer/Programs/Show', [
-        'program' => [
-            'id' => $id,
-            'name' => '',
-            'code' => '',
-            'category' => '',
-            'level' => '',
-            'period' => '',
-            'time' => '',
-            'location' => '',
-            'trainer' => '',
-            'certificated' => '',
-            'status' => '',
-            'description' => '',
-            'image_url' => null,
-        ]
-    ]);
-})->name('admin.my-courses.show');
+    Route::get('/admin/my-courses/{id}', function ($id) {
+        $program = \App\Models\Program::with('creator')->findOrFail($id);
+
+        return Inertia::render('Trainer/Programs/Show', [
+            'program' => [
+                'id' => $program->id,
+                'name' => $program->name,
+                'code' => $program->code,
+                'category' => $program->category,
+                'level' => $program->level ?? '',
+                'period' => $program->duration_hours ? $program->duration_hours . ' hours' : '',
+                'time' => '',
+                'location' => '',
+                'trainer' => $program->creator?->name ?? '',
+                'certificated' => '',
+                'status' => $program->status,
+                'description' => $program->description ?? '',
+                'image_url' => $program->image_url,
+                'approval_status' => $program->approval_status ?? 'pending',
+                'duration_hours' => $program->duration_hours,
+            ]
+        ]);
+    })->name('admin.my-courses.show');
 
     Route::get('/admin/attendance', function () {
         return Inertia::render('Admin/Attendance');
@@ -122,10 +126,6 @@ Route::get('/admin/my-courses/{id}', function ($id) {
     Route::get('/admin/feedback', function () {
         return Inertia::render('Admin/Feedback');
     })->name('admin.feedback');
-
-    Route::get('/admin/settings', function () {
-        return Inertia::render('Admin/Settings');
-    })->name('admin.settings');
 
     Route::get('/admin/certificates', function () {
         return Inertia::render('Admin/Certificates');
@@ -169,25 +169,25 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         ]);
     })->name('trainer.programs.index');
 
-Route::get('/trainer/programs/{id}', function ($id) {
-    return Inertia::render('Trainer/Programs/Show', [
-        'program' => [
-            'id' => $id,
-            'name' => '',
-            'code' => '',
-            'category' => '',
-            'level' => '',
-            'period' => '',
-            'time' => '',
-            'location' => '',
-            'trainer' => '',
-            'certificated' => '',
-            'status' => '',
-            'description' => '',
-            'image_url' => null,
-        ]
-    ]);
-})->name('trainer.programs.show');
+    Route::get('/trainer/programs/{id}', function ($id) {
+        return Inertia::render('Trainer/Programs/Show', [
+            'program' => [
+                'id' => $id,
+                'name' => '',
+                'code' => '',
+                'category' => '',
+                'level' => '',
+                'period' => '',
+                'time' => '',
+                'location' => '',
+                'trainer' => '',
+                'certificated' => '',
+                'status' => '',
+                'description' => '',
+                'image_url' => null,
+            ]
+        ]);
+    })->name('trainer.programs.show');
 
     Route::get('/trainer/attendance', function () {
         return Inertia::render('Trainer/Attendance');
@@ -207,10 +207,6 @@ Route::get('/trainer/programs/{id}', function ($id) {
     Route::get('/trainer/feedback', function () {
         return Inertia::render('Trainer/Feedback');
     })->name('trainer.feedback');
-
-    Route::get('/trainer/settings', function () {
-        return Inertia::render('Trainer/Settings');
-    })->name('trainer.settings');
 
     Route::get('/trainer/certificate-templates', function () {
         return Inertia::render('Trainer/CertificateTemplates/Index');
@@ -276,4 +272,4 @@ Route::get('/programs/{id}', function ($id) {
 })->name('programs.show');
 
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
