@@ -19,9 +19,9 @@ defineProps({
                     <Trophy :size="24" class="text-[#F1C644]" />
                 </div>
                 <div>
-                    <h2 class="text-lg font-bold text-gray-900">Top Courses</h2>
+                    <h2 class="text-lg font-bold text-gray-900">{{ $t('Top Courses') }}</h2>
                     <p class="mt-0.5 text-xs text-gray-500">
-                        Highest enrollment numbers
+                        {{ $t('Highest enrollment numbers') }}
                     </p>
                 </div>
             </div>
@@ -50,7 +50,7 @@ defineProps({
                         <p class="text-lg font-semibold text-[#2F837D]">
                             {{ course.enrollments }}
                         </p>
-                        <p class="text-xs font-medium text-gray-500">enrolled</p>
+                        <p class="text-xs font-medium text-gray-500">{{ $t('enrolled') }}</p>
                     </div>
                 </div>
             </div>

@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import { Calendar, Search, Plus, ClipboardCheck, Pencil } from "lucide-vue-next";
+import { Plus, Search, Filter, ArrowDownNarrowWide } from "lucide-vue-next";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import PageHeader from "@/Components/PageHeader.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
+import SortDropdown from "@/Components/SortDropdown.vue";
 import Skeleton from "@/Components/Skeleton.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import { formatDate as formatDateUtil, formatTime as formatTimeUtil } from "@/utils/dateFormatter";
@@ -42,6 +43,8 @@ const filters = ref({
     program_id: "",
     status: "",
     search: "",
+    sort_by: "start_date",
+    direction: "desc",
 });
 
 const fetchSessions = async () => {
@@ -51,6 +54,8 @@ const fetchSessions = async () => {
         if (filters.value.program_id) params.append("program_id", filters.value.program_id);
         if (filters.value.status) params.append("status", filters.value.status);
         if (filters.value.search) params.append("search", filters.value.search);
+        params.append("sort_by", filters.value.sort_by);
+        params.append("direction", filters.value.direction);
         params.append("page", currentPage.value);
 
         const { data } = await axios.get(`/api/trainer/attendance/sessions?${params.toString()}`);
@@ -131,7 +136,7 @@ onMounted(() => {
 
             <!-- Filters -->
             <div class="rounded-lg border border-gray-200 bg-white p-4">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
                     <div>
                         <label
                             for="program-filter"
@@ -196,6 +201,39 @@ onMounted(() => {
                                 class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            {{ $t('Sort') }}
+                        </label>
+                        <SortDropdown
+                            :sortColumn="filters.sort_by"
+                            :sortDirection="filters.direction"
+                            :sortOptions="[
+                                { value: 'start_date', label: 'Date' },
+                                { value: 'title', label: 'Session' },
+                                { value: 'status', label: 'Status' },
+                            ]"
+                            @sort="handleSort"
+                            @reset="resetSort"
+                        >
+                            <template #trigger>
+                                <button
+                                    class="w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 text-left bg-white focus:border-[#2f837d] focus:ring-[#2f837d] flex justify-between items-center"
+                                >
+                                    <span class="block truncate text-gray-700">
+                                        {{ filters.sort_by === 'start_date' ? $t('Date') : 
+                                           filters.sort_by === 'title' ? $t('Session') :
+                                           filters.sort_by === 'status' ? $t('Status') : $t('Sort') }}
+                                        <span v-if="filters.sort_by" class="ml-1 text-xs text-gray-500">
+                                            ({{ filters.direction === 'asc' ? 'A-Z' : 'Z-A' }})
+                                        </span>
+                                    </span>
+                                    <ArrowDownNarrowWide class="h-4 w-4 text-gray-400" />
+                                </button>
+                            </template>
+                        </SortDropdown>
                     </div>
 
                     <div class="flex items-end gap-2">

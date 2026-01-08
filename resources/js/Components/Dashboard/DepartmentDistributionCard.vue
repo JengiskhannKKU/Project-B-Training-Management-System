@@ -76,7 +76,7 @@ const donutOptions = computed(() => ({
         <p
             class="relative mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500 md:text-sm"
         >
-            Department Distribution
+            {{ $t('Department Distribution') }}
         </p>
         <div class="relative flex flex-col items-center gap-5 sm:flex-row md:gap-6 lg:gap-8">
             <!-- Donut chart - responsive sizes -->

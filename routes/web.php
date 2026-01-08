@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,6 +30,8 @@ Route::get('/dashboard', $redirectToRoleDashboard)
 Route::get('language/{locale}', function ($locale) {
     if (in_array($locale, ['th', 'en'])) {
         session()->put('locale', $locale);
+        // Set the app locale immediately so HandleInertiaRequests middleware picks it up
+        App::setLocale($locale);
     }
     return redirect()->back();
 })->name('language.switch');
@@ -70,11 +73,11 @@ Route::middleware(['auth'])->group(function () {
 
         $user = Auth::user();
         $canView = $user->id === $certificate->user_id ||
-                   $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && (
-                       $certificate->session?->trainer_id === $user->id ||
-                       $certificate->program?->created_by === $user->id
-                   ));
+            $user->role->name === 'admin' ||
+            ($user->role->name === 'trainer' && (
+                $certificate->session?->trainer_id === $user->id ||
+                $certificate->program?->created_by === $user->id
+            ));
 
         if (!$canView) {
             abort(403, 'Unauthorized to view this certificate');
@@ -274,7 +277,7 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && $session->trainer_id === $user->id);
+            ($user->role->name === 'trainer' && $session->trainer_id === $user->id);
 
         if (!$canView) {
             abort(403, 'Unauthorized to view session certificates');
@@ -297,7 +300,7 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && $program->created_by === $user->id);
+            ($user->role->name === 'trainer' && $program->created_by === $user->id);
 
         if (!$canView) {
             abort(403, 'Unauthorized to view program certificates');

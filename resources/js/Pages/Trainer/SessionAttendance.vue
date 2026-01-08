@@ -90,6 +90,7 @@ const sortColumn = ref("");
 const sortDirection = ref("asc");
 const showExportModal = ref(false);
 const itemsPerPage = ref(10);
+const currentPage = ref(1);
 
 // Format phone number to 012-345-6789
 const formatPhoneNumber = (phone) => {
@@ -514,24 +515,24 @@ onMounted(() => {
 
 <template>
 
-    <Head title="Session Attendance" />
+    <Head :title="$t('Session Attendance')" />
     <TrainerLayout>
         <div class="space-y-6">
             <!-- Go Back Button -->
             <Link href="/trainer/attendance"
                 class="inline-flex items-center gap-2 text-[#2f837d] hover:text-[#26685f] font-medium transition-colors">
                 <ArrowLeft :size="20" />
-                <span>Go back to courses</span>
+                <span>{{ $t('Go back to courses') }}</span>
             </Link>
 
             <!-- Page Header -->
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">
-                        Session Attendance
+                        {{ $t('Session Attendance') }}
                     </h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Track attendance for this training session
+                        {{ $t('Track attendance for this training session') }}
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
@@ -539,21 +540,21 @@ onMounted(() => {
                     <div v-if="lastAutoSaved"
                         class="text-sm text-gray-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
                         <CheckCircle :size="16" class="text-green-600" />
-                        <span class="font-medium">Auto-saved</span>
+                        <span class="font-medium">{{ $t('Auto-saved') }}</span>
                     </div>
                     <!-- Complete Session Button -->
                     <button v-if="!isSessionCompleted" @click="completeSession" :disabled="isCompleting || isLoading"
                         class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                         <CheckCircle :size="20" />
-                        <span v-if="isCompleting">Completing...</span>
-                        <span v-else>Complete Session</span>
+                        <span v-if="isCompleting">{{ $t('Completing...') }}</span>
+                        <span v-else>{{ $t('Complete Session') }}</span>
                     </button>
                     <button v-if="canGenerateCertificates" @click="showGenerateCertificatesModal = true"
                         :disabled="isGeneratingCertificates"
                         class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
                         <Award :size="18" />
-                        <span v-if="isGeneratingCertificates">Generating...</span>
-                        <span v-else>Generate Certificates</span>
+                        <span v-if="isGeneratingCertificates">{{ $t('Generating...') }}</span>
+                        <span v-else>{{ $t('Generate Certificates') }}</span>
                     </button>
                 </div>
             </div>
@@ -570,14 +571,14 @@ onMounted(() => {
                     <AlertTriangle class="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div class="flex-1">
                         <h3 class="text-sm font-semibold text-amber-800 mb-1">
-                            Session Completed
+                            {{ $t('Session Completed') }}
                         </h3>
                         <p class="text-sm text-amber-700">
-                            This session has been marked as completed. The following restrictions apply:
+                            {{ $t('This session has been marked as completed. The following restrictions apply:') }}
                         </p>
                         <ul class="mt-2 text-sm text-amber-700 list-disc list-inside space-y-1">
-                            <li>Attendance records are locked (only admin can modify)</li>
-                            <li>No new enrollments are allowed</li>
+                            <li>{{ $t('Attendance records are locked (only admin can modify)') }}</li>
+                            <li>{{ $t('No new enrollments are allowed') }}</li>
                         </ul>
                     </div>
                 </div>
@@ -586,32 +587,32 @@ onMounted(() => {
             <div class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]">
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <h2 class="text-lg font-semibold text-gray-900">
-                        Certificates ({{ certificates.length }})
+                        {{ $t('Certificates') }} ({{ certificates.length }})
                     </h2>
-                    <span v-if="isLoadingCertificates" class="text-sm text-gray-500">Loading...</span>
+                    <span v-if="isLoadingCertificates" class="text-sm text-gray-500">{{ $t('Loading...') }}</span>
                 </div>
                 <div v-if="!isSessionCompleted"
                     class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    ต้องปิด Session (Completed) ก่อนออกใบรับรอง
+                    {{ $t('Must complete session before generating certificates') }}
                 </div>
                 <div v-if="certificates.length === 0" class="text-sm text-gray-500">
-                    No certificates generated yet.
+                    {{ $t('No certificates generated yet.') }}
                 </div>
                 <div v-else class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 text-sm">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Recipient</th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Code</th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
-                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Issued</th>
-                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-500">Actions</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">{{ $t('Recipient') }}</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">{{ $t('Code') }}</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">{{ $t('Status') }}</th>
+                                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">{{ $t('Issued') }}</th>
+                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-500">{{ $t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             <tr v-for="certificate in certificates" :key="certificate.id">
                                 <td class="px-4 py-2 text-gray-900">
-                                    {{ certificate.user?.name || 'Unknown' }}
+                                    {{ certificate.user?.name || $t('Unknown') }}
                                 </td>
                                 <td class="px-4 py-2 text-gray-600">
                                     {{ certificate.certificate_code || '—' }}
@@ -619,7 +620,7 @@ onMounted(() => {
                                 <td class="px-4 py-2">
                                     <span class="rounded-full px-2 py-1 text-xs font-semibold"
                                         :class="certificate.status === 'valid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                                        {{ certificate.status }}
+                                        {{ $t(certificate.status) }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-2 text-gray-600">
@@ -632,14 +633,14 @@ onMounted(() => {
                                             class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                                         >
                                             <Eye :size="14" />
-                                            View
+                                            {{ $t('View') }}
                                         </Link>
                                         <a
                                             :href="`/api/certificates/${certificate.id}/download`"
                                             class="inline-flex items-center gap-1 rounded-lg border border-emerald-400 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
                                         >
                                             <Download :size="14" />
-                                            Download
+                                            {{ $t('Download') }}
                                         </a>
                                     </div>
                                 </td>
@@ -652,7 +653,7 @@ onMounted(() => {
             <!-- Loading State -->
             <div v-if="isLoading" class="bg-white rounded-[25px] shadow-sm p-12 border border-[#dfe5ef] text-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2f837d] mx-auto mb-4"></div>
-                <p class="text-gray-600">Loading attendance data...</p>
+                <p class="text-gray-600">{{ $t('Loading attendance data...') }}</p>
             </div>
 
             <!-- Session Info Card -->
@@ -661,50 +662,50 @@ onMounted(() => {
                     <Calendar class="h-6 w-6 text-[#2f837d]" />
                     <div class="flex flex-wrap items-center gap-3">
                         <h2 class="text-xl font-semibold text-gray-900">
-                            {{ sessionInfo.title || 'Untitled Session' }}
+                            {{ sessionInfo.title || $t('Untitled Session') }}
                         </h2>
                         <span class="rounded-full px-3 py-1 text-xs font-semibold capitalize"
                             :class="sessionStatusBadgeClass">
-                            {{ sessionInfo.status || 'unknown' }}
+                            {{ $t(sessionInfo.status || 'unknown') }}
                         </span>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Program</p>
+                        <p class="text-sm text-gray-500 mb-1">{{ $t('Program') }}</p>
                         <p class="text-base font-medium text-gray-900">
-                            {{ sessionInfo.program?.name || 'Not found' }}
+                            {{ sessionInfo.program?.name || $t('Not found') }}
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Date</p>
+                        <p class="text-sm text-gray-500 mb-1">{{ $t('Date') }}</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Calendar :size="16" class="text-[#2f837d]" />
-                            {{ formatDate(sessionInfo.start_date) || 'Not found' }}
+                            {{ formatDate(sessionInfo.start_date) || $t('Not found') }}
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Time</p>
+                        <p class="text-sm text-gray-500 mb-1">{{ $t('Time') }}</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <Clock :size="16" class="text-[#2f837d]" />
-                            {{ formatTime(sessionInfo.start_time) || 'Not found' }}
+                            {{ formatTime(sessionInfo.start_time) || $t('Not found') }}
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Location</p>
+                        <p class="text-sm text-gray-500 mb-1">{{ $t('Location') }}</p>
                         <p class="text-base font-medium text-gray-900 flex items-center gap-2">
                             <MapPin :size="16" class="text-[#2f837d]" />
-                            {{ sessionInfo.location || 'Not found' }}
+                            {{ sessionInfo.location || $t('Not found') }}
                         </p>
                     </div>
                 </div>
 
                 <!-- Program Description -->
                 <div class="pt-4 border-t border-gray-200">
-                    <p class="text-sm text-gray-500 mb-2">Description</p>
+                    <p class="text-sm text-gray-500 mb-2">{{ $t('Description') }}</p>
                     <p class="text-base text-gray-900">
-                        {{ sessionInfo.program?.description || 'Not found' }}
+                        {{ sessionInfo.program?.description || $t('Not found') }}
                     </p>
                 </div>
 
@@ -715,25 +716,25 @@ onMounted(() => {
                             <p class="text-2xl font-bold text-gray-900">
                                 {{ attendanceSummary.total }}
                             </p>
-                            <p class="text-sm text-gray-500">Total Trainees</p>
+                            <p class="text-sm text-gray-500">{{ $t('Total Trainees') }}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-green-600">
                                 {{ attendanceSummary.present }}
                             </p>
-                            <p class="text-sm text-gray-500">Present</p>
+                            <p class="text-sm text-gray-500">{{ $t('Present') }}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-red-600">
                                 {{ attendanceSummary.absent }}
                             </p>
-                            <p class="text-sm text-gray-500">Absent</p>
+                            <p class="text-sm text-gray-500">{{ $t('Absent') }}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-2xl font-bold text-gray-600">
                                 {{ attendanceSummary.not_marked }}
                             </p>
-                            <p class="text-sm text-gray-500">Not Marked</p>
+                            <p class="text-sm text-gray-500">{{ $t('Not Marked') }}</p>
                         </div>
                     </div>
                 </div>
@@ -744,7 +745,7 @@ onMounted(() => {
                 <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-6">
                     <!-- Left: Search Bar -->
                     <div class="relative w-full lg:max-w-md">
-                        <input v-model="searchQuery" type="text" placeholder="Search trainees..."
+                        <input v-model="searchQuery" type="text" :placeholder="$t('Search trainees...')"
                             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent" />
                         <Search class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                     </div>
@@ -757,7 +758,7 @@ onMounted(() => {
                             v-model:selectedStatus="selectedStatus"
                             :departments="departments"
                             :statusOptions="['present', 'absent', 'late', 'leave_early', 'not_marked']"
-                            departmentLabel="Department"
+                            :departmentLabel="$t('Department')"
                             @reset="resetFilters"
                         >
                             <template #trigger>
@@ -767,7 +768,7 @@ onMounted(() => {
                                 >
                                     <ListFilterIcon class="h-4 w-4" />
                                     <p>
-                                        Filter
+                                        {{ $t('Filter') }}
                                         <span v-if="selectedDepartment.length + selectedStatus.length > 0" class="ml-1 font-semibold">
                                             ({{ selectedDepartment.length + selectedStatus.length }})
                                         </span>
@@ -781,11 +782,11 @@ onMounted(() => {
                             :sortColumn="sortColumn"
                             :sortDirection="sortDirection"
                             :sortOptions="[
-                                { value: 'id', label: 'ID' },
-                                { value: 'name', label: 'Name' },
-                                { value: 'contact', label: 'Contact' },
-                                { value: 'department', label: 'Department' },
-                                { value: 'status', label: 'Status' },
+                                { value: 'id', label: $t('ID') },
+                                { value: 'name', label: $t('Name') },
+                                { value: 'contact', label: $t('Contact') },
+                                { value: 'department', label: $t('Department') },
+                                { value: 'status', label: $t('Status') },
                             ]"
                             @sort="handleSort"
                             @reset="resetSort"
@@ -797,7 +798,7 @@ onMounted(() => {
                                 >
                                     <ArrowDownNarrowWide class="h-4 w-4" />
                                     <p>
-                                        Sort
+                                        {{ $t('Sort') }}
                                         <span v-if="sortColumn" class="ml-1 font-medium text-xs opacity-90">
                                             : {{ sortColumn.charAt(0).toUpperCase() + sortColumn.slice(1) }}
                                         </span>
@@ -812,7 +813,7 @@ onMounted(() => {
                             class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                         >
                             <Share class="h-4 w-4" />
-                            <p>Export</p>
+                            <p>{{ $t('Export') }}</p>
                         </button>
                     </div>
                 </div>
@@ -826,7 +827,7 @@ onMounted(() => {
                                     <th @click="handleSort({ column: 'id', direction: sortDirection === 'asc' ? 'desc' : 'asc' })"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
-                                            ID
+                                            {{ $t('ID') }}
                                             <ChevronUp v-if="sortColumn === 'id'" class="h-4 w-4" :class="{
                                                 'rotate-180':
                                                     sortDirection === 'desc',
@@ -836,7 +837,7 @@ onMounted(() => {
                                     <th @click="handleSort({ column: 'name', direction: sortDirection === 'asc' ? 'desc' : 'asc' })"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
-                                            Name
+                                            {{ $t('Name') }}
                                             <ChevronUp v-if="sortColumn === 'name'" class="h-4 w-4" :class="{
                                                 'rotate-180':
                                                     sortDirection === 'desc',
@@ -846,7 +847,7 @@ onMounted(() => {
                                     <th @click="handleSort({ column: 'contact', direction: sortDirection === 'asc' ? 'desc' : 'asc' })"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
-                                            Contact
+                                            {{ $t('Contact') }}
                                             <ChevronUp v-if="sortColumn === 'contact'" class="h-4 w-4" :class="{
                                                 'rotate-180':
                                                     sortDirection === 'desc',
@@ -856,7 +857,7 @@ onMounted(() => {
                                     <th @click="handleSort({ column: 'department', direction: sortDirection === 'asc' ? 'desc' : 'asc' })"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
-                                            Department
+                                            {{ $t('Department') }}
                                             <ChevronUp v-if="sortColumn === 'department'" class="h-4 w-4" :class="{
                                                 'rotate-180':
                                                     sortDirection === 'desc',
@@ -866,7 +867,7 @@ onMounted(() => {
                                     <th @click="handleSort({ column: 'status', direction: sortDirection === 'asc' ? 'desc' : 'asc' })"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
-                                            Status
+                                            {{ $t('Status') }}
                                             <ChevronUp v-if="sortColumn === 'status'" class="h-4 w-4" :class="{
                                                 'rotate-180':
                                                     sortDirection === 'desc',
@@ -875,7 +876,7 @@ onMounted(() => {
                                     </th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Mark Attendance
+                                        {{ $t('Mark Attendance') }}
                                     </th>
                                 </tr>
                             </thead>
@@ -924,9 +925,9 @@ onMounted(() => {
                                             <component :is="trainee.status === 'present' ? CheckCircle : XCircle"
                                                 :size="14" />
                                             {{
-                                                trainee.status === 'present' ? 'Present' :
-                                                    trainee.status === 'absent' ? 'Absent' :
-                                                        'Not Marked'
+                                                trainee.status === 'present' ? $t('Present') :
+                                                    trainee.status === 'absent' ? $t('Absent') :
+                                                        $t('Not Marked')
                                             }}
                                         </span>
                                     </td>
@@ -938,10 +939,10 @@ onMounted(() => {
                                                 trainee.status === 'present'
                                                     ? 'bg-green-600 text-white shadow-md'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600'
-                                            ]" title="Mark as present">
+                                            ]" :title="$t('Mark as present')">
                                                 <div class="flex items-center gap-1">
                                                     <CheckCircle :size="14" />
-                                                    <span>Present</span>
+                                                    <span>{{ $t('Present') }}</span>
                                                 </div>
                                             </button>
 
@@ -951,10 +952,10 @@ onMounted(() => {
                                                 trainee.status === 'absent'
                                                     ? 'bg-red-600 text-white shadow-md'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
-                                            ]" title="Mark as absent">
+                                            ]" :title="$t('Mark as absent')">
                                                 <div class="flex items-center gap-1">
                                                     <XCircle :size="14" />
-                                                    <span>Absent</span>
+                                                    <span>{{ $t('Absent') }}</span>
                                                 </div>
                                             </button>
 
@@ -964,8 +965,8 @@ onMounted(() => {
                                                 trainee.status === 'not_marked'
                                                     ? 'bg-gray-600 text-white shadow-md'
                                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            ]" title="Clear marking">
-                                                <span>Clear</span>
+                                            ]" :title="$t('Clear marking')">
+                                                <span>{{ $t('Clear') }}</span>
                                             </button>
                                         </div>
                                     </td>
@@ -978,10 +979,10 @@ onMounted(() => {
                     <div v-if="filteredTrainees.length === 0" class="text-center py-12">
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            No trainees found
+                            {{ $t('No trainees found') }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Try adjusting your search or filter criteria.
+                            {{ $t('Try adjusting your search or filter criteria.') }}
                         </p>
                     </div>
 
@@ -996,7 +997,7 @@ onMounted(() => {
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
                                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
                             ]">
-                                Previous
+                                {{ $t('Previous') }}
                             </button>
 
                             <div class="flex items-center gap-1">
@@ -1029,14 +1030,14 @@ onMounted(() => {
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
                                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
                             ]">
-                                Next
+                                {{ $t('Next') }}
                             </button>
                         </div>
 
                         <!-- Result Counter (Right) -->
                         <div class="text-sm text-gray-600 text-center sm:text-right">
-                            Showing {{ startResult }}-{{ endResult }} of
-                            {{ totalResults }} results
+                            {{ $t('Showing') }} {{ startResult }}-{{ endResult }} {{ $t('of') }}
+                            {{ totalResults }} {{ $t('results') }}
                         </div>
                     </div>
                 </div>
@@ -1048,8 +1049,8 @@ onMounted(() => {
 
 
 
-            <ConfirmationDialog :show="showGenerateCertificatesModal" title="Generate Certificates"
-                message="Generate certificates for all eligible trainees in this session?" confirmText="Generate"
+            <ConfirmationDialog :show="showGenerateCertificatesModal" :title="$t('Generate Certificates')"
+                :message="$t('Generate certificates for all eligible trainees in this session?')" :confirmText="$t('Generate')"
                 confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
                 @close="showGenerateCertificatesModal = false" @cancel="showGenerateCertificatesModal = false" />
         </div>

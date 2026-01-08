@@ -118,7 +118,7 @@ const tabs = [
                                     ]"
                                 >
                                     <component :is="tab.icon" class="w-5 h-5 mr-3" :class="activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'" />
-                                    {{ tab.label }}
+                                    {{ $t(tab.label) }}
                                 </button>
                             </nav>
                         </div>
@@ -141,33 +141,33 @@ const tabs = [
                                 <div v-if="activeTab === 'profile'" key="profile" class="p-8">
                                     <div class="flex items-center justify-between mb-8">
                                         <div>
-                                            <h3 class="text-xl font-bold text-gray-900">Profile Information</h3>
-                                            <p class="text-sm text-gray-500 mt-1">Update your personal details and professional info.</p>
+                                            <h3 class="text-xl font-bold text-gray-900">{{ $t('Profile Information') }}</h3>
+                                            <p class="text-sm text-gray-500 mt-1">{{ $t('Update your personal details and professional info.') }}</p>
                                         </div>
                                         <button @click="saveProfile" :disabled="isSaving" class="btn-primary">
                                             <Save class="w-4 h-4 mr-2" />
-                                            Save Changes
+                                            {{ $t('Save Changes') }}
                                         </button>
                                     </div>
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div class="space-y-6">
                                             <div>
-                                                <label class="form-label">Full Name</label>
+                                                <label class="form-label">{{ $t('Full Name') }}</label>
                                                 <div class="relative">
                                                     <User class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.name" type="text" class="form-input pl-10" />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="form-label">Email Address</label>
+                                                <label class="form-label">{{ $t('Email Address') }}</label>
                                                 <div class="relative">
                                                     <Mail class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.email" type="email" class="form-input pl-10 text-gray-500 bg-gray-50" disabled />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="form-label">Phone Number</label>
+                                                <label class="form-label">{{ $t('Phone Number') }}</label>
                                                 <div class="relative">
                                                     <Phone class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.phone" type="tel" class="form-input pl-10" placeholder="+1 (555) 000-0000" />
@@ -177,21 +177,21 @@ const tabs = [
                                         
                                         <div class="space-y-6">
                                             <div>
-                                                <label class="form-label">Job Title</label>
+                                                <label class="form-label">{{ $t('Job Title') }}</label>
                                                 <div class="relative">
                                                     <Briefcase class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.title" type="text" class="form-input pl-10" />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="form-label">Department</label>
+                                                <label class="form-label">{{ $t('Department') }}</label>
                                                 <div class="relative">
                                                     <Building class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.department" type="text" class="form-input pl-10" />
                                                 </div>
                                             </div>
                                             <div>
-                                                <label class="form-label">Location</label>
+                                                <label class="form-label">{{ $t('Location') }}</label>
                                                 <div class="relative">
                                                     <MapPin class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                                                     <input v-model="profileForm.location" type="text" class="form-input pl-10" />
@@ -200,9 +200,9 @@ const tabs = [
                                         </div>
 
                                         <div class="md:col-span-2">
-                                            <label class="form-label">Bio</label>
+                                            <label class="form-label">{{ $t('Bio') }}</label>
                                             <textarea v-model="profileForm.bio" rows="4" class="form-input" placeholder="Tell us about yourself..."></textarea>
-                                            <p class="text-xs text-gray-500 mt-2">Brief description of your expertise and background.</p>
+                                            <p class="text-xs text-gray-500 mt-2">{{ $t('Brief description of your expertise and background.') }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -211,29 +211,29 @@ const tabs = [
                                 <div v-else-if="activeTab === 'security'" key="security" class="p-8">
                                     <div class="flex items-center justify-between mb-8">
                                         <div>
-                                            <h3 class="text-xl font-bold text-gray-900">Security</h3>
-                                            <p class="text-sm text-gray-500 mt-1">Manage your password and account security.</p>
+                                            <h3 class="text-xl font-bold text-gray-900">{{ $t('Security') }}</h3>
+                                            <p class="text-sm text-gray-500 mt-1">{{ $t('Manage your password and account security.') }}</p>
                                         </div>
                                     </div>
 
                                     <div class="max-w-2xl">
                                         <div class="space-y-6">
                                             <div>
-                                                <label class="form-label">Current Password</label>
+                                                <label class="form-label">{{ $t('Current Password') }}</label>
                                                 <input v-model="passwordForm.current_password" type="password" class="form-input" />
                                             </div>
                                             <div>
-                                                <label class="form-label">New Password</label>
+                                                <label class="form-label">{{ $t('New Password') }}</label>
                                                 <input v-model="passwordForm.password" type="password" class="form-input" />
                                             </div>
                                             <div>
-                                                <label class="form-label">Confirm New Password</label>
+                                                <label class="form-label">{{ $t('Confirm New Password') }}</label>
                                                 <input v-model="passwordForm.password_confirmation" type="password" class="form-input" />
                                             </div>
 
                                             <div class="pt-4">
                                                 <button @click="updatePassword" :disabled="isSaving" class="btn-primary">
-                                                    Update Password
+                                                    {{ $t('Update Password') }}
                                                 </button>
                                             </div>
                                         </div>
@@ -244,19 +244,19 @@ const tabs = [
                                 <div v-else-if="activeTab === 'notifications'" key="notifications" class="p-8">
                                     <div class="flex items-center justify-between mb-8">
                                         <div>
-                                            <h3 class="text-xl font-bold text-gray-900">Notifications</h3>
-                                            <p class="text-sm text-gray-500 mt-1">Choose what updates you want to receive.</p>
+                                            <h3 class="text-xl font-bold text-gray-900">{{ $t('Notifications') }}</h3>
+                                            <p class="text-sm text-gray-500 mt-1">{{ $t('Choose what updates you want to receive.') }}</p>
                                         </div>
                                         <button @click="saveProfile" :disabled="isSaving" class="btn-outline">
-                                            Save Preferences
+                                            {{ $t('Save Preferences') }}
                                         </button>
                                     </div>
 
                                     <div class="space-y-6 max-w-2xl">
                                         <div class="flex items-center justify-between py-4 border-b border-gray-100">
                                             <div>
-                                                <p class="font-medium text-gray-900">Email Updates</p>
-                                                <p class="text-sm text-gray-500">Receive daily summaries of your sessions.</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Email Updates') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Receive daily summaries of your sessions.') }}</p>
                                             </div>
                                             <button 
                                                 @click="notificationForm.email_updates = !notificationForm.email_updates"
@@ -276,8 +276,8 @@ const tabs = [
 
                                         <div class="flex items-center justify-between py-4 border-b border-gray-100">
                                             <div>
-                                                <p class="font-medium text-gray-900">Session Reminders</p>
-                                                <p class="text-sm text-gray-500">Get notified 1 hour before sessions start.</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Session Reminders') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Get notified 1 hour before sessions start.') }}</p>
                                             </div>
                                             <button 
                                                 @click="notificationForm.session_reminders = !notificationForm.session_reminders"
@@ -297,8 +297,8 @@ const tabs = [
 
                                         <div class="flex items-center justify-between py-4">
                                             <div>
-                                                <p class="font-medium text-gray-900">Marketing & Tips</p>
-                                                <p class="text-sm text-gray-500">Receive tips on how to be a better trainer.</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Marketing & Tips') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Receive tips on how to be a better trainer.') }}</p>
                                             </div>
                                             <button 
                                                 @click="notificationForm.marketing = !notificationForm.marketing"
@@ -336,7 +336,7 @@ const tabs = [
                 <div v-if="showToast" class="fixed bottom-6 right-6 z-50">
                     <div class="bg-gray-900 text-white rounded-lg shadow-xl px-4 py-3 flex items-center gap-3">
                         <CheckCircle2 class="w-5 h-5 text-green-400" />
-                        <span class="text-sm font-medium">Changes saved successfully</span>
+                        <span class="text-sm font-medium">{{ $t('Changes saved successfully') }}</span>
                     </div>
                 </div>
             </Transition>

@@ -28,8 +28,8 @@ const searchQuery = ref('');
 const selectedDepartment = ref([]);
 const selectedStatus = ref([]);
 const selectedAssignment = ref('all'); // Assignment is typically singular mode switch
-const sortColumn = ref('');
-const sortDirection = ref('asc');
+const sortColumn = ref('created_at');
+const sortDirection = ref('desc');
 const showExportModal = ref(false);
 const showCreateModal = ref(false);
 const currentPage = ref(1);
@@ -113,7 +113,13 @@ const filteredCourses = computed(() => {
             let aVal = a[sortColumn.value as keyof typeof a];
             let bVal = b[sortColumn.value as keyof typeof b];
 
-            if (typeof aVal === 'string') {
+            if (sortColumn.value === 'created_at') {
+                 // Date sorting
+                 const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                 const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                 aVal = dateA;
+                 bVal = dateB;
+            } else if (typeof aVal === 'string') {
                 aVal = aVal.toLowerCase();
                 bVal = (bVal as string).toLowerCase();
             }
@@ -509,6 +515,7 @@ onMounted(() => {
                             :sortColumn="sortColumn"
                             :sortDirection="sortDirection"
                             :sortOptions="[
+                                { value: 'created_at', label: 'Date' },
                                 { value: 'name', label: 'Course Name' },
                                 { value: 'students_count', label: 'Students' },
                                 { value: 'rating', label: 'Rating' },
