@@ -1,6 +1,6 @@
+@import './toast-theme.css';
+@import './sweetalert-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './toast-theme.css';
-@import './sweetalert-theme.css';
