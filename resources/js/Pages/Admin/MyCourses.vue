@@ -227,7 +227,7 @@ const exportToPDF = () => {
         ]);
 
         // Generate table
-        doc.autoTable({
+        (doc as any).autoTable({
             head: headers,
             body: data,
             startY: 35,
