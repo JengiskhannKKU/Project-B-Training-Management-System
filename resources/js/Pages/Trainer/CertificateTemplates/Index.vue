@@ -5,17 +5,16 @@ import axios from "axios";
 import { useToast } from "vue-toastification";
 import { Plus, Pencil, Trash2, Image } from "lucide-vue-next";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
-import LoadingSpinner from "@/Components/LoadingSpinner.vue";
-import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import Skeleton from "@/Components/Skeleton.vue";
 import TableActionButton from "@/Components/TableActionButton.vue";
 import { formatDate as formatDateUtil } from "@/utils/dateFormatter";
+import { useAlert } from "@/composables/useAlert";
 
 const toast = useToast();
+const alert = useAlert();
 
 const templates = ref([]);
 const isLoading = ref(false);
-const showDeleteModal = ref(false);
-const deleteTarget = ref(null);
 const isDeleting = ref(false);
 
 const ensureCsrf = () => axios.get("/sanctum/csrf-cookie");
@@ -36,25 +35,24 @@ const fetchTemplates = async () => {
     }
 };
 
-const openDeleteModal = (template) => {
-    deleteTarget.value = template;
-    showDeleteModal.value = true;
-};
+const deleteTemplate = async (template) => {
+    const confirmed = await alert.confirm({
+        title: 'Delete Template',
+        message: 'This will permanently delete the certificate template.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+    });
 
-const deleteTemplate = async () => {
-    if (!deleteTarget.value) {
-        return;
-    }
+    if (!confirmed) return;
 
     isDeleting.value = true;
     try {
         await ensureCsrf();
-        await axios.delete(`/api/trainer/certificate-templates/${deleteTarget.value.id}`);
+        await axios.delete(`/api/trainer/certificate-templates/${template.id}`);
         toast.success("Certificate template deleted.");
         templates.value = templates.value.filter(
-            (item) => item.id !== deleteTarget.value.id
+            (item) => item.id !== template.id
         );
-        showDeleteModal.value = false;
     } catch (error) {
         const message =
             error?.response?.data?.message ||
@@ -107,8 +105,32 @@ onMounted(fetchTemplates);
                     </h2>
                 </div>
 
-                <div v-if="isLoading" class="py-10">
-                    <LoadingSpinner size="lg" text="Loading templates..." />
+                <!-- Skeleton Loading State -->
+                <div v-if="isLoading" class="mt-4 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Scope</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Program / Session</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Background</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Active</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Updated</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr v-for="n in 5" :key="n" :class="n % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
+                                <td class="px-4 py-3"><Skeleton variant="text" width="120px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="70px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="100px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="rectangular" width="70px" height="22px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="rectangular" width="60px" height="22px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="80px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="60px" height="16px" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div v-else-if="templates.length === 0" class="py-10 text-center text-sm text-gray-500">
@@ -192,10 +214,25 @@ onMounted(fetchTemplates);
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-6">
+<<<<<<< Updated upstream
                                         <TableActionButton :icon="Trash2" variant="delete" title="Delete"
                                             @click="openDeleteModal(template)" />
                                         <TableActionButton :icon="Pencil" variant="edit" title="Edit"
                                             :href="`/trainer/certificate-templates/${template.id}/edit`" />
+=======
+                                        <TableActionButton
+                                            :icon="Trash2"
+                                            variant="delete"
+                                            title="Delete"
+                                            @click="deleteTemplate(template)"
+                                        />
+                                        <TableActionButton
+                                            :icon="Pencil"
+                                            variant="edit"
+                                            title="Edit"
+                                            :href="`/trainer/certificate-templates/${template.id}/edit`"
+                                        />
+>>>>>>> Stashed changes
                                     </div>
                                 </td>
                             </tr>
@@ -205,11 +242,14 @@ onMounted(fetchTemplates);
             </div>
         </div>
 
+<<<<<<< Updated upstream
         <ConfirmationDialog :show="showDeleteModal" title="Delete Template"
             message="This will permanently delete the certificate template." confirm-text="Delete"
             confirm-button-class="bg-red-600 hover:bg-red-700" @confirm="deleteTemplate"
             @close="showDeleteModal = false" />
 
+=======
+>>>>>>> Stashed changes
         <div v-if="isDeleting" class="fixed inset-0 z-40 bg-black/10"></div>
     </TrainerLayout>
 </template>

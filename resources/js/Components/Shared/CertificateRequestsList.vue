@@ -4,7 +4,7 @@ import { Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 import { FileText, Search, Eye } from "lucide-vue-next";
-import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import Skeleton from "@/Components/Skeleton.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import PageHeader from "@/Components/PageHeader.vue";
 
@@ -225,7 +225,35 @@ onMounted(fetchRequests);
 
         <!-- Table -->
         <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
-            <LoadingSpinner v-if="isLoading" />
+            <!-- Skeleton Loading State -->
+            <div v-if="isLoading" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                            <th v-if="showTrainerColumn" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program/Session</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr v-for="n in 5" :key="n" :class="n % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
+                            <td class="px-6 py-4"><Skeleton variant="text" width="40px" height="16px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="text" width="120px" height="16px" /></td>
+                            <td v-if="showTrainerColumn" class="px-6 py-4"><Skeleton variant="text" width="100px" height="16px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="text" width="70px" height="16px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="text" width="140px" height="16px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="rectangular" width="80px" height="24px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="text" width="90px" height="16px" /></td>
+                            <td class="px-6 py-4"><Skeleton variant="text" width="30px" height="16px" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
             <div v-else-if="requests.length === 0" class="p-8 text-center">
                 <FileText class="mx-auto h-12 w-12 text-gray-400" />

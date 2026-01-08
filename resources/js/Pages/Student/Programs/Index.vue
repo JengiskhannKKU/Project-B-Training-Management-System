@@ -2,14 +2,14 @@
 import { ref, computed, onMounted } from "vue";
 import { Head } from "@inertiajs/vue3";
 import axios from "axios";
-import { useToast } from "vue-toastification";
+import { useNotification } from "@/composables/useNotification";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
-import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import Skeleton from "@/Components/Skeleton.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
 import CourseCard from "@/Components/CourseCard.vue";
 import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen } from "lucide-vue-next";
 
-const toast = useToast();
+const notify = useNotification();
 
 const programs = ref([]);
 const isLoading = ref(false);
@@ -27,7 +27,7 @@ const fetchPrograms = async () => {
         programs.value = [];
         const message = error?.response?.data?.message || "Unable to load courses. Please try again.";
         errorMessage.value = message;
-        toast.error(message);
+        notify.error(message);
     } finally {
         isLoading.value = false;
     }
@@ -140,10 +140,28 @@ const formatDuration = (hours) => {
                     class="mt-4"
                 />
 
-                <div v-if="isLoading" class="mt-6 py-16">
-                    <LoadingSpinner size="lg" text="Loading courses..." />
+                <!-- Skeleton Loaders -->
+                <div
+                    v-if="isLoading"
+                    class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <div v-for="n in 6" :key="n" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        <!-- Image skeleton -->
+                        <Skeleton variant="rectangular" width="100%" height="192px" />
+                        <div class="p-4 space-y-3">
+                            <!-- Title skeleton -->
+                            <Skeleton variant="text" width="80%" height="20px" />
+                            <!-- Rating skeleton -->
+                            <Skeleton variant="text" width="40%" height="16px" />
+                            <!-- Description skeleton -->
+                            <Skeleton variant="text" :rows="2" />
+                            <!-- Price skeleton -->
+                            <Skeleton variant="text" width="30%" height="18px" />
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Actual Content -->
                 <div
                     v-else
                     class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"

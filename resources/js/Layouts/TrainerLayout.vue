@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -12,11 +12,23 @@ import {
     LogOut,
     Calendar,
 } from "lucide-vue-next";
+import axios from "axios";
+import NotificationCenter from "@/Components/NotificationCenter.vue";
+import NotificationBadge from "@/Components/NotificationBadge.vue";
+import Snackbar from "@/Components/Snackbar.vue";
+import { useSnackbar } from "@/composables/useSnackbar";
 
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
+const pendingCertificateRequestCount = ref(0);
 const page = usePage();
+const snackbar = useSnackbar();
+
+// Notification Center state
+const notifications = ref([
+    // Example notifications - replace with actual data from API
+]);
 
 const currentPath = computed(() => page.url);
 
@@ -81,6 +93,40 @@ const roleColor = computed(() => {
     return 'text-gray-600';
 });
 
+const handleMarkAsRead = (notificationId) => {
+    const notification = notifications.value.find(n => n.id === notificationId);
+    if (notification) {
+        notification.read = true;
+    }
+};
+
+const handleDeleteNotification = (notificationId) => {
+    notifications.value = notifications.value.filter(n => n.id !== notificationId);
+};
+
+const handleClearAllNotifications = () => {
+    notifications.value = [];
+};
+
+const fetchPendingCertificateRequestCount = async () => {
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        const response = await axios.get('/api/trainer/certificate-requests/pending-count');
+        if (response.data?.data?.count !== undefined) {
+            pendingCertificateRequestCount.value = response.data.data.count;
+        }
+    } catch (error) {
+        // Silently fail - this is just a badge count
+        console.error('Error fetching pending certificate request count:', error);
+    }
+};
+
+onMounted(() => {
+    fetchPendingCertificateRequestCount();
+    // Refresh count every 60 seconds
+    setInterval(fetchPendingCertificateRequestCount, 60000);
+});
+
 </script>
 
 <template>
@@ -119,7 +165,15 @@ const roleColor = computed(() => {
                                             : 'text-gray-500 group-hover:text-gray-900',
                                     ]"
                                 />
-                                <span class="ml-3">{{ item.name }}</span>
+                                <span class="ml-3 flex-1">{{ item.name }}</span>
+                                <!-- Show badge for Certificate Requests -->
+                                <NotificationBadge
+                                    v-if="item.path === '/trainer/certificate-requests' && pendingCertificateRequestCount > 0"
+                                    :count="pendingCertificateRequestCount"
+                                    color="warning"
+                                    size="sm"
+                                    class="ml-2"
+                                />
                             </Link>
                         </li>
                     </ul>
@@ -148,7 +202,14 @@ const roleColor = computed(() => {
             <!-- Header with Profile -->
             <header>
                 <div class="px-8 py-4 flex justify-end items-center">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-4">
+                        <!-- Notification Center -->
+                        <NotificationCenter
+                            :notifications="notifications"
+                            @mark-as-read="handleMarkAsRead"
+                            @delete="handleDeleteNotification"
+                            @clear-all="handleClearAllNotifications"
+                        />
                         <!-- Avatar with online indicator -->
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
@@ -184,5 +245,16 @@ const roleColor = computed(() => {
                 <slot />
             </div>
         </div>
+
+        <!-- Global Snackbar -->
+        <Snackbar
+            :show="snackbar.state.value.show"
+            :message="snackbar.state.value.message"
+            :variant="snackbar.state.value.variant"
+            :action="snackbar.state.value.action"
+            :position="snackbar.state.value.position"
+            :duration="snackbar.state.value.duration"
+            @close="snackbar.hide()"
+        />
     </div>
 </template>

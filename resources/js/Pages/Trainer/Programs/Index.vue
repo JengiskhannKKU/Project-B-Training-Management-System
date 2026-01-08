@@ -6,6 +6,7 @@ import { Head } from '@inertiajs/vue3';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import CourseCard from '@/Components/CourseCard.vue';
 import CourseModal from '@/Components/CourseModal.vue';
+import Skeleton from '@/Components/Skeleton.vue';
 import {
     Search,
     Archive,
@@ -581,9 +582,37 @@ const mockPrograms = [
                 <div
                     class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden p-6"
                 >
+                    <!-- Skeleton Loading State -->
+                    <div
+                        v-if="isLoadingPrograms"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    >
+                        <div
+                            v-for="n in 6"
+                            :key="n"
+                            class="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                        >
+                            <!-- Image skeleton -->
+                            <Skeleton variant="rectangular" width="100%" height="192px" />
+                            <div class="p-4 space-y-3">
+                                <!-- Title skeleton -->
+                                <Skeleton variant="text" width="80%" height="20px" />
+                                <!-- Rating skeleton -->
+                                <Skeleton variant="text" width="40%" height="16px" />
+                                <!-- Description skeleton -->
+                                <Skeleton variant="text" :rows="2" />
+                                <!-- Details skeleton -->
+                                <div class="flex gap-4">
+                                    <Skeleton variant="text" width="30%" height="16px" />
+                                    <Skeleton variant="text" width="30%" height="16px" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Grid of Course Cards -->
                     <div
-                        v-if="paginatedCourses.length > 0"
+                        v-else-if="paginatedCourses.length > 0"
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         <CourseCard
