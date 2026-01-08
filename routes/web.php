@@ -42,11 +42,40 @@ Route::middleware(['auth'])->group(function () {
         ]);
     })->name('me.enrollments.show');
     Route::get('/me/certificates', function () {
-        return Inertia::render('Student/Certificates/Index');
+        $user = Auth::user();
+        $certificates = \App\Models\Certificate::with(['program', 'session.program'])
+            ->where('user_id', $user->id)
+            ->orderBy('issued_at', 'desc')
+            ->get();
+
+        return Inertia::render('Student/Certificates/Index', [
+            'certificates' => $certificates
+        ]);
     })->name('me.certificates');
+
     Route::get('/certificates/{id}', function ($id) {
+        $certificate = \App\Models\Certificate::with([
+            'user',
+            'program',
+            'session.program',
+            'issuer'
+        ])->findOrFail($id);
+
+        $user = Auth::user();
+        $canView = $user->id === $certificate->user_id ||
+                   $user->role->name === 'admin' ||
+                   ($user->role->name === 'trainer' && (
+                       $certificate->session?->trainer_id === $user->id ||
+                       $certificate->program?->created_by === $user->id
+                   ));
+
+        if (!$canView) {
+            abort(403, 'Unauthorized to view this certificate');
+        }
+
         return Inertia::render('Certificates/Show', [
             'certificateId' => $id,
+            'certificate' => $certificate,
         ]);
     })->name('certificates.show');
 });
@@ -208,14 +237,48 @@ Route::get('/trainer/programs/{id}', function ($id) {
     })->name('trainer.certificate-templates.edit');
 
     Route::get('/sessions/{id}/certificates', function ($id) {
+        $session = \App\Models\TrainingSession::with(['program'])->findOrFail($id);
+
+        $user = Auth::user();
+        $canView = $user->role->name === 'admin' ||
+                   ($user->role->name === 'trainer' && $session->trainer_id === $user->id);
+
+        if (!$canView) {
+            abort(403, 'Unauthorized to view session certificates');
+        }
+
+        $certificates = \App\Models\Certificate::with(['user', 'enrollment'])
+            ->where('session_id', $id)
+            ->orderBy('issued_at', 'desc')
+            ->get();
+
         return Inertia::render('Certificates/SessionCertificates', [
             'sessionId' => $id,
+            'session' => $session,
+            'certificates' => $certificates,
         ]);
     })->name('sessions.certificates');
 
     Route::get('/programs/{id}/certificates', function ($id) {
+        $program = \App\Models\Program::findOrFail($id);
+
+        $user = Auth::user();
+        $canView = $user->role->name === 'admin' ||
+                   ($user->role->name === 'trainer' && $program->created_by === $user->id);
+
+        if (!$canView) {
+            abort(403, 'Unauthorized to view program certificates');
+        }
+
+        $certificates = \App\Models\Certificate::with(['user', 'session'])
+            ->where('program_id', $id)
+            ->orderBy('issued_at', 'desc')
+            ->get();
+
         return Inertia::render('Certificates/ProgramCertificates', [
             'programId' => $id,
+            'program' => $program,
+            'certificates' => $certificates,
         ]);
     })->name('programs.certificates');
 });

@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import { Eye, Trash2, Search } from "lucide-vue-next";
+import { Eye, Trash2, Search, Download } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
@@ -260,14 +260,19 @@ onMounted(fetchCertificates);
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap gap-2">
-                                        <a
-                                            :href="`/api/certificates/${certificate.id}/view`"
-                                            target="_blank"
-                                            rel="noopener"
-                                            class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                        <Link
+                                            :href="`/certificates/${certificate.id}`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                                         >
                                             <Eye :size="14" />
                                             View
+                                        </Link>
+                                        <a
+                                            :href="`/api/certificates/${certificate.id}/download`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-emerald-400 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
+                                        >
+                                            <Download :size="14" />
+                                            Download
                                         </a>
                                         <button
                                             type="button"

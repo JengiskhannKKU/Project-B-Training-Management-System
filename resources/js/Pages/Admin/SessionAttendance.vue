@@ -18,6 +18,8 @@ import {
     XCircle,
     ArrowLeft,
     Award,
+    Eye,
+    Download,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterModal from "@/Components/FilterModal.vue";
@@ -630,6 +632,7 @@ onMounted(() => {
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Code</th>
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500">Issued</th>
+                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-500">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
@@ -650,6 +653,24 @@ onMounted(() => {
                                 </td>
                                 <td class="px-4 py-2 text-gray-600">
                                     {{ certificate.issued_at || '—' }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <Link
+                                            :href="`/certificates/${certificate.id}`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <Eye :size="14" />
+                                            View
+                                        </Link>
+                                        <a
+                                            :href="`/api/certificates/${certificate.id}/download`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-emerald-400 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
+                                        >
+                                            <Download :size="14" />
+                                            Download
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>

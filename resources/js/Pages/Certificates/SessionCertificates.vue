@@ -1,9 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
-import axios from "axios";
-import { useToast } from "vue-toastification";
-import { ArrowLeft, Eye } from "lucide-vue-next";
+import { ArrowLeft, Eye, Download } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
@@ -13,10 +11,17 @@ const props = defineProps({
         type: [Number, String],
         required: true,
     },
+    session: {
+        type: Object,
+        default: null,
+    },
+    certificates: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
-const toast = useToast();
 
 const isAdmin = computed(() => page.props.auth?.user?.role?.name === "admin");
 const layoutComponent = computed(() =>
@@ -26,8 +31,8 @@ const backLink = computed(() =>
     isAdmin.value ? "/admin/attendance" : "/trainer/attendance"
 );
 
-const session = ref(null);
-const certificates = ref([]);
+const session = ref(props.session);
+const certificates = ref(props.certificates || []);
 const isLoading = ref(false);
 
 const sessionStatusBadgeClass = computed(() => {
@@ -63,29 +68,6 @@ const formatDate = (value) => {
     }
     return parsed.toLocaleDateString();
 };
-
-const fetchData = async () => {
-    isLoading.value = true;
-    try {
-        const [sessionResponse, certificateResponse] = await Promise.all([
-            axios.get(`/api/sessions/${props.sessionId}`),
-            axios.get(`/api/sessions/${props.sessionId}/certificates`),
-        ]);
-        session.value = sessionResponse.data?.data ?? null;
-        certificates.value = certificateResponse.data?.data ?? [];
-    } catch (error) {
-        session.value = null;
-        certificates.value = [];
-        const message =
-            error?.response?.data?.message ||
-            "Unable to load session certificates.";
-        toast.error(message);
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-onMounted(fetchData);
 </script>
 
 <template>
@@ -185,15 +167,22 @@ onMounted(fetchData);
                                     {{ formatDate(certificate.issued_at) }}
                                 </td>
                                 <td class="px-4 py-3">
-                                    <a
-                                        :href="`/api/certificates/${certificate.id}/view`"
-                                        target="_blank"
-                                        rel="noopener"
-                                        class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <Eye :size="14" />
-                                        View Certificate
-                                    </a>
+                                    <div class="flex items-center gap-2">
+                                        <Link
+                                            :href="`/certificates/${certificate.id}`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <Eye :size="14" />
+                                            View
+                                        </Link>
+                                        <a
+                                            :href="`/api/certificates/${certificate.id}/download`"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-emerald-400 px-3 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
+                                        >
+                                            <Download :size="14" />
+                                            Download
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
