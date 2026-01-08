@@ -19,9 +19,9 @@ defineProps({
                     <Trophy :size="24" class="text-[#F1C644]" />
                 </div>
                 <div>
-                    <h2 class="text-lg font-bold text-gray-900">Top Trainers</h2>
+                    <h2 class="text-lg font-bold text-gray-900">{{ $t('Top Trainers') }}</h2>
                     <p class="mt-0.5 text-xs text-gray-500">
-                        Highest satisfaction ratings
+                        {{ $t('Highest satisfaction ratings') }}
                     </p>
                 </div>
             </div>
@@ -37,7 +37,7 @@ defineProps({
                         {{ trainer.name }}
                     </p>
                     <p class="mt-0.5 text-xs text-gray-500">
-                        {{ trainer.courses }} courses • {{ trainer.students }} students
+                        {{ trainer.courses }} {{ $t('courses') }} • {{ trainer.students }} {{ $t('Students').toLowerCase() }}
                     </p>
                 </div>
                 <div

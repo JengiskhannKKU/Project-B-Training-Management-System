@@ -11,7 +11,6 @@ import {
     Settings,
     LogOut,
     FileCheck,
-    FileBadge,
     Award,
     Calendar,
 } from "lucide-vue-next";
@@ -62,11 +61,6 @@ const navigationItems = [
         name: "Certificate Templates",
         path: "/admin/certificate-templates",
         icon: Award,
-    },
-    {
-        name: "Certificate Requests",
-        path: "/admin/certificate-requests",
-        icon: FileBadge,
     },
     {
         name: "All Courses",

@@ -13,7 +13,9 @@ import {
     Clock,
     MapPin,
     UserRound,
+    ArrowDownNarrowWide,
 } from "lucide-vue-next";
+import SortDropdown from "@/Components/SortDropdown.vue";
 
 const toast = useToast();
 const enrollments = ref([]);
@@ -21,6 +23,18 @@ const certificates = ref([]);
 const isLoading = ref(false);
 const activeTab = ref("upcoming");
 const cancellingId = ref(null);
+const sortColumn = ref("start_date");
+const sortDirection = ref("desc");
+
+const handleSort = ({ column, direction }) => {
+    sortColumn.value = column;
+    sortDirection.value = direction;
+};
+
+const resetSort = () => {
+    sortColumn.value = "start_date";
+    sortDirection.value = "desc";
+};
 
 const fetchEnrollments = async () => {
     isLoading.value = true;
@@ -130,11 +144,35 @@ const finishedEnrollments = computed(() =>
     )
 );
 
-const visibleEnrollments = computed(() =>
-    activeTab.value === "upcoming"
+const visibleEnrollments = computed(() => {
+    let list = activeTab.value === "upcoming"
         ? upcomingEnrollments.value
-        : finishedEnrollments.value
-);
+        : finishedEnrollments.value;
+
+    if (sortColumn.value) {
+        list = [...list].sort((a, b) => {
+            let aVal, bVal;
+            
+            if (sortColumn.value === 'start_date') {
+                aVal = a.session?.start_date ? new Date(a.session.start_date).getTime() : 0;
+                bVal = b.session?.start_date ? new Date(b.session.start_date).getTime() : 0;
+            } else if (sortColumn.value === 'name') {
+                aVal = (a.program?.name || a.session?.title || "").toLowerCase();
+                bVal = (b.program?.name || b.session?.title || "").toLowerCase();
+            } else if (sortColumn.value === 'status') {
+                aVal = (a.status || "").toLowerCase();
+                bVal = (b.status || "").toLowerCase();
+            }
+
+            if (sortDirection.value === 'asc') {
+                return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+            } else {
+                return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+            }
+        });
+    }
+    return list;
+});
 
 const toAttendCount = computed(() => upcomingEnrollments.value.length);
 const completeCount = computed(
@@ -240,33 +278,56 @@ onMounted(fetchEnrollments);
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold"
-                        :class="
-                            activeTab === 'upcoming'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'text-gray-500'
-                        "
-                        @click="activeTab = 'upcoming'"
-                    >
-                        Upcoming ({{ toAttendCount }})
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-xl px-4 py-2 text-sm font-semibold"
-                        :class="
-                            activeTab === 'finished'
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'text-gray-500'
-                        "
-                        @click="activeTab = 'finished'"
-                    >
-                        Finished ({{ finishedEnrollments.length }})
-                    </button>
+            <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <div class="rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="rounded-xl px-4 py-2 text-sm font-semibold"
+                            :class="
+                                activeTab === 'upcoming'
+                                    ? 'bg-emerald-50 text-emerald-700'
+                                    : 'text-gray-500'
+                            "
+                            @click="activeTab = 'upcoming'"
+                        >
+                            Upcoming ({{ toAttendCount }})
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-xl px-4 py-2 text-sm font-semibold"
+                            :class="
+                                activeTab === 'finished'
+                                    ? 'bg-emerald-50 text-emerald-700'
+                                    : 'text-gray-500'
+                            "
+                            @click="activeTab = 'finished'"
+                        >
+                            Finished ({{ finishedEnrollments.length }})
+                        </button>
+                    </div>
                 </div>
+
+                <SortDropdown
+                    :sortColumn="sortColumn"
+                    :sortDirection="sortDirection"
+                    :sortOptions="[
+                        { value: 'start_date', label: 'Date' },
+                        { value: 'name', label: 'Course Name' },
+                        { value: 'status', label: 'Status' },
+                    ]"
+                    @sort="handleSort"
+                    @reset="resetSort"
+                >
+                    <template #trigger>
+                        <button
+                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:border-[#2f837d] focus:outline-none focus:ring-1 focus:ring-[#2f837d]"
+                        >
+                            <ArrowDownNarrowWide class="h-4 w-4 text-gray-500" />
+                            <span>{{ $t('Sort') }}</span>
+                        </button>
+                    </template>
+                </SortDropdown>
             </div>
 
             <div v-if="isLoading" class="py-16">

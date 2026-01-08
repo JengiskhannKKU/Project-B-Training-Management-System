@@ -88,20 +88,20 @@ onMounted(fetchTemplates);
                         Certificate Templates
                     </h1>
                     <p class="text-sm text-gray-600">
-                        Manage certificate layouts and background assets.
+                        {{ $t('Manage certificate layouts and background assets.') }}
                     </p>
                 </div>
                 <Link href="/admin/certificate-templates/create"
                     class="inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]">
                     <Plus class="h-4 w-4" />
-                    Create Template
+                    {{ $t('Create Template') }}
                 </Link>
             </div>
 
             <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-gray-900">
-                        Templates ({{ templates.length }})
+                        {{ $t('Templates') }} ({{ templates.length }})
                     </h2>
                 </div>
 
@@ -134,7 +134,7 @@ onMounted(fetchTemplates);
                 </div>
 
                 <div v-else-if="templates.length === 0" class="py-10 text-center text-sm text-gray-500">
-                    No certificate templates yet.
+                    {{ $t('No certificate templates yet.') }}
                 </div>
 
                 <div v-else class="mt-4 overflow-x-auto">
@@ -148,10 +148,10 @@ onMounted(fetchTemplates);
                                     Scope
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                    Program / Session
+                                    {{ $t('Program / Session') }}
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                    Background
+                                    {{ $t('Background') }}
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
                                     Active
@@ -160,7 +160,7 @@ onMounted(fetchTemplates);
                                     Updated
                                 </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                                    Action
+                                    {{ $t('Action') }}
                                 </th>
                             </tr>
                         </thead>

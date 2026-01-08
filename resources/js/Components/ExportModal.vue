@@ -61,7 +61,7 @@ const handleExportPDF = () => {
                             <Share class="h-5 w-5 text-white" />
                         </div>
                         <h3 class="text-xl font-bold text-gray-900">
-                            Export Data
+                            {{ $t('Export Data') }}
                         </h3>
                     </div>
                     <button
@@ -74,8 +74,7 @@ const handleExportPDF = () => {
 
                 <!-- Modal Content -->
                 <p class="text-sm text-gray-600 mb-6">
-                    Choose your preferred export format to download the
-                    {{ dataType || activeTab }} data.
+                    {{ $t('Choose your preferred export format to download the {dataType} data.', { dataType: dataType || activeTab }) }}
                 </p>
 
                 <!-- Export Options -->
@@ -91,9 +90,9 @@ const handleExportPDF = () => {
                                 <Download class="h-5 w-5" />
                             </div>
                             <div class="text-left">
-                                <div class="font-semibold">Export as CSV</div>
+                                <div class="font-semibold">{{ $t('Export as CSV') }}</div>
                                 <div class="text-xs opacity-90">
-                                    Download spreadsheet file
+                                    {{ $t('Download spreadsheet file') }}
                                 </div>
                             </div>
                         </div>
@@ -113,9 +112,9 @@ const handleExportPDF = () => {
                                 <FileText class="h-5 w-5" />
                             </div>
                             <div class="text-left">
-                                <div class="font-semibold">Export as PDF</div>
+                                <div class="font-semibold">{{ $t('Export as PDF') }}</div>
                                 <div class="text-xs opacity-75">
-                                    Download document file
+                                    {{ $t('Download document file') }}
                                 </div>
                             </div>
                         </div>
@@ -131,7 +130,7 @@ const handleExportPDF = () => {
                         @click="handleClose"
                         class="w-full px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                     >
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                 </div>
                 </div>

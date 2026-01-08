@@ -35,10 +35,10 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-gray-900">
-                        Student Engagement
+                        {{ $t('Student Engagement') }}
                     </h3>
                     <p class="text-sm text-gray-500">
-                        Current status overview
+                        {{ $t('Participation trends') }}
                     </p>
                 </div>
             </div>
@@ -52,7 +52,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     <div class="flex items-center gap-2">
                         <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
                         <span class="text-sm font-semibold text-gray-700">
-                            Highly Engaged
+                            {{ $t('Active students') }}
                         </span>
                     </div>
                     <span class="text-sm font-bold text-emerald-600">
@@ -66,7 +66,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     ></div>
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ highlyEngaged }} students
+                    {{ highlyEngaged }} {{ $t('students enrolled') }}
                 </p>
             </div>
 
@@ -76,7 +76,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     <div class="flex items-center gap-2">
                         <div class="h-2 w-2 rounded-full bg-amber-500"></div>
                         <span class="text-sm font-semibold text-gray-700">
-                            Moderate
+                            {{ $t('Needs attention') }}
                         </span>
                     </div>
                     <span class="text-sm font-bold text-amber-600">
@@ -90,7 +90,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     ></div>
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ moderate }} students
+                    {{ moderate }} {{ $t('students enrolled') }}
                 </p>
             </div>
 
@@ -100,7 +100,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     <div class="flex items-center gap-2">
                         <div class="h-2 w-2 rounded-full bg-red-500"></div>
                         <span class="text-sm font-semibold text-gray-700">
-                            At Risk
+                            {{ $t('At risk') }}
                         </span>
                     </div>
                     <span class="text-sm font-bold text-red-600">
@@ -114,7 +114,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
                     ></div>
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ atRisk }} students
+                    {{ atRisk }} {{ $t('students at risk') }}
                 </p>
             </div>
         </div>
@@ -122,7 +122,7 @@ const atRiskPercent = total > 0 ? ((props.atRisk / total) * 100).toFixed(1) : 0;
         <!-- Summary -->
         <div class="mt-6 rounded-lg bg-gray-50 p-4">
             <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-600">Total Students</span>
+                <span class="text-sm font-medium text-gray-600">{{ $t('Total Trainees') }}</span>
                 <span class="text-lg font-bold text-gray-900">{{ total }}</span>
             </div>
         </div>

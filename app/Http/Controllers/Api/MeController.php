@@ -96,16 +96,26 @@ class MeController extends Controller
         $user = $request->user()->load('profile');
         $profile = $user->profile;
 
-        if (!$profile || !$profile->avatar_image) {
-            abort(404, 'Avatar not found');
+        if ($profile && $profile->avatar_image) {
+            $mime = $profile->avatar_mime_type ?? 'application/octet-stream';
+
+            return response($profile->avatar_image, 200, [
+                'Content-Type' => $mime,
+                'Content-Length' => strlen($profile->avatar_image),
+            ]);
         }
 
-        $mime = $profile->avatar_mime_type ?? 'application/octet-stream';
+        $fallbackPath = public_path('default-avatar.svg');
+        if (is_file($fallbackPath)) {
+            $fallback = file_get_contents($fallbackPath);
 
-        return response($profile->avatar_image, 200, [
-            'Content-Type' => $mime,
-            'Content-Length' => strlen($profile->avatar_image),
-        ]);
+            return response($fallback, 200, [
+                'Content-Type' => 'image/svg+xml',
+                'Content-Length' => strlen($fallback),
+            ]);
+        }
+
+        abort(404, 'Avatar not found');
     }
 
     /**
@@ -140,15 +150,25 @@ class MeController extends Controller
     {
         $profile = $user->profile;
 
-        if (!$profile || !$profile->avatar_image) {
-            abort(404, 'Avatar not found');
+        if ($profile && $profile->avatar_image) {
+            $mime = $profile->avatar_mime_type ?? 'application/octet-stream';
+
+            return response($profile->avatar_image, 200, [
+                'Content-Type' => $mime,
+                'Content-Length' => strlen($profile->avatar_image),
+            ]);
         }
 
-        $mime = $profile->avatar_mime_type ?? 'application/octet-stream';
+        $fallbackPath = public_path('default-avatar.svg');
+        if (is_file($fallbackPath)) {
+            $fallback = file_get_contents($fallbackPath);
 
-        return response($profile->avatar_image, 200, [
-            'Content-Type' => $mime,
-            'Content-Length' => strlen($profile->avatar_image),
-        ]);
+            return response($fallback, 200, [
+                'Content-Type' => 'image/svg+xml',
+                'Content-Length' => strlen($fallback),
+            ]);
+        }
+
+        abort(404, 'Avatar not found');
     }
 }

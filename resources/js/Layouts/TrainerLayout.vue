@@ -6,7 +6,6 @@ import {
     BookOpen,
     BookCheck,
     Award,
-    FileBadge,
     MessageSquare,
     Settings,
     LogOut,
@@ -23,7 +22,6 @@ import { trans as $t } from "laravel-vue-i18n";
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
-const pendingCertificateRequestCount = ref(0);
 const page = usePage();
 const snackbar = useSnackbar();
 
@@ -59,11 +57,6 @@ const navigationItems = computed(() => [
         name: $t("Certificate Templates"),
         path: "/trainer/certificate-templates",
         icon: Award,
-    },
-    {
-        name: $t("Certificate Requests"),
-        path: "/trainer/certificate-requests",
-        icon: FileBadge,
     },
     {
         name: $t("Feedback"),
@@ -110,23 +103,7 @@ const handleClearAllNotifications = () => {
     notifications.value = [];
 };
 
-const fetchPendingCertificateRequestCount = async () => {
-    try {
-        await axios.get('/sanctum/csrf-cookie');
-        const response = await axios.get('/api/trainer/certificate-requests/pending-count');
-        if (response.data?.data?.count !== undefined) {
-            pendingCertificateRequestCount.value = response.data.data.count;
-        }
-    } catch (error) {
-        // Silently fail - this is just a badge count
-        console.error('Error fetching pending certificate request count:', error);
-    }
-};
-
 onMounted(() => {
-    fetchPendingCertificateRequestCount();
-    // Refresh count every 60 seconds
-    setInterval(fetchPendingCertificateRequestCount, 60000);
 });
 
 </script>
@@ -168,14 +145,6 @@ onMounted(() => {
                                     ]"
                                 />
                                 <span class="ml-3 flex-1">{{ item.name }}</span>
-                                <!-- Show badge for Certificate Requests -->
-                                <NotificationBadge
-                                    v-if="item.path === '/trainer/certificate-requests' && pendingCertificateRequestCount > 0"
-                                    :count="pendingCertificateRequestCount"
-                                    color="warning"
-                                    size="sm"
-                                    class="ml-2"
-                                />
                             </Link>
                         </li>
                     </ul>

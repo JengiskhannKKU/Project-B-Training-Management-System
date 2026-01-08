@@ -14,9 +14,9 @@ defineProps({
         class="rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-lg"
     >
         <div class="mb-6">
-            <h2 class="text-base font-bold text-gray-900">Top Categories</h2>
+            <h2 class="text-base font-bold text-gray-900">{{ $t('Top Categories') }}</h2>
             <p class="mt-1 text-xs text-gray-500">
-                Most popular course categories
+                {{ $t('Most popular course categories') }}
             </p>
         </div>
         <div class="space-y-4">
@@ -45,7 +45,7 @@ defineProps({
                     ></div>
                 </div>
                 <p class="text-xs font-medium text-gray-500">
-                    {{ category.count }} courses
+                    {{ category.count }} {{ $t('courses') }}
                 </p>
             </div>
         </div>
@@ -53,7 +53,7 @@ defineProps({
             href="#"
             class="group mt-6 flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white py-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow"
         >
-            View all categories
+            {{ $t('View all categories') }}
             <ArrowRight
                 :size="14"
                 class="transition-transform duration-200 group-hover:translate-x-0.5"

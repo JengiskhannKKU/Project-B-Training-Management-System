@@ -1,70 +1,96 @@
 <template>
     <div class="language-switcher">
-        <!-- Modern Toggle Switch Design -->
-        <div class="relative inline-flex items-center bg-white rounded-full p-1 shadow-sm border border-gray-200">
-            <!-- Background Slider -->
-            <div 
-                class="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] bg-gradient-to-r from-[#2F837D] to-[#3da094] rounded-full shadow-md transition-transform duration-300 ease-in-out"
-                :class="currentLocale === 'en' ? 'translate-x-full' : 'translate-x-0'"
-            ></div>
-
+        <!-- Minimal Modern Toggle -->
+        <div class="inline-flex items-center gap-1 bg-gray-100 rounded-full p-1">
             <!-- Thai Button -->
-            <a
-                href="/language/th"
-                class="relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#2F837D] focus:ring-offset-2 min-w-[90px] justify-center"
-                :class="currentLocale === 'th' ? 'text-white' : 'text-gray-700 hover:text-[#2F837D]'"
+            <button
+                @click="switchLanguage('th')"
+                type="button"
+                :class="[
+                    'relative px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ease-out flex items-center gap-1.5 min-w-[70px] justify-center focus:outline-none',
+                    currentLocale === 'th' 
+                        ? 'bg-[#2F837D] text-white shadow-sm scale-105' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'
+                ]"
                 :aria-label="currentLocale === 'th' ? 'Currently in Thai' : 'Switch to Thai'"
-                :title="currentLocale === 'th' ? 'ภาษาไทย (ปัจจุบัน)' : 'เปลี่ยนเป็นภาษาไทย'"
-                role="button"
+                :disabled="currentLocale === 'th'"
             >
-                <span class="text-base" :class="currentLocale === 'th' ? 'drop-shadow-sm' : ''">🇹🇭</span>
-                <span class="font-semibold">ไทย</span>
-            </a>
+                <Transition
+                    enter-active-class="transition-all duration-300 ease-out"
+                    enter-from-class="opacity-0 scale-75"
+                    enter-to-class="opacity-100 scale-100"
+                    leave-active-class="transition-all duration-200 ease-in"
+                    leave-from-class="opacity-100 scale-100"
+                    leave-to-class="opacity-0 scale-75"
+                    mode="out-in"
+                >
+                    <span :key="currentLocale === 'th' ? 'active' : 'inactive'" class="flex items-center gap-1.5">
+                        <span class="text-sm">🇹🇭</span>
+                        <span>ไทย</span>
+                    </span>
+                </Transition>
+            </button>
 
             <!-- English Button -->
-            <a
-                href="/language/en"
-                class="relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ease-in-out flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#2F837D] focus:ring-offset-2 min-w-[90px] justify-center"
-                :class="currentLocale === 'en' ? 'text-white' : 'text-gray-700 hover:text-[#2F837D]'"
+            <button
+                @click="switchLanguage('en')"
+                type="button"
+                :class="[
+                    'relative px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ease-out flex items-center gap-1.5 min-w-[70px] justify-center focus:outline-none',
+                    currentLocale === 'en' 
+                        ? 'bg-[#2F837D] text-white shadow-sm scale-105' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'
+                ]"
                 :aria-label="currentLocale === 'en' ? 'Currently in English' : 'Switch to English'"
-                :title="currentLocale === 'en' ? 'English (Current)' : 'Switch to English'"
-                role="button"
+                :disabled="currentLocale === 'en'"
             >
-                <span class="text-base" :class="currentLocale === 'en' ? 'drop-shadow-sm' : ''">🇺🇸</span>
-                <span class="font-semibold">EN</span>
-            </a>
+                <Transition
+                    enter-active-class="transition-all duration-300 ease-out"
+                    enter-from-class="opacity-0 scale-75"
+                    enter-to-class="opacity-100 scale-100"
+                    leave-active-class="transition-all duration-200 ease-in"
+                    leave-from-class="opacity-100 scale-100"
+                    leave-to-class="opacity-0 scale-75"
+                    mode="out-in"
+                >
+                    <span :key="currentLocale === 'en' ? 'active' : 'inactive'" class="flex items-center gap-1.5">
+                        <span class="text-sm">🇺🇸</span>
+                        <span>EN</span>
+                    </span>
+                </Transition>
+            </button>
         </div>
     </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-import { getActiveLanguage } from 'laravel-vue-i18n';
+import { router, usePage } from '@inertiajs/vue3';
+import { getActiveLanguage, loadLanguageAsync } from 'laravel-vue-i18n';
 
 const page = usePage();
-// Default to Thai language
 const currentLocale = computed(() => page.props.locale || getActiveLanguage() || 'th');
+
+const switchLanguage = async (locale) => {
+    if (currentLocale.value === locale) return;
+    
+    await loadLanguageAsync(locale);
+    router.visit(`/language/${locale}`);
+}
 </script>
 
 <style scoped>
 .language-switcher {
-    /* Ensure smooth transitions and proper z-index stacking */
     position: relative;
 }
 
-/* Add subtle hover effect on the entire toggle */
-.language-switcher > div:hover {
-    box-shadow: 0 2px 8px rgba(47, 131, 125, 0.15);
+/* Smooth hover lift effect */
+.language-switcher button:hover:not(:disabled) {
+    transform: translateY(-1px);
 }
 
-/* Smooth gradient animation on the slider */
-@keyframes slideGradient {
-    0%, 100% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
+/* Active button gets subtle pulse */
+.language-switcher button:not(:disabled):active {
+    transform: scale(0.98);
 }
 </style>

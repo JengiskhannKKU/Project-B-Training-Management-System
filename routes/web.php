@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,6 +30,8 @@ Route::get('/dashboard', $redirectToRoleDashboard)
 Route::get('language/{locale}', function ($locale) {
     if (in_array($locale, ['th', 'en'])) {
         session()->put('locale', $locale);
+        // Set the app locale immediately so HandleInertiaRequests middleware picks it up
+        App::setLocale($locale);
     }
     return redirect()->back();
 })->name('language.switch');
@@ -70,11 +73,11 @@ Route::middleware(['auth'])->group(function () {
 
         $user = Auth::user();
         $canView = $user->id === $certificate->user_id ||
-                   $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && (
-                       $certificate->session?->trainer_id === $user->id ||
-                       $certificate->program?->created_by === $user->id
-                   ));
+            $user->role->name === 'admin' ||
+            ($user->role->name === 'trainer' && (
+                $certificate->session?->trainer_id === $user->id ||
+                $certificate->program?->created_by === $user->id
+            ));
 
         if (!$canView) {
             abort(403, 'Unauthorized to view this certificate');
@@ -121,7 +124,29 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.my-courses');
 
     Route::get('/admin/my-courses/{id}', function ($id) {
-        $program = \App\Models\Program::with('creator')->findOrFail($id);
+        $program = \App\Models\Program::with('creator')->find($id);
+
+        if (! $program) {
+            return Inertia::render('Trainer/Programs/Show', [
+                'program' => [
+                    'id' => $id,
+                    'name' => '',
+                    'code' => '',
+                    'category' => '',
+                    'level' => '',
+                    'period' => '',
+                    'time' => '',
+                    'location' => '',
+                    'trainer' => '',
+                    'certificated' => '',
+                    'status' => '',
+                    'description' => '',
+                    'image_url' => null,
+                    'approval_status' => 'pending',
+                    'duration_hours' => null,
+                ],
+            ]);
+        }
 
         return Inertia::render('Trainer/Programs/Show', [
             'program' => [
@@ -140,7 +165,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                 'image_url' => $program->image_url,
                 'approval_status' => $program->approval_status ?? 'pending',
                 'duration_hours' => $program->duration_hours,
-            ]
+            ],
         ]);
     })->name('admin.my-courses.show');
 
@@ -181,16 +206,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         ]);
     })->name('admin.certificate-templates.edit');
 
-    // Certificate Request Routes
-    Route::get('/admin/certificate-requests', function () {
-        return Inertia::render('Admin/CertificateRequests/Index');
-    })->name('admin.certificate-requests.index');
 
-    Route::get('/admin/certificate-requests/{id}', function ($id) {
-        return Inertia::render('Admin/CertificateRequests/Show', [
-            'id' => $id,
-        ]);
-    })->name('admin.certificate-requests.show');
 });
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
@@ -258,23 +274,14 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         ]);
     })->name('trainer.certificate-templates.edit');
 
-    // Certificate Request Routes
-    Route::get('/trainer/certificate-requests', function () {
-        return Inertia::render('Trainer/CertificateRequests/Index');
-    })->name('trainer.certificate-requests.index');
 
-    Route::get('/trainer/certificate-requests/{id}', function ($id) {
-        return Inertia::render('Trainer/CertificateRequests/Show', [
-            'id' => $id,
-        ]);
-    })->name('trainer.certificate-requests.show');
 
     Route::get('/sessions/{id}/certificates', function ($id) {
         $session = \App\Models\TrainingSession::with(['program'])->findOrFail($id);
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && $session->trainer_id === $user->id);
+            ($user->role->name === 'trainer' && $session->trainer_id === $user->id);
 
         if (!$canView) {
             abort(403, 'Unauthorized to view session certificates');
@@ -297,7 +304,7 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
-                   ($user->role->name === 'trainer' && $program->created_by === $user->id);
+            ($user->role->name === 'trainer' && $program->created_by === $user->id);
 
         if (!$canView) {
             abort(403, 'Unauthorized to view program certificates');

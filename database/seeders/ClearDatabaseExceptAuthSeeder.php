@@ -5,11 +5,12 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\File;
 
-class ClearDatabaseSeeder extends Seeder
+class ClearDatabaseExceptAuthSeeder extends Seeder
 {
     /**
-     * Truncate all application tables and reset IDs.
+     * Truncate application tables while keeping auth login data.
      */
     public function run(): void
     {
@@ -24,12 +25,9 @@ class ClearDatabaseSeeder extends Seeder
             'training_sessions',
             'programs',
             'admin_requests',
-            'profiles',
             'auth_sessions',
             'personal_access_tokens',
             'password_reset_tokens',
-            'users',
-            'roles',
             'sessions',
             'jobs',
             'job_batches',
@@ -47,7 +45,9 @@ class ClearDatabaseSeeder extends Seeder
 
         Schema::enableForeignKeyConstraints();
 
-        $this->command?->info('Database cleared successfully.');
+        $this->clearSessionFiles();
+
+        $this->command?->info('Database cleared (auth login preserved).');
     }
 
     private function truncateTable(string $table): void
@@ -59,5 +59,24 @@ class ClearDatabaseSeeder extends Seeder
         }
 
         DB::table($table)->truncate();
+    }
+
+    private function clearSessionFiles(): void
+    {
+        if (config('session.driver') !== 'file') {
+            return;
+        }
+
+        $sessionPath = storage_path('framework/sessions');
+        if (!is_dir($sessionPath)) {
+            return;
+        }
+
+        foreach (File::files($sessionPath) as $file) {
+            if ($file->getFilename() === '.gitignore') {
+                continue;
+            }
+            File::delete($file->getPathname());
+        }
     }
 }

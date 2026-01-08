@@ -104,18 +104,18 @@ const series = ref([
                         <Clock :size="20" class="text-teal-600" />
                     </div>
                     <h3 class="text-base font-bold text-gray-900">
-                        Teaching Hours
+                        {{ $t('Teaching Hours') }}
                     </h3>
                 </div>
                 <p class="mt-2 text-sm text-gray-500">
-                    Last 7 days activity
+                    {{ $t('Last 7 days') }}
                 </p>
             </div>
             <div class="text-right">
                 <p class="text-2xl font-bold text-gray-900">
                     {{ hours.reduce((a, b) => a + b, 0) }}h
                 </p>
-                <p class="text-xs text-gray-500">Total hours</p>
+                <p class="text-xs text-gray-500">{{ $t('Total hours') }}</p>
             </div>
         </div>
 

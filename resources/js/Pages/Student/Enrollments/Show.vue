@@ -16,6 +16,8 @@ import {
     XCircle,
     AlertCircle,
 } from "lucide-vue-next";
+import ReviewForm from "@/Components/ReviewForm.vue";
+import StarRating from "@/Components/StarRating.vue";
 
 const props = defineProps({
     enrollmentId: {
@@ -28,6 +30,13 @@ const toast = useToast();
 const enrollment = ref(null);
 const attendances = ref([]);
 const isLoading = ref(false);
+const existingReview = ref(null);
+const isEditingReview = ref(false);
+const isSubmittingReview = ref(false);
+
+const canReview = computed(() => {
+    return enrollment.value?.status === 'completed';
+});
 
 const fetchEnrollmentDetails = async () => {
     isLoading.value = true;
@@ -50,10 +59,56 @@ const fetchEnrollmentDetails = async () => {
         attendances.value = Array.isArray(attendanceData.data)
             ? attendanceData.data
             : [];
+
+        // Check if review exists for this enrollment
+        if (enrollment.value?.review) {
+            existingReview.value = enrollment.value.review;
+        }
     } catch (error) {
         toast.error("Unable to load enrollment details.");
     } finally {
         isLoading.value = false;
+    }
+};
+
+const handleSubmitReview = async (reviewData) => {
+    isSubmittingReview.value = true;
+    try {
+        if (existingReview.value) {
+            // Update existing review
+            const { data } = await axios.put(
+                `/api/reviews/${existingReview.value.id}`,
+                reviewData
+            );
+            existingReview.value = data.data;
+            isEditingReview.value = false;
+            toast.success("Review updated successfully!");
+        } else {
+            // Create new review
+            const { data } = await axios.post("/api/reviews", {
+                enrollment_id: enrollment.value.id,
+                ...reviewData,
+            });
+            existingReview.value = data.data;
+            toast.success("Thank you for your review!");
+        }
+    } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to submit review.");
+    } finally {
+        isSubmittingReview.value = false;
+    }
+};
+
+const handleDeleteReview = async () => {
+    if (!confirm("Are you sure you want to delete your review?")) return;
+    
+    try {
+        await axios.delete(`/api/reviews/${existingReview.value.id}`);
+        existingReview.value = null;
+        isEditingReview.value = false;
+        toast.success("Review deleted successfully.");
+    } catch (error) {
+        toast.error("Failed to delete review.");
     }
 };
 
@@ -393,6 +448,51 @@ onMounted(fetchEnrollmentDetails);
                             <div class="text-xs text-yellow-600">Late</div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Review Section (only for completed enrollments) -->
+                <div
+                    v-if="canReview"
+                    class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+                >
+                    <template v-if="existingReview && !isEditingReview">
+                        <div class="mb-4 flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                Your Review
+                            </h3>
+                            <div class="flex gap-2">
+                                <button
+                                    class="text-sm text-teal-600 hover:text-teal-700"
+                                    @click="isEditingReview = true"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    class="text-sm text-red-600 hover:text-red-700"
+                                    @click="handleDeleteReview"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <StarRating :model-value="existingReview.rating" readonly size="md" />
+                            <span class="text-sm text-gray-500">
+                                {{ existingReview.rating }} / 5
+                            </span>
+                        </div>
+                        <p v-if="existingReview.comment" class="text-gray-700">
+                            {{ existingReview.comment }}
+                        </p>
+                    </template>
+                    <template v-else>
+                        <ReviewForm
+                            :existingReview="isEditingReview ? existingReview : null"
+                            :loading="isSubmittingReview"
+                            @submit="handleSubmitReview"
+                            @cancel="isEditingReview = false"
+                        />
+                    </template>
                 </div>
             </div>
         </div>

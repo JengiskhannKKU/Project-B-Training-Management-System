@@ -127,7 +127,7 @@ const validateForm = () => {
         errors.value.category = 'Please select a category';
     }
 
-    if (!form.duration_hours || form.duration_hours < 1) {
+    if (isEditMode.value && (!form.duration_hours || form.duration_hours < 1)) {
         errors.value.duration_hours = 'Duration must be at least 1 hour';
     }
 
@@ -157,10 +157,11 @@ const saveDraft = () => {
 const confirmRequest = () => {
     showConfirmDialog.value = false;
     const formPayload = typeof form.data === 'function' ? form.data() : { ...form };
+    const { duration_hours, status, ...payloadBase } = formPayload;
 
     // Add image_url to payload if uploaded
-    const payload = {
-        ...formPayload,
+    const payload: Record<string, unknown> = {
+        ...payloadBase,
         // Map frontend 'title' to backend 'name'
         name: form.title,
         // Ensure description is present (map full_description)
@@ -168,9 +169,11 @@ const confirmRequest = () => {
         image_url: imageUrl.value || null,
         // Include new fields
         code: form.code,
-        duration_hours: form.duration_hours,
-        status: form.status,
     };
+    if (isEditMode.value) {
+        payload.duration_hours = duration_hours;
+        payload.status = status;
+    }
 
     // If consumer wants to skip preview overlays, emit directly
     if (!props.enablePreviewDialogs) {
@@ -446,7 +449,7 @@ const triggerFileInput = () => {
 
 
                 <!-- Duration and Status -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-if="isEditMode" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="duration_hours" class="block text-sm font-medium text-gray-700">
                             Duration (Hours) <span class="text-red-500">*</span>

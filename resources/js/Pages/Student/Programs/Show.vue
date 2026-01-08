@@ -15,6 +15,8 @@ import {
     Mail,
     QrCode,
 } from "lucide-vue-next";
+import ReviewsList from "@/Components/ReviewsList.vue";
+import StarRating from "@/Components/StarRating.vue";
 
 const toast = useToast();
 const page = usePage();
@@ -36,6 +38,10 @@ const showConfirm = ref(false);
 const showSuccess = ref(false);
 const selectedSession = ref(null);
 const enrollLoading = ref(false);
+const reviews = ref([]);
+const averageRating = ref(null);
+const totalReviews = ref(0);
+const isLoadingReviews = ref(false);
 
 const programTitle = computed(() => program.value?.name || "Program");
 
@@ -119,6 +125,22 @@ const fetchSessions = async () => {
         toast.error(message);
     } finally {
         isLoadingSessions.value = false;
+    }
+};
+
+const fetchReviews = async () => {
+    isLoadingReviews.value = true;
+    try {
+        const { data } = await axios.get(
+            `/api/programs/${props.programId}/reviews`
+        );
+        reviews.value = data.data?.reviews || [];
+        averageRating.value = data.data?.average_rating || null;
+        totalReviews.value = data.data?.total_reviews || 0;
+    } catch (error) {
+        reviews.value = [];
+    } finally {
+        isLoadingReviews.value = false;
     }
 };
 
@@ -208,6 +230,7 @@ const seatsLabel = (session) => {
 onMounted(() => {
     fetchProgram();
     fetchSessions();
+    fetchReviews();
 });
 </script>
 
@@ -302,6 +325,26 @@ onMounted(() => {
                                     </li>
                                 </ul>
                             </div>
+                        </div>
+
+                        <!-- Reviews Section -->
+                        <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-semibold text-gray-900">Student Reviews</h2>
+                                <div v-if="averageRating && totalReviews > 0" class="flex items-center gap-2">
+                                    <StarRating :model-value="Math.round(averageRating)" readonly size="sm" />
+                                    <span class="text-sm font-semibold text-gray-900">{{ averageRating }}</span>
+                                    <span class="text-sm text-gray-500">({{ totalReviews }})</span>
+                                </div>
+                            </div>
+                            <LoadingSpinner v-if="isLoadingReviews" text="Loading reviews..." />
+                            <ReviewsList
+                                v-else
+                                :reviews="reviews"
+                                :average-rating="averageRating"
+                                :total-reviews="totalReviews"
+                                :show-title="false"
+                            />
                         </div>
 
                         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
