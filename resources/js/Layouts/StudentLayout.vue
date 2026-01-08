@@ -3,8 +3,10 @@ import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import { BookOpen, BookCheck, Award, Settings, LogOut } from "lucide-vue-next";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import Snackbar from "@/Components/Snackbar.vue";
 import { useSnackbar } from "@/composables/useSnackbar";
+import { trans as $t } from "laravel-vue-i18n";
 
 const showingSidebar = ref(true);
 const page = usePage();
@@ -19,28 +21,28 @@ const currentUser = computed(() => page.props.auth?.user || null);
 
 const currentPath = computed(() => page.url);
 
-const navigationItems = [
+const navigationItems = computed(() => [
     {
-        name: "Courses",
+        name: $t("Courses"),
         path: "/programs",
         icon: BookOpen,
     },
     {
-        name: "My courses",
+        name: $t("My courses"),
         path: "/me/enrollments",
         icon: BookCheck,
     },
     {
-        name: "Certificates",
+        name: $t("Certificates"),
         path: "/me/certificates",
         icon: Award,
     },
     {
-        name: "Setting",
+        name: $t("Setting"),
         path: "/me/profile",
         icon: Settings,
     },
-];
+]);
 
 const isActive = (path) => {
     if (path === "/programs") {
@@ -140,7 +142,7 @@ const handleClearAllNotifications = () => {
                         class="flex items-center p-2 w-full rounded-lg group transition-colors text-[#2F837D] hover:bg-[#2F837D]/20"
                     >
                         <LogOut class="w-5 h-5 transition duration-75" />
-                        <span class="ml-3">Logout</span>
+                        <span class="ml-3">{{ $t('Logout') }}</span>
                     </Link>
                 </div>
             </div>
@@ -160,6 +162,10 @@ const handleClearAllNotifications = () => {
                             @delete="handleDeleteNotification"
                             @clear-all="handleClearAllNotifications"
                         />
+
+                        <!-- Language Switcher -->
+                        <LanguageSwitcher />
+
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
                                 <img
@@ -181,7 +187,7 @@ const handleClearAllNotifications = () => {
                                 {{ currentUser?.email }}
                             </p>
                             <p class="text-xs font-medium" :class="roleColor">
-                                Role: {{ userRole }}
+                                {{ $t('Role') }}: {{ userRole }}
                             </p>
                         </div>
                     </div>

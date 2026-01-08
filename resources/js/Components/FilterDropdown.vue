@@ -9,11 +9,11 @@ const props = defineProps({
     },
     selectedDepartment: {
         type: Array,
-        required: true,
+        default: () => [],
     },
     selectedStatus: {
         type: Array,
-        required: true,
+        default: () => [],
     },
     selectedAssignment: {
         type: String,
@@ -21,7 +21,7 @@ const props = defineProps({
     },
     departments: {
         type: Array,
-        required: true,
+        default: () => [],
     },
     statusOptions: {
         type: Array,
@@ -130,7 +130,7 @@ onUnmounted(() => {
                     class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                 >
                     <ListFilterIcon class="h-4 w-4" />
-                    <p>Filter</p>
+                    <p>{{ $t('Filter') }}</p>
                 </button>
             </slot>
         </div>
@@ -154,7 +154,7 @@ onUnmounted(() => {
                 <!-- Assignment Filter -->
                 <div v-if="showAssignmentFilter">
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                        Assignment
+                        {{ $t('Assignment') }}
                     </label>
                     <div class="bg-gray-50 p-1 rounded-lg flex">
                         <button
@@ -164,7 +164,7 @@ onUnmounted(() => {
                             class="flex-1 py-1.5 text-sm font-medium rounded-md transition-all duration-200"
                             :class="localAssignment === option.value ? 'bg-white text-[#2f837d] shadow-sm' : 'text-gray-500 hover:text-gray-700'"
                         >
-                            {{ option.label }}
+                            {{ $t(option.label) }}
                         </button>
                     </div>
                 </div>
@@ -172,7 +172,7 @@ onUnmounted(() => {
                 <!-- Department Filter -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                        {{ departmentLabel }}
+                        {{ $t(departmentLabel) }}
                     </label>
                     <div class="space-y-1">
                         <div 
@@ -196,7 +196,7 @@ onUnmounted(() => {
                 <!-- Status Filter -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-                        Status
+                        {{ $t('Status') }}
                     </label>
                     <div class="space-y-1">
                         <div 
@@ -206,7 +206,7 @@ onUnmounted(() => {
                             class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 group"
                             :class="localStatus.includes(status) ? 'bg-[#2f837d]/10 text-[#2f837d]' : 'hover:bg-gray-50 text-gray-700'"
                         >
-                            <span class="text-sm font-medium">{{ status }}</span>
+                            <span class="text-sm font-medium">{{ $t(status) }}</span>
                             <div 
                                 class="h-5 w-5 rounded-full border flex items-center justify-center transition-colors"
                                 :class="localStatus.includes(status) ? 'border-[#2f837d] bg-[#2f837d]' : 'border-gray-300 group-hover:border-gray-400'"
@@ -223,13 +223,13 @@ onUnmounted(() => {
                     @click="handleReset"
                     class="flex-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium border border-transparent hover:border-gray-200"
                 >
-                    Clear All
+                    {{ $t('Clear All') }}
                 </button>
                 <button
                     @click="handleApply"
                     class="flex-1 px-3 py-2 text-sm bg-gradient-to-r from-[#2f837d] to-[#257067] text-white rounded-lg hover:shadow-lg transition-all font-medium"
                 >
-                    Apply Filters
+                    {{ $t('Apply Filters') }}
                 </button>
             </div>
         </div>

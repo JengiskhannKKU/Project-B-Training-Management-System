@@ -15,8 +15,10 @@ import {
 import axios from "axios";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
 import NotificationBadge from "@/Components/NotificationBadge.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import Snackbar from "@/Components/Snackbar.vue";
 import { useSnackbar } from "@/composables/useSnackbar";
+import { trans as $t } from "laravel-vue-i18n";
 
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
@@ -32,48 +34,48 @@ const notifications = ref([
 
 const currentPath = computed(() => page.url);
 
-const navigationItems = [
+const navigationItems = computed(() => [
     {
-        name: "Dashboard",
+        name: $t("Dashboard"),
         path: "/trainer",
         icon: LayoutDashboard,
     },
     {
-        name: "My Courses",
+        name: $t("My Courses"),
         path: "/trainer/programs",
         icon: BookOpen,
     },
     {
-        name: "Sessions",
+        name: $t("Sessions"),
         path: "/trainer/sessions",
         icon: Calendar,
     },
     {
-        name: "Attendance",
+        name: $t("Attendance"),
         path: "/trainer/attendance",
         icon: BookCheck,
     },
     {
-        name: "Certificate Templates",
+        name: $t("Certificate Templates"),
         path: "/trainer/certificate-templates",
         icon: Award,
     },
     {
-        name: "Certificate Requests",
+        name: $t("Certificate Requests"),
         path: "/trainer/certificate-requests",
         icon: FileBadge,
     },
     {
-        name: "Feedback",
+        name: $t("Feedback"),
         path: "/trainer/feedback",
         icon: MessageSquare,
     },
     {
-        name: "Settings",
+        name: $t("Setting"),
         path: "/me/profile",
         icon: Settings,
     },
-];
+]);
 
 const isActive = (path) => {
     return currentPath.value === path;
@@ -188,7 +190,7 @@ onMounted(() => {
                         class="flex items-center p-2 w-full rounded-lg group transition-colors text-[#2F837D] hover:bg-[#2F837D]/20"
                     >
                         <LogOut class="w-5 h-5 transition duration-75" />
-                        <span class="ml-3">Logout</span>
+                        <span class="ml-3">{{ $t('Logout') }}</span>
                     </Link>
                 </div>
             </div>
@@ -210,6 +212,10 @@ onMounted(() => {
                             @delete="handleDeleteNotification"
                             @clear-all="handleClearAllNotifications"
                         />
+
+                        <!-- Language Switcher -->
+                        <LanguageSwitcher />
+
                         <!-- Avatar with online indicator -->
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
@@ -233,7 +239,7 @@ onMounted(() => {
                                 {{ page.props.auth?.user?.email }}
                             </p>
                             <p class="text-xs font-medium" :class="roleColor">
-                                Role: {{ userRole }}
+                                {{ $t('Role') }}: {{ userRole }}
                             </p>
                         </div>
                     </div>

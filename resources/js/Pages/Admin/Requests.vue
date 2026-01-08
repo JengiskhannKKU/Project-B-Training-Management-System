@@ -529,15 +529,15 @@ onMounted(() => {
         <div class="space-y-6">
             <!-- API Login Banner -->
             <div v-if="showApiLogin" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 space-y-3">
-                <div class="font-semibold">API auth required (fallback)</div>
-                <p class="text-sm">Enter admin credentials to store a Bearer token and retry.</p>
+                <div class="font-semibold">{{ $t('API Auth Required') }}</div>
+                <p class="text-sm">{{ $t('API Auth Description') }}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="text-xs text-gray-700">Email</label>
+                        <label class="text-xs text-gray-700">{{ $t('Email') }}</label>
                         <input v-model="apiEmail" type="email" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
                     </div>
                     <div>
-                        <label class="text-xs text-gray-700">Password</label>
+                        <label class="text-xs text-gray-700">{{ $t('Password') }}</label>
                         <input v-model="apiPassword" type="password" class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
                     </div>
                 </div>
@@ -548,7 +548,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-2 rounded-md bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-60"
                     >
                         <span v-if="apiLoginLoading" class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                        Save API Token
+                        {{ $t('Save API Token') }}
                     </button>
                     <p v-if="apiLoginError" class="text-sm text-red-600">{{ apiLoginError }}</p>
                 </div>
@@ -557,9 +557,9 @@ onMounted(() => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Program Requests</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ $t('Program Requests') }}</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage trainer-submitted programs: approve or reject with notes.
+                        {{ $t('Manage requests description') }}
                     </p>
                 </div>
             </div>
@@ -570,10 +570,10 @@ onMounted(() => {
                     <BookOpen class="h-6 w-6 text-[#2f837d]" />
                     <div>
                         <h2 class="text-xl font-semibold text-gray-900">
-                            Program Requests ({{ totalCoursesCount }})
+                            {{ $t('Program Requests') }} ({{ totalCoursesCount }})
                         </h2>
                         <p class="text-sm text-gray-500">
-                            Approve or reject trainer submissions
+                            {{ $t('Requests count description') }}
                         </p>
                     </div>
                 </div>
@@ -585,7 +585,7 @@ onMounted(() => {
                         <input
                             v-model="searchQuery"
                             type="text"
-                            placeholder="Search requests..."
+                            :placeholder="$t('Search requests...')"
                             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         />
                         <Search class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />

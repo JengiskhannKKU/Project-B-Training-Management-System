@@ -448,9 +448,9 @@ watch(
         <div class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+                    <h1 class="text-3xl font-bold text-gray-900">{{ $t('Users') }}</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Manage all users in the system
+                        {{ $t('Manage users description') }}
                     </p>
                 </div>
             </div>
@@ -481,7 +481,7 @@ watch(
                         ]"
                         @click="activeTab = 'trainees'"
                     >
-                        Trainees
+                        {{ $t('Trainees') }}
                     </button>
                     <button
                         :class="[
@@ -492,7 +492,7 @@ watch(
                         ]"
                         @click="activeTab = 'trainers'"
                     >
-                        Trainers
+                        {{ $t('Trainers') }}
                     </button>
                 </div>
             </div>
@@ -521,7 +521,7 @@ watch(
                         <input
                             v-model="searchQuery"
                             type="text"
-                            placeholder="Search users..."
+                            :placeholder="$t('Search users...')"
                             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         />
                         <Search
@@ -545,7 +545,7 @@ watch(
                                 >
                                     <ListFilterIcon class="h-4 w-4" />
                                     <p>
-                                        Filter
+                                        {{ $t('Filter') }}
                                         <span v-if="selectedDepartment.length + selectedStatus.length > 0" class="ml-1 font-semibold">
                                             ({{ selectedDepartment.length + selectedStatus.length }})
                                         </span>
@@ -568,7 +568,7 @@ watch(
                                 >
                                     <ArrowDownNarrowWide class="h-4 w-4" />
                                     <p>
-                                        Sort
+                                        {{ $t('Sort') }}
                                         <span v-if="sortColumn" class="ml-1 font-medium text-xs opacity-90">
                                             : {{ sortColumn.charAt(0).toUpperCase() + sortColumn.slice(1) }}
                                         </span>
@@ -583,7 +583,7 @@ watch(
                             class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
                         >
                             <Share class="h-4 w-4" />
-                            <p>Export</p>
+                            <p>{{ $t('Export') }}</p>
                         </button>
                     </div>
                 </div>
@@ -600,7 +600,7 @@ watch(
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            ID
+                                            {{ $t('ID') }}
                                             <ChevronUp
                                                 v-if="sortColumn === 'id'"
                                                 class="h-4 w-4"
@@ -617,7 +617,7 @@ watch(
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            Name
+                                            {{ $t('Name') }}
                                             <ChevronUp
                                                 v-if="sortColumn === 'name'"
                                                 class="h-4 w-4"
@@ -634,7 +634,7 @@ watch(
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            Contact
+                                            {{ $t('Contact') }}
                                             <ChevronUp
                                                 v-if="sortColumn === 'contact'"
                                                 class="h-4 w-4"
@@ -651,7 +651,7 @@ watch(
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            Department
+                                            {{ $t('Department') }}
                                             <ChevronUp
                                                 v-if="
                                                     sortColumn === 'department'
@@ -670,7 +670,7 @@ watch(
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            Status
+                                            {{ $t('Status') }}
                                             <ChevronUp
                                                 v-if="sortColumn === 'status'"
                                                 class="h-4 w-4"
@@ -685,7 +685,7 @@ watch(
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
-                                        Actions
+                                        {{ $t('Actions') }}
                                     </th>
                                 </tr>
                             </thead>

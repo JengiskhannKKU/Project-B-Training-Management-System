@@ -29,7 +29,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Log in" />
+    <Head :title="$t('Log in')" />
 
     <div class="pt-4 pl-6 z-50 w-auto">
         <img
@@ -59,10 +59,10 @@ const submit = () => {
                 <!-- Header -->
                 <div class="text-center lg:text-left">
                     <h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-                        Log in
+                        {{ $t('Log in') }}
                     </h2>
                     <p class="mt-3 text-base text-gray-600">
-                        Welcome back! Please enter your details.
+                        {{ $t('Welcome back! Please enter your details.') }}
                     </p>
                 </div>
 
@@ -78,7 +78,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="mt-8 space-y-6">
                     <div class="space-y-5">
                         <div>
-                            <InputLabel for="email" value="Email" class="text-sm font-semibold text-gray-700" />
+                            <InputLabel for="email" :value="$t('Email')" class="text-sm font-semibold text-gray-700" />
                             <TextInput
                                 id="email"
                                 type="email"
@@ -87,13 +87,13 @@ const submit = () => {
                                 required
                                 autofocus
                                 autocomplete="username"
-                                placeholder="Enter your email"
+                                :placeholder="$t('Enter your email')"
                             />
                             <InputError class="mt-2" :message="form.errors.email" />
                         </div>
 
                         <div>
-                            <InputLabel for="password" value="Password" class="text-sm font-semibold text-gray-700" />
+                            <InputLabel for="password" :value="$t('Password')" class="text-sm font-semibold text-gray-700" />
                             <TextInput
                                 id="password"
                                 type="password"
@@ -101,7 +101,7 @@ const submit = () => {
                                 v-model="form.password"
                                 required
                                 autocomplete="current-password"
-                                placeholder="Enter your password"
+                                :placeholder="$t('Enter your password')"
                             />
                             <InputError
                                 class="mt-2"
@@ -118,7 +118,7 @@ const submit = () => {
                                 class="transition-all duration-200"
                             />
                             <span class="ms-2 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200"
-                                >Remember for 30 days</span
+                                >{{ $t('Remember for 30 days') }}</span
                             >
                         </label>
 
@@ -127,7 +127,7 @@ const submit = () => {
                             :href="route('password.request')"
                             class="text-sm font-semibold text-[#3D9792] hover:text-[#2d7773] focus:outline-none focus:underline transition-colors duration-200"
                         >
-                            Forgot password?
+                            {{ $t('Forgot password?') }}
                         </Link>
                     </div>
 
@@ -142,9 +142,9 @@ const submit = () => {
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Signing in...
+                                {{ $t('Signing in...') }}
                             </span>
-                            <span v-else>Sign in</span>
+                            <span v-else>{{ $t('Sign in') }}</span>
                         </PrimaryButton>
                     </div>
                 </form>
@@ -155,7 +155,7 @@ const submit = () => {
                         <div class="w-full border-t border-gray-300"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="px-4 bg-white font-medium">Or continue with</span>
+                        <span class="px-4 bg-white font-medium">{{ $t('Or continue with') }}</span>
                     </div>
                 </div>
 
@@ -182,17 +182,17 @@ const submit = () => {
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                         />
                     </svg>
-                    Continue with Google
+                    {{ $t('Continue with Google') }}
                 </a>
 
                 <!-- Sign Up Link -->
                 <p class="text-center text-sm text-gray-600">
-                    Don't have an account?
+                    {{ $t("Don't have an account?") }}
                     <Link
                         :href="route('register')"
                         class="font-semibold text-[#3D9792] hover:text-[#2d7773] transition-colors duration-200"
                     >
-                        Sign up
+                        {{ $t('Sign up') }}
                     </Link>
                 </p>
             </div>
