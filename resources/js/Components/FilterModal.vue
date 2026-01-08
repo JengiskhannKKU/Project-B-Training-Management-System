@@ -18,6 +18,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    selectedAssignment: {
+        type: String,
+        default: "all",
+    },
     departments: {
         type: Array,
         required: true,
@@ -30,6 +34,10 @@ const props = defineProps({
         type: String,
         default: "Department",
     },
+    showAssignmentFilter: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits([
@@ -37,6 +45,7 @@ const emit = defineEmits([
     "reset",
     "update:selectedDepartment",
     "update:selectedStatus",
+    "update:selectedAssignment",
 ]);
 
 const handleClose = () => {
@@ -91,6 +100,28 @@ const handleReset = () => {
 
                 <!-- Modal Content -->
                 <div class="space-y-4">
+                    <!-- Assignment Filter (My Courses) -->
+                    <div v-if="showAssignmentFilter">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                            Assignment
+                        </label>
+                        <select
+                            :value="selectedAssignment"
+                            @input="
+                                $emit(
+                                    'update:selectedAssignment',
+                                    $event.target.value
+                                )
+                            "
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
+                        >
+                            <option value="all">All Courses</option>
+                            <option value="my">My Courses</option>
+                        </select>
+                    </div>
+
                     <!-- Department Filter -->
                     <div>
                         <label

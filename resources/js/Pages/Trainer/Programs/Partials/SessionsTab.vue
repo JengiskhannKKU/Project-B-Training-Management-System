@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Search, ListFilter, ArrowDownNarrowWide, Share, Award } from 'lucide-vue-next';
+import { formatDate, formatTime } from '@/utils/dateFormatter';
 
 defineProps<{
     sessions: Array<{
@@ -79,18 +80,19 @@ const getStatusBadgeClass = (status: string) => {
                         <p>Export</p>
                     </button>
 
-                    <button @click="emit('add-session')" class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="emit('add-session')" class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Add Sessions
+                        <span>Add Sessions</span>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Sessions Table -->
-        <div class="rounded-lg bg-white shadow-sm overflow-x-auto">
+        <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
+            <div class="overflow-x-auto">
             <table class="w-full min-w-[640px]">
                 <thead class="border-b border-gray-200 bg-gray-50">
                     <tr>
@@ -105,10 +107,18 @@ const getStatusBadgeClass = (status: string) => {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <tr v-for="session in sessions" :key="session.id" class="hover:bg-gray-50">
+                    <tr
+                        v-for="(session, index) in sessions"
+                        :key="session.id"
+                        :class="[
+                            'transition-colors',
+                            index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                            'hover:bg-gray-100'
+                        ]"
+                    >
                         <td class="px-4 py-3 text-sm text-gray-900">{{ session.display_id || session.id }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.date }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.time }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(session.date) }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatTime(session.time) }}</td>
                         <td class="px-4 py-3 text-sm text-gray-900">{{ session.session }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ session.location }}</td>
                         <td class="px-4 py-3 text-sm">
@@ -152,6 +162,7 @@ const getStatusBadgeClass = (status: string) => {
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- Pagination -->

@@ -13,6 +13,7 @@ import {
     ListFilterIcon,
     ArrowDownNarrowWide,
     Share,
+    Plus,
 } from 'lucide-vue-next';
 import ExportModal from '@/Components/ExportModal.vue';
 import FilterModal from '@/Components/FilterModal.vue';
@@ -339,9 +340,18 @@ const fetchPrograms = async () => {
         await ensureCsrf();
         const { data } = await axios.get('/api/trainer/requests');
         const list = data?.data || data || [];
-        programs.value = list
+        const mappedPrograms = list
             .filter((r: any) => r.target_type === 'program')
             .map(mapProgramFromRequest);
+
+        // Sort programs by ID or created_at in descending order (newest first)
+        programs.value = mappedPrograms.sort((a: any, b: any) => {
+            // Try to sort by created_at if available, otherwise by id
+            if (a.created_at && b.created_at) {
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            }
+            return (b.id || 0) - (a.id || 0);
+        });
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
@@ -462,10 +472,10 @@ const mockPrograms = [
                 </div>
                 <button
                     @click="showCreateModal = true"
-                    class="inline-flex items-center gap-2 rounded-full bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#266a66]"
+                    class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
                 >
-                    <span class="text-lg leading-none">+</span>
-                    Create Course
+                    <Plus :size="20" />
+                    <span>Create Course</span>
                 </button>
             </div>
 

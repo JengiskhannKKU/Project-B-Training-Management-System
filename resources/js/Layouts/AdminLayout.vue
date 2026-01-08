@@ -57,7 +57,7 @@ const navigationItems = [
         icon: FileBadge,
     },
     {
-        name: "My Courses",
+        name: "All Courses",
         path: "/admin/my-courses",
         icon: BookOpen,
     },

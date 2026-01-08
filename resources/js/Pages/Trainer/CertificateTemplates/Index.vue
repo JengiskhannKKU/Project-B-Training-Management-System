@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Image } from "lucide-vue-next";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import TableActionButton from "@/Components/TableActionButton.vue";
 
 const toast = useToast();
 
@@ -103,7 +104,7 @@ onMounted(fetchTemplates);
                 </Link>
             </div>
 
-            <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] p-6">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-gray-900">
                         Templates ({{ templates.length }})
@@ -146,7 +147,15 @@ onMounted(fetchTemplates);
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            <tr v-for="template in templates" :key="template.id">
+                            <tr
+                                v-for="(template, index) in templates"
+                                :key="template.id"
+                                :class="[
+                                    'transition-colors',
+                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                    'hover:bg-gray-100'
+                                ]"
+                            >
                                 <td class="px-4 py-3 text-gray-900">
                                     {{ template.name }}
                                 </td>
@@ -194,22 +203,19 @@ onMounted(fetchTemplates);
                                     {{ formatDate(template.updated_at) }}
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <Link
-                                            :href="`/trainer/certificate-templates/${template.id}/edit`"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                                        >
-                                            <Pencil class="h-3.5 w-3.5" />
-                                            Edit
-                                        </Link>
-                                        <button
-                                            type="button"
+                                    <div class="flex items-center gap-6">
+                                        <TableActionButton
+                                            :icon="Trash2"
+                                            variant="delete"
+                                            title="Delete"
                                             @click="openDeleteModal(template)"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                            Delete
-                                        </button>
+                                        />
+                                        <TableActionButton
+                                            :icon="Pencil"
+                                            variant="edit"
+                                            title="Edit"
+                                            :href="`/trainer/certificate-templates/${template.id}/edit`"
+                                        />
                                     </div>
                                 </td>
                             </tr>

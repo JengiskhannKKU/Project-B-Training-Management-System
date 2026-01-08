@@ -1,12 +1,11 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import { Calendar, Search } from "lucide-vue-next";
+import { Calendar, Search, ClipboardCheck } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import PageHeader from "@/Components/PageHeader.vue";
-import SimplePagination from "@/Components/SimplePagination.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 
@@ -17,12 +16,31 @@ const programs = ref([]);
 const isLoading = ref(false);
 const currentPage = ref(1);
 const totalPages = ref(1);
+const totalResults = ref(0);
+const itemsPerPage = ref(10);
 
 const filters = ref({
     program_id: "",
     status: "",
     search: "",
 });
+
+const startResult = computed(() => {
+    if (totalResults.value === 0) return 0;
+    return (currentPage.value - 1) * itemsPerPage.value + 1;
+});
+
+const endResult = computed(() => {
+    const end = currentPage.value * itemsPerPage.value;
+    return end > totalResults.value ? totalResults.value : end;
+});
+
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+        fetchSessions();
+    }
+};
 
 const fetchSessions = async () => {
     isLoading.value = true;
@@ -38,6 +56,8 @@ const fetchSessions = async () => {
         sessions.value = data?.data?.data || [];
         totalPages.value = data?.data?.last_page || 1;
         currentPage.value = data?.data?.current_page || 1;
+        totalResults.value = data?.data?.total || 0;
+        itemsPerPage.value = data?.data?.per_page || 10;
     } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to load sessions");
         sessions.value = [];
@@ -70,12 +90,6 @@ const resetFilters = () => {
     fetchSessions();
 };
 
-const changePage = (page) => {
-    if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
-        fetchSessions();
-    }
-};
 
 const formatDate = (value) => {
     if (!value) return "—";
@@ -196,7 +210,7 @@ onMounted(() => {
             </div>
 
             <!-- Sessions Table -->
-            <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
                 <LoadingSpinner v-if="isLoading" />
 
                 <div v-else-if="sessions.length === 0" class="p-8 text-center">
@@ -258,11 +272,15 @@ onMounted(() => {
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="divide-y divide-gray-200">
                             <tr
-                                v-for="session in sessions"
+                                v-for="(session, index) in sessions"
                                 :key="session.id"
-                                class="hover:bg-gray-50"
+                                :class="[
+                                    'transition-colors',
+                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                    'hover:bg-gray-100'
+                                ]"
                             >
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">
                                     {{ session.title }}
@@ -293,9 +311,10 @@ onMounted(() => {
                                 >
                                     <Link
                                         :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
-                                        class="text-[#2f837d] hover:text-[#266a66]"
+                                        class="inline-flex items-center gap-1.5 text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
+                                        title="Mark Attendance"
                                     >
-                                        Mark Attendance
+                                        <ClipboardCheck class="h-5 w-5" />
                                     </Link>
                                 </td>
                             </tr>
@@ -303,13 +322,80 @@ onMounted(() => {
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <SimplePagination
+                <!-- Pagination and Result Counter -->
+                <div
                     v-if="sessions.length > 0"
-                    :currentPage="currentPage"
-                    :totalPages="totalPages"
-                    @change="changePage"
-                />
+                    class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200"
+                >
+                    <!-- Pagination (Left) -->
+                    <div class="flex items-center gap-2">
+                        <button
+                            @click="goToPage(currentPage - 1)"
+                            :disabled="currentPage === 1"
+                            :class="[
+                                'px-3 py-1 rounded border transition-colors',
+                                currentPage === 1
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                            ]"
+                        >
+                            Previous
+                        </button>
+
+                        <div class="flex items-center gap-1">
+                            <template
+                                v-for="page in totalPages"
+                                :key="page"
+                            >
+                                <button
+                                    v-if="
+                                        page === 1 ||
+                                        page === totalPages ||
+                                        (page >= currentPage - 1 &&
+                                            page <= currentPage + 1)
+                                    "
+                                    @click="goToPage(page)"
+                                    :class="[
+                                        'px-3 py-1 rounded border transition-colors',
+                                        currentPage === page
+                                            ? 'bg-[#2f837d] text-white border-[#2f837d]'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                                    ]"
+                                >
+                                    {{ page }}
+                                </button>
+                                <span
+                                    v-else-if="
+                                        page === currentPage - 2 ||
+                                        page === currentPage + 2
+                                    "
+                                    class="px-2 text-gray-500"
+                                >
+                                    ...
+                                </span>
+                            </template>
+                        </div>
+
+                        <button
+                            @click="goToPage(currentPage + 1)"
+                            :disabled="currentPage === totalPages"
+                            :class="[
+                                'px-3 py-1 rounded border transition-colors',
+                                currentPage === totalPages
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                            ]"
+                        >
+                            Next
+                        </button>
+                    </div>
+
+                    <!-- Result Counter (Right) -->
+                    <div class="text-sm text-gray-600">
+                        Showing {{ startResult }}-{{ endResult }} of
+                        {{ totalResults }} results
+                    </div>
+                </div>
             </div>
         </div>
     </AdminLayout>

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { X, Calendar, Clock, MapPin } from 'lucide-vue-next';
+import { formatDate, formatTime } from '@/utils/dateFormatter';
 
 interface Session {
     id: number;
@@ -103,7 +104,7 @@ const programBaseUrl = computed(() => {
                         </div>
                         <div class="flex items-center gap-2 text-sm text-gray-600">
                             <Clock :size="16" class="text-gray-400" />
-                            <span>{{ session.date }} | {{ session.time }}</span>
+                            <span>{{ formatDate(session.date) }} | {{ formatTime(session.time) }}</span>
                         </div>
                     </Link>
                 </div>
@@ -119,7 +120,7 @@ const programBaseUrl = computed(() => {
                     </p>
                     <Link
                         :href="`${programBaseUrl}/${requestId || courseId}`"
-                        class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#26685f] transition-colors"
+                        class="mt-4 bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
                     >
                         Create Session
                     </Link>

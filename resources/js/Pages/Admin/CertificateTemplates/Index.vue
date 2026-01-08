@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Image } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import TableActionButton from "@/Components/TableActionButton.vue";
 
 const toast = useToast();
 
@@ -194,22 +195,19 @@ onMounted(fetchTemplates);
                                     {{ formatDate(template.updated_at) }}
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2">
-                                        <Link
-                                            :href="`/admin/certificate-templates/${template.id}/edit`"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                                        >
-                                            <Pencil class="h-3.5 w-3.5" />
-                                            Edit
-                                        </Link>
-                                        <button
-                                            type="button"
+                                    <div class="flex items-center gap-6">
+                                        <TableActionButton
+                                            :icon="Trash2"
+                                            variant="delete"
+                                            title="Delete"
                                             @click="openDeleteModal(template)"
-                                            class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-                                        >
-                                            <Trash2 class="h-3.5 w-3.5" />
-                                            Delete
-                                        </button>
+                                        />
+                                        <TableActionButton
+                                            :icon="Pencil"
+                                            variant="edit"
+                                            title="Edit"
+                                            :href="`/admin/certificate-templates/${template.id}/edit`"
+                                        />
                                     </div>
                                 </td>
                             </tr>

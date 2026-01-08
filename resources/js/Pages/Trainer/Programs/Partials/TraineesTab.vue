@@ -68,14 +68,22 @@ const emit = defineEmits<{
             </div>
         </div>
 
-        <div class="rounded-lg bg-white shadow-sm">
+        <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
             <div class="border-b border-gray-200 px-4 py-3 flex items-center gap-2 text-sm font-medium text-teal-600">
                 <div class="h-2 w-2 rounded-full bg-teal-600"></div>
                 ENROLLED ({{ trainees.length }})
             </div>
 
             <div class="divide-y divide-gray-200">
-                <div v-for="trainee in trainees" :key="trainee.id" class="px-3 sm:px-4 py-4 hover:bg-gray-50">
+                <div
+                    v-for="(trainee, index) in trainees"
+                    :key="trainee.id"
+                    :class="[
+                        'px-3 sm:px-4 py-4 transition-colors',
+                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                        'hover:bg-gray-100'
+                    ]"
+                >
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div class="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                             <img :src="trainee.avatar" :alt="trainee.name" class="h-10 w-10 sm:h-12 sm:w-12 rounded-full flex-shrink-0" />
