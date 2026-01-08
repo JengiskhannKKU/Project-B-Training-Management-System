@@ -7,7 +7,10 @@ import StudentLayout from "@/Layouts/StudentLayout.vue";
 import Skeleton from "@/Components/Skeleton.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
 import CourseCard from "@/Components/CourseCard.vue";
-import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen } from "lucide-vue-next";
+import FilterDropdown from "@/Components/FilterDropdown.vue";
+import SortDropdown from "@/Components/SortDropdown.vue";
+import ExportModal from "@/Components/ExportModal.vue";
+import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen, Share } from "lucide-vue-next";
 
 const notify = useNotification();
 
@@ -15,7 +18,10 @@ const programs = ref([]);
 const isLoading = ref(false);
 const errorMessage = ref(null);
 const searchQuery = ref("");
-const selectedCategory = ref("all");
+const selectedCategory = ref([]);
+const sortColumn = ref("");
+const sortDirection = ref("asc");
+const showExportModal = ref(false);
 
 const fetchPrograms = async () => {
     isLoading.value = true;
@@ -39,7 +45,7 @@ onMounted(() => {
 
 const categories = computed(() => {
     const unique = new Set(programs.value.map((program) => program.category || "General"));
-    return ["all", ...unique];
+    return [...unique];
 });
 
 const filteredPrograms = computed(() => {
@@ -52,18 +58,84 @@ const filteredPrograms = computed(() => {
         );
     }
 
-    if (selectedCategory.value !== "all") {
+    if (selectedCategory.value.length > 0) {
         result = result.filter(
-            (program) => (program.category || "General") === selectedCategory.value
+            (program) => selectedCategory.value.includes(program.category || "General")
         );
+    }
+
+    if (sortColumn.value) {
+        result.sort((a, b) => {
+            let aVal = a[sortColumn.value];
+            let bVal = b[sortColumn.value];
+
+            if (typeof aVal === "string") {
+                aVal = aVal.toLowerCase();
+                bVal = bVal.toLowerCase();
+            }
+
+            if (sortDirection.value === "asc") {
+                return aVal > bVal ? 1 : -1;
+            } else {
+                return aVal < bVal ? 1 : -1;
+            }
+        });
     }
 
     return result;
 });
 
+const handleSort = ({ column, direction }) => {
+    sortColumn.value = column;
+    sortDirection.value = direction;
+};
+
+const resetFilters = () => {
+    selectedCategory.value = [];
+};
+
+const resetSort = () => {
+    sortColumn.value = "";
+    sortDirection.value = "asc";
+};
+
 const formatDuration = (hours) => {
     if (!hours && hours !== 0) return "-";
     return `${hours} hrs`;
+};
+
+// Export to CSV
+const exportToCSV = () => {
+    const headers = ["ID", "Name", "Category", "Level", "Students", "Price", "Date"];
+    const csvData = filteredPrograms.value.map((program) => [
+        program.id,
+        program.name,
+        program.category,
+        program.level,
+        program.students_count,
+        program.price,
+        program.date,
+    ]);
+
+    const csvContent = [
+        headers.join(","),
+        ...csvData.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "programs.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+    showExportModal.value = false;
+};
+
+// Export to PDF
+const exportToPDF = () => {
+    alert("PDF export functionality - requires a PDF library like jsPDF");
+    showExportModal.value = false;
 };
 
 </script>
@@ -94,39 +166,63 @@ const formatDuration = (hours) => {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                        <FilterDropdown
+                            v-model:selectedDepartment="selectedCategory"
+                            :departments="categories"
+                            departmentLabel="Category"
+                            @reset="resetFilters"
                         >
-                            <ListFilterIcon class="h-4 w-4" />
-                            Filter
-                        </button>
-                        <button
-                            type="button"
-                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                            <template #trigger>
+                                <button
+                                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm transition-colors"
+                                    :class="selectedCategory.length > 0 ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                                >
+                                    <ListFilterIcon class="h-4 w-4" />
+                                    Filter
+                                    <span v-if="selectedCategory.length > 0" class="ml-1 font-semibold">
+                                        ({{ selectedCategory.length }})
+                                    </span>
+                                </button>
+                            </template>
+                        </FilterDropdown>
+
+                        <SortDropdown
+                            :sortColumn="sortColumn"
+                            :sortDirection="sortDirection"
+                            :sortOptions="[
+                                { value: 'name', label: 'Name' },
+                                { value: 'date', label: 'Date' },
+                                { value: 'price', label: 'Price' },
+                            ]"
+                            @sort="handleSort"
+                            @reset="resetSort"
                         >
-                            <ArrowDownNarrowWide class="h-4 w-4" />
-                            Sort
+                            <template #trigger>
+                                <button
+                                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm transition-colors"
+                                    :class="sortColumn ? 'bg-[#2f837d]/10 border-[#2f837d] text-[#2f837d]' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                                >
+                                    <ArrowDownNarrowWide class="h-4 w-4" />
+                                    Sort
+                                    <span v-if="sortColumn" class="ml-1 font-medium text-xs opacity-90">
+                                        : {{ sortColumn.charAt(0).toUpperCase() + sortColumn.slice(1) }}
+                                    </span>
+                                </button>
+                            </template>
+                        </SortDropdown>
+
+                        <!-- Share/Export button -->
+                        <button
+                            @click="showExportModal = true"
+                            class="rounded-lg border border-[#d5dde7] inline-flex gap-2 items-center px-4 py-2 hover:bg-gray-50 transition-colors"
+                        >
+                            <Share class="h-4 w-4" />
+                            <p>Export</p>
                         </button>
                     </div>
                 </div>
 
-                <div class="mt-5 flex flex-wrap gap-2">
-                    <button
-                        v-for="category in categories"
-                        :key="category"
-                        type="button"
-                        @click="selectedCategory = category"
-                        :class="[
-                            'rounded-full px-4 py-2 text-sm font-medium transition',
-                            selectedCategory === category
-                                ? 'bg-[#DAFFED] text-[#2F837D]'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                        ]"
-                    >
-                        {{ category === 'all' ? 'All courses' : category }}
-                    </button>
-                </div>
+                <!-- Removed old category buttons -->
 
                 <div class="mt-6 flex items-center gap-2 text-lg font-semibold text-gray-900">
                     <BookOpen class="h-5 w-5 text-[#2f837d]" />
@@ -190,6 +286,16 @@ const formatDuration = (hours) => {
                     No courses found.
                 </div>
             </div>
+
+            <!-- Export Modal -->
+            <ExportModal
+                :show="showExportModal"
+                activeTab="programs"
+                dataType="programs"
+                @close="showExportModal = false"
+                @exportCSV="exportToCSV"
+                @exportPDF="exportToPDF"
+            />
         </div>
     </StudentLayout>
 </template>

@@ -214,12 +214,6 @@ onMounted(fetchTemplates);
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-6">
-<<<<<<< Updated upstream
-                                        <TableActionButton :icon="Trash2" variant="delete" title="Delete"
-                                            @click="openDeleteModal(template)" />
-                                        <TableActionButton :icon="Pencil" variant="edit" title="Edit"
-                                            :href="`/trainer/certificate-templates/${template.id}/edit`" />
-=======
                                         <TableActionButton
                                             :icon="Trash2"
                                             variant="delete"
@@ -232,7 +226,6 @@ onMounted(fetchTemplates);
                                             title="Edit"
                                             :href="`/trainer/certificate-templates/${template.id}/edit`"
                                         />
->>>>>>> Stashed changes
                                     </div>
                                 </td>
                             </tr>
@@ -242,14 +235,6 @@ onMounted(fetchTemplates);
             </div>
         </div>
 
-<<<<<<< Updated upstream
-        <ConfirmationDialog :show="showDeleteModal" title="Delete Template"
-            message="This will permanently delete the certificate template." confirm-text="Delete"
-            confirm-button-class="bg-red-600 hover:bg-red-700" @confirm="deleteTemplate"
-            @close="showDeleteModal = false" />
-
-=======
->>>>>>> Stashed changes
         <div v-if="isDeleting" class="fixed inset-0 z-40 bg-black/10"></div>
     </TrainerLayout>
 </template>
