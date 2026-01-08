@@ -36,6 +36,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user ? $user->loadMissing('role') : null,
             ],
+            'locale' => app()->getLocale(),
         ];
     }
 }

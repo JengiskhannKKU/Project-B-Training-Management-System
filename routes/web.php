@@ -26,6 +26,13 @@ Route::get('/dashboard', $redirectToRoleDashboard)
     ->middleware(['auth'])
     ->name('dashboard');
 
+Route::get('language/{locale}', function ($locale) {
+    if (in_array($locale, ['th', 'en'])) {
+        session()->put('locale', $locale);
+    }
+    return redirect()->back();
+})->name('language.switch');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
