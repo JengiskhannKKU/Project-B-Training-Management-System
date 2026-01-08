@@ -98,13 +98,13 @@ onUnmounted(() => {
             >
                 <!-- Header -->
                 <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-900">Notifications</h3>
+                    <h3 class="font-semibold text-gray-900">{{ $t('Notifications') }}</h3>
                     <button
                         v-if="hasNotifications"
                         @click="handleClearAll"
                         class="text-xs text-[#2f837d] hover:text-[#266a66] font-medium transition-colors duration-200"
                     >
-                        Clear All
+                        {{ $t('Clear All') }}
                     </button>
                 </div>
 
@@ -119,8 +119,8 @@ onUnmounted(() => {
                         class="flex flex-col items-center justify-center py-12 px-4"
                     >
                         <BellOff :size="48" class="text-gray-300 mb-3" />
-                        <p class="text-gray-500 text-sm font-medium">No notifications</p>
-                        <p class="text-gray-400 text-xs mt-1">You're all caught up!</p>
+                        <p class="text-gray-500 text-sm font-medium">{{ $t('No notifications') }}</p>
+                        <p class="text-gray-400 text-xs mt-1">{{ $t("You're all caught up!") }}</p>
                     </div>
 
                     <!-- Notification Items -->
@@ -168,14 +168,14 @@ onUnmounted(() => {
                                         v-if="!notification.read"
                                         @click="handleMarkAsRead(notification.id)"
                                         class="p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                                        title="Mark as read"
+                                        :title="$t('Mark as read')"
                                     >
                                         <Check :size="16" class="text-gray-600" />
                                     </button>
                                     <button
                                         @click="handleDelete(notification.id)"
                                         class="p-1.5 rounded hover:bg-gray-200 transition-colors duration-150"
-                                        title="Delete"
+                                        :title="$t('Delete')"
                                     >
                                         <Trash2 :size="16" class="text-gray-600" />
                                     </button>

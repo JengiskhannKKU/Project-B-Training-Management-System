@@ -25,7 +25,8 @@ import {
     MapPin,
     Camera,
     Upload,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -105,6 +106,7 @@ const activeTab = ref(roleName.value === 'admin' ? 'general' : 'profile');
 const avatarPreview = ref(null);
 const avatarVersion = ref(Date.now());
 const isUploadingAvatar = ref(false);
+const showAvatarMenu = ref(false);
 
 const form = useForm({
     name: '',
@@ -165,10 +167,6 @@ const loadProfile = async () => {
         isLoadingProfile.value = false;
     }
 };
-
-onMounted(() => {
-    loadProfile();
-});
 
 const submitProfileForm = async () => {
     form.clearErrors();
@@ -254,7 +252,35 @@ const deleteAvatar = async () => {
 
 const triggerFileUpload = () => {
     document.getElementById('avatar-upload-input')?.click();
+    showAvatarMenu.value = false;
 };
+
+const toggleAvatarMenu = () => {
+    showAvatarMenu.value = !showAvatarMenu.value;
+};
+
+const handleDeleteAvatar = () => {
+    showAvatarMenu.value = false;
+    deleteAvatar();
+};
+
+// Close avatar menu when clicking outside
+const closeAvatarMenuOnClickOutside = (event) => {
+    const avatarMenu = document.getElementById('avatar-menu');
+    const cameraButton = document.getElementById('camera-button');
+    if (avatarMenu && !avatarMenu.contains(event.target) && !cameraButton.contains(event.target)) {
+        showAvatarMenu.value = false;
+    }
+};
+
+onMounted(() => {
+    loadProfile();
+    document.addEventListener('click', closeAvatarMenuOnClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeAvatarMenuOnClickOutside);
+});
 </script>
 
 <template>
@@ -266,8 +292,8 @@ const triggerFileUpload = () => {
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Settings</h1>
-                    <p class="mt-1 text-sm text-gray-500">Manage your profile, preferences and security.</p>
+                    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ $t('Settings') }}</h1>
+                    <p class="mt-1 text-sm text-gray-500">{{ $t('Manage your profile, preferences and security.') }}</p>
                 </div>
             </div>
 
@@ -283,11 +309,43 @@ const triggerFileUpload = () => {
                                     <img :src="avatarUrl" alt="Avatar"
                                         class="w-full h-full rounded-full object-cover" />
                                 </div>
-                                <button @click="triggerFileUpload"
-                                    class="absolute bottom-0 right-0 p-1.5 bg-[#2f837d] text-white rounded-full hover:bg-[#266a66] transition-colors shadow-sm"
-                                    title="Change Avatar">
-                                    <Camera class="w-4 h-4" />
-                                </button>
+                                <div class="absolute bottom-0 right-0">
+                                    <button 
+                                        id="camera-button"
+                                        @click="toggleAvatarMenu"
+                                        class="p-1.5 bg-[#2f837d] text-white rounded-full hover:bg-[#266a66] transition-colors shadow-sm"
+                                        title="Avatar Options">
+                                        <Camera class="w-4 h-4" />
+                                    </button>
+                                    <!-- Avatar Menu Dropdown -->
+                                    <Transition
+                                        enter-active-class="transition ease-out duration-100"
+                                        enter-from-class="transform opacity-0 scale-95"
+                                        enter-to-class="transform opacity-100 scale-100"
+                                        leave-active-class="transition ease-in duration-75"
+                                        leave-from-class="transform opacity-100 scale-100"
+                                        leave-to-class="transform opacity-0 scale-95">
+                                        <div 
+                                            v-if="showAvatarMenu" 
+                                            id="avatar-menu"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                                            <button 
+                                                @click="triggerFileUpload"
+                                                :disabled="isUploadingAvatar"
+                                                class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                                                <Upload class="w-4 h-4 mr-2 text-[#2f837d]" />
+                                                {{ $t('Upload Avatar') }}
+                                            </button>
+                                            <button 
+                                                v-if="apiUser.avatar_present"
+                                                @click="handleDeleteAvatar"
+                                                class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center">
+                                                <Trash2 class="w-4 h-4 mr-2" />
+                                                {{ $t('Delete Avatar') }}
+                                            </button>
+                                        </div>
+                                    </Transition>
+                                </div>
                                 <input id="avatar-upload-input" type="file" accept="image/*" class="hidden"
                                     @change="onAvatarSelected" :disabled="isUploadingAvatar" />
                             </div>
@@ -313,7 +371,7 @@ const triggerFileUpload = () => {
                                 'flex-shrink-0 mr-3 h-5 w-5 transition-colors duration-200'
                             ]" />
                             <div class="text-left">
-                                <span class="block">{{ tab.label }}</span>
+                                <span class="block">{{ $t(tab.label) }}</span>
                             </div>
                         </button>
                     </nav>
@@ -331,44 +389,44 @@ const triggerFileUpload = () => {
                             leave-to-class="transform opacity-0 -translate-x-4" mode="out-in">
                             <!-- Start Admin Specific Tabs -->
                             <div v-if="activeTab === 'general' && roleName === 'admin'" key="admin-general" class="p-8">
-                                <h3 class="text-xl font-bold text-gray-900 mb-6">General Information</h3>
+                                <h3 class="text-xl font-bold text-gray-900 mb-6">{{ $t('General Information') }}</h3>
                                 <div class="grid grid-cols-1 gap-y-6 sm:grid-cols-2 gap-x-6">
                                     <div class="sm:col-span-2">
-                                        <label class="form-label">Site Name</label>
+                                        <label class="form-label">{{ $t('Site Name') }}</label>
                                         <input v-model="adminSettings.general.siteName" type="text"
                                             class="form-input" />
                                     </div>
                                     <div class="sm:col-span-2">
-                                        <label class="form-label">Description</label>
+                                        <label class="form-label">{{ $t('Description') }}</label>
                                         <textarea v-model="adminSettings.general.siteDescription" rows="3"
                                             class="form-input"></textarea>
                                     </div>
                                     <div>
-                                        <label class="form-label">Contact Email</label>
+                                        <label class="form-label">{{ $t('Contact Email') }}</label>
                                         <input v-model="adminSettings.general.contactEmail" type="email"
                                             class="form-input" />
                                     </div>
                                     <div>
-                                        <label class="form-label">Timezone</label>
+                                        <label class="form-label">{{ $t('Timezone') }}</label>
                                         <select v-model="adminSettings.general.timezone" class="form-input">
                                             <option value="UTC">UTC</option>
                                             <option value="EST">EST</option>
                                         </select>
                                     </div>
                                     <div class="sm:col-span-2">
-                                        <button class="btn-primary">Save General Settings</button>
+                                        <button class="btn-primary">{{ $t('Save General Settings') }}</button>
                                     </div>
                                 </div>
                             </div>
 
                             <div v-else-if="activeTab === 'courses' && roleName === 'admin'" key="admin-courses"
                                 class="p-8">
-                                <h3 class="text-xl font-bold text-gray-900 mb-6">Course Configuration</h3>
+                                <h3 class="text-xl font-bold text-gray-900 mb-6">{{ $t('Course Configuration') }}</h3>
                                 <div class="space-y-6 max-w-2xl">
                                     <div class="flex items-center justify-between py-4 border-b border-gray-50">
                                         <div>
-                                            <p class="font-medium text-gray-900">Auto-Approval</p>
-                                            <p class="text-sm text-gray-500">New courses published immediately</p>
+                                            <p class="font-medium text-gray-900">{{ $t('Auto-Approval') }}</p>
+                                            <p class="text-sm text-gray-500">{{ $t('New courses published immediately') }}</p>
                                         </div>
                                         <button
                                             @click="adminSettings.courses.autoApproval = !adminSettings.courses.autoApproval"
@@ -381,8 +439,8 @@ const triggerFileUpload = () => {
                                     </div>
                                     <div class="flex items-center justify-between py-4">
                                         <div>
-                                            <p class="font-medium text-gray-900">Self-Enrollment</p>
-                                            <p class="text-sm text-gray-500">Allow students to enroll properly</p>
+                                            <p class="font-medium text-gray-900">{{ $t('Self-Enrollment') }}</p>
+                                            <p class="text-sm text-gray-500">{{ $t('Allow students to enroll without approval') }}</p>
                                         </div>
                                         <button
                                             @click="adminSettings.courses.allowSelfEnrollment = !adminSettings.courses.allowSelfEnrollment"
@@ -401,17 +459,17 @@ const triggerFileUpload = () => {
                             <div v-else-if="activeTab === 'profile'" key="profile" class="p-8">
                                 <div class="flex items-center justify-between mb-8">
                                     <div>
-                                        <h3 class="text-xl font-bold text-gray-900">Profile Information</h3>
-                                        <p class="text-sm text-gray-500 mt-1">Update your personal details.</p>
+                                        <h3 class="text-xl font-bold text-gray-900">{{ $t('Profile Information') }}</h3>
+                                        <p class="text-sm text-gray-500 mt-1">{{ $t('Update your personal details.') }}</p>
                                     </div>
                                     <button @click="submitProfileForm" :disabled="form.processing" class="btn-primary">
                                         <Save class="w-4 h-4 mr-2" />
-                                        Save Changes
+                                        {{ $t('Save Changes') }}
                                     </button>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label class="form-label">Full Name</label>
+                                        <label class="form-label">{{ $t('Full Name') }}</label>
                                         <div class="relative">
                                             <User
                                                 class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -430,7 +488,7 @@ const triggerFileUpload = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="form-label">Phone</label>
+                                        <label class="form-label">{{ $t('Phone') }}</label>
                                         <div class="relative">
                                             <Phone
                                                 class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -438,7 +496,7 @@ const triggerFileUpload = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="form-label">Department</label>
+                                        <label class="form-label">{{ $t('Department') }}</label>
                                         <div class="relative">
                                             <Building
                                                 class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -446,33 +504,26 @@ const triggerFileUpload = () => {
                                         </div>
                                     </div>
                                     <div class="md:col-span-2">
-                                        <label class="form-label">Bio</label>
+                                        <label class="form-label">{{ $t('Bio') }}</label>
                                         <div class="relative">
                                             <textarea v-model="form.bio" rows="4" class="form-input"
                                                 placeholder="Tell us about yourself..."></textarea>
                                         </div>
-                                    </div>
-                                    <div v-if="apiUser.avatar_present"
-                                        class="md:col-span-2 pt-4 border-t border-gray-100">
-                                        <button @click="deleteAvatar"
-                                            class="text-red-600 text-sm font-medium hover:text-red-700 flex items-center">
-                                            <Trash2 class="w-4 h-4 mr-2" /> Delete Profile Picture
-                                        </button>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Security Tab (Shared) -->
                             <div v-else-if="activeTab === 'security'" key="security" class="p-8">
-                                <h3 class="text-xl font-bold text-gray-900 mb-6">Security</h3>
+                                <h3 class="text-xl font-bold text-gray-900 mb-6">{{ $t('Security') }}</h3>
                                 <div class="max-w-xl space-y-6">
                                     <!-- Admin Security Settings if Admin -->
                                     <div v-if="roleName === 'admin'"
                                         class="p-4 bg-gray-50 rounded-xl border border-gray-100 mb-8">
                                         <div class="flex items-center justify-between mb-4">
                                             <div>
-                                                <p class="font-medium text-gray-900">Two-Factor Authentication</p>
-                                                <p class="text-sm text-gray-500">Add an extra layer of security</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Two-Factor Authentication') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Add an extra layer of security') }}</p>
                                             </div>
                                             <button
                                                 @click="adminSettings.security.twoFactorAuth = !adminSettings.security.twoFactorAuth"
@@ -486,10 +537,10 @@ const triggerFileUpload = () => {
                                     </div>
 
                                     <div>
-                                        <h4 class="text-base font-semibold text-gray-900 mb-4">Update Password</h4>
+                                        <h4 class="text-base font-semibold text-gray-900 mb-4">{{ $t('Update Password') }}</h4>
                                         <form @submit.prevent="submitPasswordForm" class="space-y-4">
                                             <div>
-                                                <label class="form-label">Current Password</label>
+                                                <label class="form-label">{{ $t('Current Password') }}</label>
                                                 <input v-model="passwordForm.current_password" type="password"
                                                     class="form-input" />
                                                 <p v-if="passwordForm.errors.current_password"
@@ -497,7 +548,7 @@ const triggerFileUpload = () => {
                                                     passwordForm.errors.current_password }}</p>
                                             </div>
                                             <div>
-                                                <label class="form-label">New Password</label>
+                                                <label class="form-label">{{ $t('New Password') }}</label>
                                                 <input v-model="passwordForm.password" type="password"
                                                     class="form-input" />
                                                 <p v-if="passwordForm.errors.password"
@@ -505,13 +556,13 @@ const triggerFileUpload = () => {
                                                 </p>
                                             </div>
                                             <div>
-                                                <label class="form-label">Confirm New Password</label>
+                                                <label class="form-label">{{ $t('Confirm New Password') }}</label>
                                                 <input v-model="passwordForm.password_confirmation" type="password"
                                                     class="form-input" />
                                             </div>
                                             <button type="submit" :disabled="passwordForm.processing"
                                                 class="btn-primary">
-                                                Update Password
+                                                {{ $t('Update Password') }}
                                             </button>
                                         </form>
                                     </div>
@@ -520,14 +571,14 @@ const triggerFileUpload = () => {
 
                             <!-- Notifications Tab (Shared) -->
                             <div v-else-if="activeTab === 'notifications'" key="notifications" class="p-8">
-                                <h3 class="text-xl font-bold text-gray-900 mb-6">Notifications</h3>
+                                <h3 class="text-xl font-bold text-gray-900 mb-6">{{ $t('Notifications') }}</h3>
                                 <div class="space-y-6 max-w-2xl">
                                     <!-- Admin Notifications -->
                                     <div v-if="roleName === 'admin'" class="space-y-6">
                                         <div class="flex items-center justify-between py-4 border-b border-gray-50">
                                             <div>
-                                                <p class="font-medium text-gray-900">Email Notifications</p>
-                                                <p class="text-sm text-gray-500">Receive daily summaries.</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Email Notifications') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Receive daily summaries of activity.') }}</p>
                                             </div>
                                             <button
                                                 @click="adminSettings.notifications.emailNotifications = !adminSettings.notifications.emailNotifications"
@@ -544,9 +595,8 @@ const triggerFileUpload = () => {
                                     <div v-else class="space-y-6">
                                         <div class="flex items-center justify-between py-4 border-b border-gray-50">
                                             <div>
-                                                <p class="font-medium text-gray-900">Email Updates</p>
-                                                <p class="text-sm text-gray-500">Receive daily summaries of your
-                                                    sessions.</p>
+                                                <p class="font-medium text-gray-900">{{ $t('Email Updates') }}</p>
+                                                <p class="text-sm text-gray-500">{{ $t('Receive daily summaries of your sessions.') }}</p>
                                             </div>
                                             <button
                                                 @click="notificationForm.email_updates = !notificationForm.email_updates"

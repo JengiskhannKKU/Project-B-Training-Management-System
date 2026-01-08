@@ -83,10 +83,10 @@ const departments = {
             <!-- Header -->
             <div class="space-y-1">
                 <h1 class="text-3xl font-bold tracking-tight text-gray-900">
-                    Dashboard
+                    {{ $t('Dashboard') }}
                 </h1>
                 <p class="text-sm text-gray-600">
-                    Welcome back! Here's an overview of your training activities and student progress.
+                    {{ $t('Welcome Back') }}
                 </p>
             </div>
 
@@ -96,7 +96,7 @@ const departments = {
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <!-- Total Trainees Card -->
                     <StatsCard
-                        title="Total Trainees"
+                        :title="$t('Total Trainees')"
                         :value="stats.trainees.value"
                         :growth="stats.trainees.growth"
                         hover-color="blue"
@@ -110,22 +110,22 @@ const departments = {
 
                     <!-- Total Courses Card -->
                     <StatsCard
-                        title="Total Courses"
+                        :title="$t('Total Courses')"
                         :value="stats.courses.total"
                         :icon="BookOpen"
                         icon-color="purple"
                         hover-color="purple"
-                        :badge="`${stats.courses.active} active`"
+                        :badge="`${stats.courses.active} ${$t('active')}`"
                     />
 
                     <!-- Pending Certifications Card -->
                     <StatsCard
-                        title="Pending Certifications"
+                        :title="$t('Pending Certifications')"
                         :value="stats.pendingCertifications.value"
                         :icon="Award"
                         icon-color="emerald"
                         hover-color="emerald"
-                        :badge="stats.pendingCertifications.trend === 'down' ? 'Decreasing' : 'Increasing'"
+                        :badge="stats.pendingCertifications.trend === 'down' ? $t('Decreasing') : $t('Increasing')"
                     />
                 </div>
 

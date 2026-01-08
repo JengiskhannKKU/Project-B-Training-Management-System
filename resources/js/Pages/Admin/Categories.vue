@@ -168,7 +168,7 @@ const handleDeleteCategory = (category) => {
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Categories</h1>
                     <p class="mt-2 text-sm text-gray-600">
-                        Organize courses into categories
+                        {{ $t('Organize courses into categories') }}
                     </p>
                 </div>
                 <button

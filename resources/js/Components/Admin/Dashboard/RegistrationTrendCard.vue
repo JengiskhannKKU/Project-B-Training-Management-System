@@ -12,17 +12,17 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    periodOptions: {
-        type: Array,
-        default: () => ["Last 3 Months", "Last 6 Months", "Last Year", "All Time"],
-    },
-    defaultPeriod: {
-        type: String,
-        default: "Last 6 Months",
-    },
 });
 
-const selectedPeriod = ref(props.defaultPeriod);
+// Period options - will be translated in template
+const periodOptions = [
+    'Last 3 Months',
+    'Last 6 Months',
+    'Last Year',
+    'All Time',
+];
+
+const selectedPeriod = ref('Last 6 Months');
 const showPeriodDropdown = ref(false);
 
 const chartOptions = computed(() => ({
@@ -96,7 +96,7 @@ const chartOptions = computed(() => ({
         shared: true,
         intersect: false,
         y: {
-            formatter: (val) => `${val} registrations`,
+            formatter: (val) => `${val}`,
         },
     },
     markers: {
@@ -115,10 +115,10 @@ const chartOptions = computed(() => ({
         <div class="mb-6 flex items-center justify-between">
             <div>
                 <h2 class="text-base font-bold text-gray-900">
-                    Registration Trend
+                    {{ $t('Registration Trend') }}
                 </h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    Track trainee registrations over time
+                    {{ $t('Track trainee registrations over time') }}
                 </p>
             </div>
             <div class="relative">
@@ -126,7 +126,7 @@ const chartOptions = computed(() => ({
                     @click="showPeriodDropdown = !showPeriodDropdown"
                     class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow"
                 >
-                    {{ selectedPeriod }}
+                    {{ $t(selectedPeriod) }}
                     <ChevronDown
                         :size="14"
                         class="transition-transform duration-200"
@@ -150,7 +150,7 @@ const chartOptions = computed(() => ({
                                 selectedPeriod === option,
                         }"
                     >
-                        {{ option }}
+                        {{ $t(option) }}
                     </button>
                 </div>
             </div>

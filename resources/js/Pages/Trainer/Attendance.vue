@@ -48,8 +48,8 @@ onMounted(() => {
 const searchQuery = ref("");
 const selectedCategory = ref([]);
 const selectedStatus = ref([]);
-const sortColumn = ref("");
-const sortDirection = ref("asc");
+const sortColumn = ref("date");
+const sortDirection = ref("desc");
 const showExportModal = ref(false);
 const showSessionsModal = ref(false);
 const selectedCourse = ref(null);
@@ -106,7 +106,13 @@ const filteredCourses = computed(() => {
             let aVal = a[sortColumn.value];
             let bVal = b[sortColumn.value];
 
-            if (typeof aVal === "string") {
+            if (sortColumn.value === "date") {
+                 // Date sorting
+                 const dateA = a.date ? new Date(a.date).getTime() : 0;
+                 const dateB = b.date ? new Date(b.date).getTime() : 0;
+                 aVal = dateA;
+                 bVal = dateB;
+            } else if (typeof aVal === "string") {
                 aVal = aVal.toLowerCase();
                 bVal = bVal.toLowerCase();
             }
@@ -361,6 +367,7 @@ const selectedCourseName = computed(() => {
                             :sortColumn="sortColumn"
                             :sortDirection="sortDirection"
                             :sortOptions="[
+                                { value: 'date', label: 'Date' },
                                 { value: 'name', label: 'Course Name' },
                                 { value: 'category', label: 'Category' },
                                 { value: 'students_count', label: 'Students' },

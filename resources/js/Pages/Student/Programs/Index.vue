@@ -22,8 +22,8 @@ const errorMessage = ref(null);
 const searchQuery = ref("");
 const selectedCategory = ref([]);
 const selectedStatus = ref([]);
-const sortColumn = ref("");
-const sortDirection = ref("asc");
+const sortColumn = ref("created_at");
+const sortDirection = ref("desc");
 const showExportModal = ref(false);
 
 const fetchPrograms = async () => {
@@ -72,9 +72,15 @@ const filteredPrograms = computed(() => {
             let aVal = a[sortColumn.value];
             let bVal = b[sortColumn.value];
 
-            if (typeof aVal === "string") {
+            if (sortColumn.value === 'created_at') {
+                 // Date sorting
+                 const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                 const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                 aVal = dateA;
+                 bVal = dateB;
+            } else if (typeof aVal === "string") {
                 aVal = aVal.toLowerCase();
-                bVal = bVal.toLowerCase();
+                bVal = (bVal).toLowerCase();
             }
 
             if (sortDirection.value === "asc") {
@@ -234,9 +240,10 @@ const exportToPDF = () => {
                             :sortColumn="sortColumn"
                             :sortDirection="sortDirection"
                             :sortOptions="[
-                                { value: 'name', label: 'Name' },
-                                { value: 'date', label: 'Date' },
-                                { value: 'price', label: 'Price' },
+                                { value: 'created_at', label: 'Date' },
+                                { value: 'name', label: 'Course Name' },
+                                { value: 'duration', label: 'Duration' },
+                                { value: 'rating', label: 'Rating' },
                             ]"
                             @sort="handleSort"
                             @reset="resetSort"

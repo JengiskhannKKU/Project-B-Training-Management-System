@@ -72,8 +72,8 @@ const saveSettings = () => {
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Settings</h1>
-                    <p class="mt-1 text-sm text-gray-500">Manage application preferences and configurations.</p>
+                    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ $t('Settings') }}</h1>
+                    <p class="mt-1 text-sm text-gray-500">{{ $t('Manage application preferences and configurations.') }}</p>
                 </div>
                 <div>
                     <button
@@ -87,7 +87,7 @@ const saveSettings = () => {
                                 isSaving ? 'animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent' : 'w-4 h-4 mr-2'
                             ]"
                         />
-                        {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                        {{ isSaving ? $t('Saving...') : $t('Save Changes') }}
                     </button>
                 </div>
             </div>
@@ -115,12 +115,12 @@ const saveSettings = () => {
                                 ]"
                             />
                             <div class="text-left">
-                                <span class="block">{{ tab.label }}</span>
+                                <span class="block">{{ $t(tab.label) }}</span>
                                 <span
                                     v-if="activeTab === tab.id"
                                     class="block text-xs opacity-75 font-normal mt-0.5"
                                 >
-                                    {{ tab.description }}
+                                    {{ $t(tab.description) }}
                                 </span>
                             </div>
                         </button>
@@ -134,13 +134,13 @@ const saveSettings = () => {
                         <!-- General Settings -->
                         <div v-if="activeTab === 'general'" class="p-6 space-y-8 animate-fade-in">
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900">General Information</h2>
-                                <p class="mt-1 text-sm text-gray-500">Basic details about your training platform.</p>
+                                <h2 class="text-lg font-semibold text-gray-900">{{ $t('General Information') }}</h2>
+                                <p class="mt-1 text-sm text-gray-500">{{ $t('Basic details about your training platform.') }}</p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                                 <div class="sm:col-span-4">
-                                    <label class="block text-sm font-medium text-gray-700">Site Name</label>
+                                    <label class="block text-sm font-medium text-gray-700">{{ $t('Site Name') }}</label>
                                     <div class="mt-1">
                                         <input
                                             v-model="settings.general.siteName"
@@ -151,7 +151,7 @@ const saveSettings = () => {
                                 </div>
 
                                 <div class="sm:col-span-6">
-                                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                                    <label class="block text-sm font-medium text-gray-700">{{ $t('Description') }}</label>
                                     <div class="mt-1">
                                         <textarea
                                             v-model="settings.general.siteDescription"
@@ -159,11 +159,11 @@ const saveSettings = () => {
                                             class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                                         ></textarea>
                                     </div>
-                                    <p class="mt-2 text-xs text-gray-500">Brief description displayed in search results and meta tags.</p>
+                                    <p class="mt-2 text-xs text-gray-500">{{ $t('Brief description displayed in search results and meta tags.') }}</p>
                                 </div>
 
                                 <div class="sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700">Contact Email</label>
+                                    <label class="block text-sm font-medium text-gray-700">{{ $t('Contact Email') }}</label>
                                     <div class="mt-1 flex rounded-lg shadow-sm">
                                         <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
                                             <Mail class="h-4 w-4" />
@@ -177,7 +177,7 @@ const saveSettings = () => {
                                 </div>
 
                                 <div class="sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700">Timezone</label>
+                                    <label class="block text-sm font-medium text-gray-700">{{ $t('Timezone') }}</label>
                                     <div class="mt-1">
                                         <select
                                             v-model="settings.general.timezone"
@@ -197,15 +197,15 @@ const saveSettings = () => {
                         <!-- Notifications Settings -->
                         <div v-else-if="activeTab === 'notifications'" class="p-6 space-y-8 animate-fade-in">
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900">Notifications</h2>
-                                <p class="mt-1 text-sm text-gray-500">Decide how and when you want to be notified.</p>
+                                <h2 class="text-lg font-semibold text-gray-900">{{ $t('Notifications') }}</h2>
+                                <p class="mt-1 text-sm text-gray-500">{{ $t('Decide how and when you want to be notified.') }}</p>
                             </div>
 
                             <div class="space-y-6 divide-y divide-gray-100">
                                 <div class="flex items-center justify-between pt-4 first:pt-0">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900">Email Notifications</span>
-                                        <span class="text-sm text-gray-500">Receive daily summaries of activity.</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ $t('Email Notifications') }}</span>
+                                        <span class="text-sm text-gray-500">{{ $t('Receive daily summaries of activity.') }}</span>
                                     </div>
                                     <button
                                         @click="settings.notifications.emailNotifications = !settings.notifications.emailNotifications"
@@ -225,8 +225,8 @@ const saveSettings = () => {
 
                                 <div class="flex items-center justify-between pt-4">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900">Course Updates</span>
-                                        <span class="text-sm text-gray-500">Get notified when trainers update course content.</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ $t('Course Updates') }}</span>
+                                        <span class="text-sm text-gray-500">{{ $t('Get notified when trainers update course content.') }}</span>
                                     </div>
                                     <button
                                         @click="settings.notifications.courseUpdates = !settings.notifications.courseUpdates"
@@ -246,8 +246,8 @@ const saveSettings = () => {
 
                                 <div class="flex items-center justify-between pt-4">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900">Attendance Alerts</span>
-                                        <span class="text-sm text-gray-500">Alerts when attendance drops below threshold.</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ $t('Attendance Alerts') }}</span>
+                                        <span class="text-sm text-gray-500">{{ $t('Alerts when attendance drops below threshold.') }}</span>
                                     </div>
                                     <button
                                         @click="settings.notifications.attendanceAlerts = !settings.notifications.attendanceAlerts"
@@ -270,13 +270,13 @@ const saveSettings = () => {
                         <!-- Course Settings -->
                         <div v-else-if="activeTab === 'courses'" class="p-6 space-y-8 animate-fade-in">
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900">Course Configuration</h2>
-                                <p class="mt-1 text-sm text-gray-500">Global settings for training programs.</p>
+                                <h2 class="text-lg font-semibold text-gray-900">{{ $t('Course Configuration') }}</h2>
+                                <p class="mt-1 text-sm text-gray-500">{{ $t('Global settings for training programs.') }}</p>
                             </div>
 
                             <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                                 <div class="sm:col-span-3">
-                                    <label class="block text-sm font-medium text-gray-700">Default Student Limit</label>
+                                    <label class="block text-sm font-medium text-gray-700">{{ $t('Default Student Limit') }}</label>
                                     <div class="mt-1">
                                         <input
                                             v-model="settings.courses.maxStudentsPerCourse"
@@ -289,8 +289,8 @@ const saveSettings = () => {
                                 <div class="sm:col-span-6 border-t border-gray-100 pt-6">
                                     <div class="flex items-center justify-between">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-gray-900">Auto-Approval</span>
-                                            <span class="text-sm text-gray-500">New courses published immediately</span>
+                                            <span class="text-sm font-medium text-gray-900">{{ $t('Auto-Approval') }}</span>
+                                            <span class="text-sm text-gray-500">{{ $t('New courses published immediately') }}</span>
                                         </div>
                                         <button
                                             @click="settings.courses.autoApproval = !settings.courses.autoApproval"
@@ -312,8 +312,8 @@ const saveSettings = () => {
                                 <div class="sm:col-span-6 pt-4">
                                     <div class="flex items-center justify-between">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-gray-900">Self-Enrollment</span>
-                                            <span class="text-sm text-gray-500">Allow students to enroll without approval</span>
+                                            <span class="text-sm font-medium text-gray-900">{{ $t('Self-Enrollment') }}</span>
+                                            <span class="text-sm text-gray-500">{{ $t('Allow students to enroll without approval') }}</span>
                                         </div>
                                         <button
                                             @click="settings.courses.allowSelfEnrollment = !settings.courses.allowSelfEnrollment"
@@ -337,15 +337,15 @@ const saveSettings = () => {
                          <!-- Security Settings -->
                         <div v-else-if="activeTab === 'security'" class="p-6 space-y-8 animate-fade-in">
                             <div>
-                                <h2 class="text-lg font-semibold text-gray-900">Security</h2>
-                                <p class="mt-1 text-sm text-gray-500">Manage security protocols.</p>
+                                <h2 class="text-lg font-semibold text-gray-900">{{ $t('Security') }}</h2>
+                                <p class="mt-1 text-sm text-gray-500">{{ $t('Manage security protocols.') }}</p>
                             </div>
 
                             <div class="space-y-6">
                                 <div class="flex items-center justify-between py-4 border-b border-gray-100">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900">Two-Factor Authentication</span>
-                                        <span class="text-sm text-gray-500">Add an extra layer of security</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ $t('Two-Factor Authentication') }}</span>
+                                        <span class="text-sm text-gray-500">{{ $t('Add an extra layer of security') }}</span>
                                     </div>
                                     <button
                                         @click="settings.security.twoFactorAuth = !settings.security.twoFactorAuth"
@@ -365,7 +365,7 @@ const saveSettings = () => {
                                 
                                 <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                                     <div class="sm:col-span-3">
-                                        <label class="block text-sm font-medium text-gray-700">Session Timeout (minutes)</label>
+                                        <label class="block text-sm font-medium text-gray-700">{{ $t('Session Timeout (minutes)') }}</label>
                                         <input
                                             v-model="settings.security.sessionTimeout"
                                             type="number"
@@ -373,7 +373,7 @@ const saveSettings = () => {
                                         />
                                     </div>
                                     <div class="sm:col-span-3">
-                                        <label class="block text-sm font-medium text-gray-700">Password Expiry (days)</label>
+                                        <label class="block text-sm font-medium text-gray-700">{{ $t('Password Expiry (days)') }}</label>
                                         <input
                                             v-model="settings.security.passwordExpiry"
                                             type="number"
@@ -401,7 +401,7 @@ const saveSettings = () => {
             <div v-if="showToast" class="fixed bottom-4 right-4 z-50">
                 <div class="bg-gray-900 text-white rounded-lg shadow-lg px-4 py-3 flex items-center gap-3">
                     <CheckCircle2 class="w-5 h-5 text-green-400" />
-                    <span class="text-sm font-medium">Settings saved successfully</span>
+                    <span class="text-sm font-medium">{{ $t('Settings saved successfully') }}</span>
                 </div>
             </div>
         </Transition>
