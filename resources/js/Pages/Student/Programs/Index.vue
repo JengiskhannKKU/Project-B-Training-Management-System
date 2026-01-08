@@ -11,6 +11,8 @@ import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import ExportModal from "@/Components/ExportModal.vue";
 import { Search, ListFilterIcon, ArrowDownNarrowWide, BookOpen, Share } from "lucide-vue-next";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const notify = useNotification();
 
@@ -134,8 +136,47 @@ const exportToCSV = () => {
 
 // Export to PDF
 const exportToPDF = () => {
-    alert("PDF export functionality - requires a PDF library like jsPDF");
-    showExportModal.value = false;
+    try {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(16);
+        doc.text('Programs Report', 14, 20);
+
+        // Add generation date
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+        // Prepare table data with null-safe values
+        const headers = [['ID', 'Name', 'Category', 'Level', 'Students', 'Price', 'Date']];
+        const data = filteredPrograms.value.map((program) => [
+            program.id ?? '',
+            program.name ?? '',
+            program.category ?? '',
+            program.level ?? '',
+            program.students_count ?? 0,
+            program.price ?? '',
+            program.date ?? '',
+        ]);
+
+        // Generate table
+        doc.autoTable({
+            head: headers,
+            body: data,
+            startY: 35,
+            theme: 'grid',
+            headStyles: { fillColor: [59, 130, 246] },
+            styles: { fontSize: 9 },
+        });
+
+        // Save the PDF
+        doc.save('programs.pdf');
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please try again.');
+    } finally {
+        showExportModal.value = false;
+    }
 };
 
 </script>
