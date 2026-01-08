@@ -21,7 +21,7 @@ class AdminProgramController extends Controller
             'category' => ['required', 'string', 'max:100'],
             'level' => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'duration_hours' => ['required', 'integer', 'min:1'],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
 
@@ -53,7 +53,7 @@ class AdminProgramController extends Controller
             'category' => ['sometimes', 'required', 'string', 'max:100'],
             'level' => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'duration_hours' => ['sometimes', 'required', 'integer', 'min:1'],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_url' => ['nullable', 'string', 'max:2048'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'inactive'])],
         ]);
 

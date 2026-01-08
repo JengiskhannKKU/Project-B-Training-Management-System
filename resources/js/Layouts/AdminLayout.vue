@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -103,8 +103,6 @@ const roleColor = computed(() => {
 
 const fetchPendingRequestCount = async () => {
     try {
-        // Ensure CSRF cookie is set for Sanctum
-        await axios.get('/sanctum/csrf-cookie');
         const response = await axios.get('/api/admin/requests/pending-count');
         if (response.data?.data?.count !== undefined) {
             pendingRequestCount.value = response.data.data.count;
@@ -118,10 +116,15 @@ const fetchPendingRequestCount = async () => {
 onMounted(() => {
     fetchPendingRequestCount();
     // Refresh count every 30 seconds
-    setInterval(fetchPendingRequestCount, 30000);
+    const intervalId = setInterval(fetchPendingRequestCount, 30000);
 
     // Listen for manual refresh events from the Requests page
     window.addEventListener('refresh-pending-count', fetchPendingRequestCount);
+
+    onUnmounted(() => {
+        clearInterval(intervalId);
+        window.removeEventListener('refresh-pending-count', fetchPendingRequestCount);
+    });
 });
 
 </script>

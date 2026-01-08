@@ -8,6 +8,7 @@ import AdminLayout from "@/Layouts/AdminLayout.vue";
 import PageHeader from "@/Components/PageHeader.vue";
 import StatusBadge from "@/Components/StatusBadge.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter";
 
 const toast = useToast();
 
@@ -93,13 +94,7 @@ const resetFilters = () => {
 
 const formatDate = (value) => {
     if (!value) return "—";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return parsed.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    });
+    return formatDateUtil(value) || "—";
 };
 
 const getAttendanceRate = (session) => {
@@ -115,52 +110,35 @@ onMounted(() => {
 </script>
 
 <template>
+
     <Head title="Attendance Management" />
     <AdminLayout>
         <div class="space-y-6">
-            <PageHeader
-                title="Attendance Management"
-                description="View and manage attendance for all training sessions."
-            />
+            <PageHeader title="Attendance Management"
+                description="View and manage attendance for all training sessions." />
 
             <!-- Filters -->
             <div class="rounded-lg border border-gray-200 bg-white p-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <div>
-                        <label
-                            for="program-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
+                        <label for="program-filter" class="block text-sm font-medium text-gray-700 mb-1">
                             Program
                         </label>
-                        <select
-                            id="program-filter"
-                            v-model="filters.program_id"
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
-                        >
+                        <select id="program-filter" v-model="filters.program_id"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]">
                             <option value="">All Programs</option>
-                            <option
-                                v-for="program in programs"
-                                :key="program.id"
-                                :value="program.id"
-                            >
+                            <option v-for="program in programs" :key="program.id" :value="program.id">
                                 {{ program.name }}
                             </option>
                         </select>
                     </div>
 
                     <div>
-                        <label
-                            for="status-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
+                        <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">
                             Status
                         </label>
-                        <select
-                            id="status-filter"
-                            v-model="filters.status"
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
-                        >
+                        <select id="status-filter" v-model="filters.status"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]">
                             <option value="">All Statuses</option>
                             <option value="upcoming">Upcoming</option>
                             <option value="open">Open</option>
@@ -171,38 +149,25 @@ onMounted(() => {
                     </div>
 
                     <div>
-                        <label
-                            for="search-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
+                        <label for="search-filter" class="block text-sm font-medium text-gray-700 mb-1">
                             Search
                         </label>
                         <div class="relative">
-                            <input
-                                id="search-filter"
-                                v-model="filters.search"
-                                type="text"
+                            <input id="search-filter" v-model="filters.search" type="text"
                                 placeholder="Session title..."
                                 class="w-full rounded-lg border-gray-300 pl-10 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
-                                @keyup.enter="applyFilters"
-                            />
-                            <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                            />
+                                @keyup.enter="applyFilters" />
+                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         </div>
                     </div>
 
                     <div class="flex items-end gap-2">
-                        <button
-                            @click="applyFilters"
-                            class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]"
-                        >
+                        <button @click="applyFilters"
+                            class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]">
                             Apply
                         </button>
-                        <button
-                            @click="resetFilters"
-                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                        >
+                        <button @click="resetFilters"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                             Reset
                         </button>
                     </div>
@@ -226,62 +191,49 @@ onMounted(() => {
                         <thead class="bg-gray-50">
                             <tr>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Session
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Program
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Date
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Trainer
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Enrolled
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Present
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Rate
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Status
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
+                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            <tr
-                                v-for="(session, index) in sessions"
-                                :key="session.id"
-                                :class="[
-                                    'transition-colors',
-                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
-                                    'hover:bg-gray-100'
-                                ]"
-                            >
+                            <tr v-for="(session, index) in sessions" :key="session.id" :class="[
+                                'transition-colors',
+                                index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
+                                'hover:bg-gray-100'
+                            ]">
                                 <td class="px-6 py-4 text-sm font-medium text-gray-900">
                                     {{ session.title }}
                                 </td>
@@ -306,14 +258,10 @@ onMounted(() => {
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <StatusBadge :status="session.status || 'upcoming'" />
                                 </td>
-                                <td
-                                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-                                >
-                                    <Link
-                                        :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <Link :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
                                         class="inline-flex items-center gap-1.5 text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
-                                        title="Mark Attendance"
-                                    >
+                                        title="Mark Attendance">
                                         <ClipboardCheck class="h-5 w-5" />
                                     </Link>
                                 </td>
@@ -323,69 +271,49 @@ onMounted(() => {
                 </div>
 
                 <!-- Pagination and Result Counter -->
-                <div
-                    v-if="sessions.length > 0"
-                    class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200"
-                >
+                <div v-if="sessions.length > 0"
+                    class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
                     <!-- Pagination (Left) -->
                     <div class="flex items-center gap-2">
-                        <button
-                            @click="goToPage(currentPage - 1)"
-                            :disabled="currentPage === 1"
-                            :class="[
-                                'px-3 py-1 rounded border transition-colors',
-                                currentPage === 1
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                            ]"
-                        >
+                        <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" :class="[
+                            'px-3 py-1 rounded border transition-colors',
+                            currentPage === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                        ]">
                             Previous
                         </button>
 
                         <div class="flex items-center gap-1">
-                            <template
-                                v-for="page in totalPages"
-                                :key="page"
-                            >
-                                <button
-                                    v-if="
-                                        page === 1 ||
-                                        page === totalPages ||
-                                        (page >= currentPage - 1 &&
-                                            page <= currentPage + 1)
-                                    "
-                                    @click="goToPage(page)"
-                                    :class="[
-                                        'px-3 py-1 rounded border transition-colors',
-                                        currentPage === page
-                                            ? 'bg-[#2f837d] text-white border-[#2f837d]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                    ]"
-                                >
+                            <template v-for="page in totalPages" :key="page">
+                                <button v-if="
+                                    page === 1 ||
+                                    page === totalPages ||
+                                    (page >= currentPage - 1 &&
+                                        page <= currentPage + 1)
+                                " @click="goToPage(page)" :class="[
+                                    'px-3 py-1 rounded border transition-colors',
+                                    currentPage === page
+                                        ? 'bg-[#2f837d] text-white border-[#2f837d]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                                ]">
                                     {{ page }}
                                 </button>
-                                <span
-                                    v-else-if="
-                                        page === currentPage - 2 ||
-                                        page === currentPage + 2
-                                    "
-                                    class="px-2 text-gray-500"
-                                >
+                                <span v-else-if="
+                                    page === currentPage - 2 ||
+                                    page === currentPage + 2
+                                " class="px-2 text-gray-500">
                                     ...
                                 </span>
                             </template>
                         </div>
 
-                        <button
-                            @click="goToPage(currentPage + 1)"
-                            :disabled="currentPage === totalPages"
-                            :class="[
-                                'px-3 py-1 rounded border transition-colors',
-                                currentPage === totalPages
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                            ]"
-                        >
+                        <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" :class="[
+                            'px-3 py-1 rounded border transition-colors',
+                            currentPage === totalPages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                        ]">
                             Next
                         </button>
                     </div>

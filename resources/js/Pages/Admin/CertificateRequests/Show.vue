@@ -17,6 +17,7 @@ import {
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import RejectModal from "@/Pages/Trainer/CertificateRequests/Partials/RejectModal.vue";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter";
 
 const props = defineProps({
     id: {
@@ -129,15 +130,7 @@ const statusBadgeClass = computed(() => {
 
 const formatDate = (value) => {
     if (!value) return "—";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return value;
-    }
-    return parsed.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
+    return formatDateUtil(value) || "—";
 };
 
 const getTrainerName = () => {
@@ -151,14 +144,12 @@ onMounted(fetchRequest);
 </script>
 
 <template>
+
     <Head title="Certificate Request Details" />
     <AdminLayout>
         <div class="space-y-6">
             <div class="flex items-center gap-4">
-                <Link
-                    href="/admin/certificate-requests"
-                    class="text-gray-600 hover:text-gray-900"
-                >
+                <Link href="/admin/certificate-requests" class="text-gray-600 hover:text-gray-900">
                     <ArrowLeft class="h-5 w-5" />
                 </Link>
                 <div>
@@ -176,10 +167,8 @@ onMounted(fetchRequest);
             <div v-else-if="request" class="space-y-6">
                 <!-- Status Badge -->
                 <div class="flex items-center justify-between">
-                    <span
-                        :class="statusBadgeClass"
-                        class="inline-flex rounded-full px-3 py-1 text-sm font-semibold capitalize"
-                    >
+                    <span :class="statusBadgeClass"
+                        class="inline-flex rounded-full px-3 py-1 text-sm font-semibold capitalize">
                         {{ request.status }}
                     </span>
                     <span class="text-sm text-gray-500">
@@ -188,10 +177,8 @@ onMounted(fetchRequest);
                 </div>
 
                 <!-- Validation Warnings -->
-                <div
-                    v-if="validation && !validation.is_eligible"
-                    class="rounded-lg border border-red-200 bg-red-50 p-4"
-                >
+                <div v-if="validation && !validation.is_eligible"
+                    class="rounded-lg border border-red-200 bg-red-50 p-4">
                     <div class="flex items-start gap-3">
                         <AlertCircle class="h-5 w-5 text-red-600 mt-0.5" />
                         <div>
@@ -199,10 +186,7 @@ onMounted(fetchRequest);
                                 Cannot Approve Request
                             </h3>
                             <ul class="mt-2 space-y-1 text-sm text-red-700">
-                                <li
-                                    v-for="warning in validation.warnings"
-                                    :key="warning"
-                                >
+                                <li v-for="warning in validation.warnings" :key="warning">
                                     {{ warning }}
                                 </li>
                             </ul>
@@ -324,10 +308,7 @@ onMounted(fetchRequest);
                 </div>
 
                 <!-- Completion Details -->
-                <div
-                    v-if="attendance"
-                    class="rounded-lg border border-gray-200 bg-white p-6"
-                >
+                <div v-if="attendance" class="rounded-lg border border-gray-200 bg-white p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Calendar class="h-5 w-5" />
                         Attendance Details
@@ -353,17 +334,12 @@ onMounted(fetchRequest);
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Status</dt>
                             <dd class="mt-1">
-                                <span
-                                    v-if="attendance.attendance_rate >= 80"
-                                    class="inline-flex items-center gap-1 text-sm text-green-700"
-                                >
+                                <span v-if="attendance.attendance_rate >= 80"
+                                    class="inline-flex items-center gap-1 text-sm text-green-700">
                                     <CheckCircle class="h-4 w-4" />
                                     Meets Requirements
                                 </span>
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1 text-sm text-red-700"
-                                >
+                                <span v-else class="inline-flex items-center gap-1 text-sm text-red-700">
                                     <XCircle class="h-4 w-4" />
                                     Below 80%
                                 </span>
@@ -373,10 +349,7 @@ onMounted(fetchRequest);
                 </div>
 
                 <!-- Certificate Template -->
-                <div
-                    v-if="certificateTemplate"
-                    class="rounded-lg border border-gray-200 bg-white p-6"
-                >
+                <div v-if="certificateTemplate" class="rounded-lg border border-gray-200 bg-white p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Award class="h-5 w-5" />
                         Certificate Template
@@ -400,10 +373,8 @@ onMounted(fetchRequest);
                 </div>
 
                 <!-- Approval Note (if rejected or approved) -->
-                <div
-                    v-if="request.note && request.status !== 'pending'"
-                    class="rounded-lg border border-gray-200 bg-white p-6"
-                >
+                <div v-if="request.note && request.status !== 'pending'"
+                    class="rounded-lg border border-gray-200 bg-white p-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-2">
                         {{ request.status === "approved" ? "Approval" : "Rejection" }}
                         Note
@@ -416,23 +387,15 @@ onMounted(fetchRequest);
                 </div>
 
                 <!-- Actions -->
-                <div
-                    v-if="request.status === 'pending'"
-                    class="flex flex-wrap gap-4 border-t border-gray-200 bg-gray-50 p-6 rounded-lg"
-                >
-                    <button
-                        @click="approveRequest"
-                        :disabled="!canApprove || isApproving"
-                        class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                <div v-if="request.status === 'pending'"
+                    class="flex flex-wrap gap-4 border-t border-gray-200 bg-gray-50 p-6 rounded-lg">
+                    <button @click="approveRequest" :disabled="!canApprove || isApproving"
+                        class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <CheckCircle class="h-5 w-5" />
                         {{ isApproving ? "Approving..." : "Approve Request" }}
                     </button>
-                    <button
-                        @click="showRejectModal = true"
-                        :disabled="isApproving"
-                        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                    >
+                    <button @click="showRejectModal = true" :disabled="isApproving"
+                        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
                         <XCircle class="h-5 w-5" />
                         Reject Request
                     </button>
@@ -441,10 +404,6 @@ onMounted(fetchRequest);
         </div>
 
         <!-- Reject Modal (Reused from Trainer) -->
-        <RejectModal
-            :show="showRejectModal"
-            @close="showRejectModal = false"
-            @reject="handleReject"
-        />
+        <RejectModal :show="showRejectModal" @close="showRejectModal = false" @reject="handleReject" />
     </AdminLayout>
 </template>

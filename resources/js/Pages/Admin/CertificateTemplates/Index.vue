@@ -8,6 +8,7 @@ import AdminLayout from "@/Layouts/AdminLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
 import TableActionButton from "@/Components/TableActionButton.vue";
+import { formatDate as formatDateUtil } from "@/utils/dateFormatter";
 
 const toast = useToast();
 
@@ -72,17 +73,14 @@ const scopeLabel = (scope) => {
 
 const formatDate = (value) => {
     if (!value) return "—";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return value;
-    }
-    return parsed.toLocaleDateString();
+    return formatDateUtil(value) || "—";
 };
 
 onMounted(fetchTemplates);
 </script>
 
 <template>
+
     <Head title="Certificate Templates" />
     <AdminLayout>
         <div class="space-y-6">
@@ -95,10 +93,8 @@ onMounted(fetchTemplates);
                         Manage certificate layouts and background assets.
                     </p>
                 </div>
-                <Link
-                    href="/admin/certificate-templates/create"
-                    class="inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]"
-                >
+                <Link href="/admin/certificate-templates/create"
+                    class="inline-flex items-center gap-2 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]">
                     <Plus class="h-4 w-4" />
                     Create Template
                 </Link>
@@ -167,27 +163,23 @@ onMounted(fetchTemplates);
                                     <div v-else>Global</div>
                                 </td>
                                 <td class="px-4 py-3 text-gray-600">
-                                    <span
-                                        :class="[
-                                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
-                                            template.has_background
-                                                ? 'bg-emerald-100 text-emerald-700'
-                                                : 'bg-gray-100 text-gray-500'
-                                        ]"
-                                    >
+                                    <span :class="[
+                                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                                        template.has_background
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-gray-100 text-gray-500'
+                                    ]">
                                         <Image class="h-3.5 w-3.5" />
                                         {{ template.has_background ? 'Uploaded' : 'None' }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span
-                                        :class="[
-                                            'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold',
-                                            template.is_active
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-gray-100 text-gray-500'
-                                        ]"
-                                    >
+                                    <span :class="[
+                                        'inline-flex rounded-full px-2 py-0.5 text-xs font-semibold',
+                                        template.is_active
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-gray-100 text-gray-500'
+                                    ]">
                                         {{ template.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
@@ -196,18 +188,10 @@ onMounted(fetchTemplates);
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-6">
-                                        <TableActionButton
-                                            :icon="Trash2"
-                                            variant="delete"
-                                            title="Delete"
-                                            @click="openDeleteModal(template)"
-                                        />
-                                        <TableActionButton
-                                            :icon="Pencil"
-                                            variant="edit"
-                                            title="Edit"
-                                            :href="`/admin/certificate-templates/${template.id}/edit`"
-                                        />
+                                        <TableActionButton :icon="Trash2" variant="delete" title="Delete"
+                                            @click="openDeleteModal(template)" />
+                                        <TableActionButton :icon="Pencil" variant="edit" title="Edit"
+                                            :href="`/admin/certificate-templates/${template.id}/edit`" />
                                     </div>
                                 </td>
                             </tr>
@@ -217,15 +201,10 @@ onMounted(fetchTemplates);
             </div>
         </div>
 
-        <ConfirmationDialog
-            :show="showDeleteModal"
-            title="Delete Template"
-            message="This will permanently delete the certificate template."
-            confirm-text="Delete"
-            confirm-button-class="bg-red-600 hover:bg-red-700"
-            @confirm="deleteTemplate"
-            @close="showDeleteModal = false"
-        />
+        <ConfirmationDialog :show="showDeleteModal" title="Delete Template"
+            message="This will permanently delete the certificate template." confirm-text="Delete"
+            confirm-button-class="bg-red-600 hover:bg-red-700" @confirm="deleteTemplate"
+            @close="showDeleteModal = false" />
 
         <div v-if="isDeleting" class="fixed inset-0 z-40 bg-black/10"></div>
     </AdminLayout>
