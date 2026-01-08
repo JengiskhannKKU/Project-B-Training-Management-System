@@ -1,5 +1,5 @@
 <template>
-  <span :class="classes">{{ status }}</span>
+  <span :class="classes">{{ $t(status) }}</span>
 </template>
 
 <script setup>

@@ -111,7 +111,7 @@ const getAvatarColor = (name) => {
                 ]"
             >
                 <ThumbsUp :size="14" />
-                <span>Helpful</span>
+                <span>{{ $t('Helpful') }}</span>
             </button>
 
             <button
@@ -119,7 +119,7 @@ const getAvatarColor = (name) => {
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
             >
                 <MessageCircle :size="14" />
-                <span>Reply</span>
+                <span>{{ $t('Reply') }}</span>
             </button>
 
             <button
@@ -132,7 +132,7 @@ const getAvatarColor = (name) => {
                 ]"
             >
                 <Bookmark :size="14" :fill="isSaved ? 'currentColor' : 'none'" />
-                <span>Save</span>
+                <span>{{ $t('Save') }}</span>
             </button>
 
             <button
@@ -140,7 +140,7 @@ const getAvatarColor = (name) => {
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors ml-auto"
             >
                 <Share2 :size="14" />
-                <span>Share</span>
+                <span>{{ $t('Share') }}</span>
             </button>
         </div>
     </div>

@@ -11,7 +11,7 @@ const props = defineProps({
 
 <template>
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Sentiment Overview</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ $t('Sentiment Overview') }}</h2>
 
         <div class="space-y-4">
             <!-- Positive Sentiment -->
@@ -21,8 +21,8 @@ const props = defineProps({
                         <Smile :size="20" class="text-green-600" />
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">Positive</p>
-                        <p class="text-xs text-gray-500">Happy customers</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $t('Positive') }}</p>
+                        <p class="text-xs text-gray-500">{{ $t('Happy customers') }}</p>
                     </div>
                 </div>
                 <div class="text-2xl font-bold text-green-600">
@@ -37,8 +37,8 @@ const props = defineProps({
                         <Meh :size="20" class="text-gray-600" />
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">Neutral</p>
-                        <p class="text-xs text-gray-500">Mixed feelings</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $t('Neutral') }}</p>
+                        <p class="text-xs text-gray-500">{{ $t('Mixed feelings') }}</p>
                     </div>
                 </div>
                 <div class="text-2xl font-bold text-gray-600">
@@ -53,8 +53,8 @@ const props = defineProps({
                         <Frown :size="20" class="text-red-600" />
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">Negative</p>
-                        <p class="text-xs text-gray-500">Needs improvement</p>
+                        <p class="text-sm font-medium text-gray-900">{{ $t('Negative') }}</p>
+                        <p class="text-xs text-gray-500">{{ $t('Needs improvement') }}</p>
                     </div>
                 </div>
                 <div class="text-2xl font-bold text-red-600">

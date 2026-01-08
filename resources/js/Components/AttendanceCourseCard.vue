@@ -83,7 +83,7 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ students_count }} students</span>
+                        <span class="truncate">{{ students_count }} {{ $t('students') }}</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />
@@ -111,7 +111,7 @@ const getStarType = (index: number, rating: number) => {
                 @click="emit('viewSessions', id)"
                 class="w-full inline-flex justify-center items-center bg-[#2f837d] hover:bg-[#26685f] text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md mt-auto"
             >
-                Check Attendance
+                {{ $t('Check Attendance') }}
             </button>
         </div>
     </div>

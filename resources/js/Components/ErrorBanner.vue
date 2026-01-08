@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
                     type="button"
                     @click="handleDismiss"
                     class="flex-shrink-0 rounded-lg p-1 hover:bg-black/5 transition-colors"
-                    aria-label="Dismiss"
+                    :aria-label="$t('Dismiss')"
                 >
                     <X :size="16" :class="variantConfig.iconClass" />
                 </button>

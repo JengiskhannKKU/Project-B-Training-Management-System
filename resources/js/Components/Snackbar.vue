@@ -135,7 +135,7 @@ onUnmounted(() => {
                 <button
                     @click="handleClose"
                     class="ml-auto p-1 rounded hover:bg-white/10 transition-colors duration-200"
-                    aria-label="Close"
+                    :aria-label="$t('Close')"
                 >
                     <X :size="16" />
                 </button>

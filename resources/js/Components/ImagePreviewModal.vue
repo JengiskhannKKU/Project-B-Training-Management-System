@@ -75,7 +75,7 @@ const handleBackdropClick = () => {
 
                 <!-- Hint text -->
                 <div class="absolute bottom-6 text-center text-sm text-white/70">
-                    คลิกที่พื้นหลังหรือปุ่ม X เพื่อปิด
+                    {{ $t('Click background or X button to close') }}
                 </div>
             </div>
         </Transition>

@@ -141,7 +141,7 @@ onUnmounted(() => {
             class="absolute right-0 mt-2 w-80 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 p-4"
         >
             <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold text-gray-900">{{ title }}</h3>
+                <h3 class="font-semibold text-gray-900">{{ title === 'Filter' ? $t('Filter') : $t(title) }}</h3>
                 <button 
                     @click="closeDropdown"
                     class="text-gray-400 hover:text-gray-600 rounded-full p-1 hover:bg-gray-100"
@@ -182,7 +182,7 @@ onUnmounted(() => {
                             class="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 group"
                             :class="localDepartment.includes(dept) ? 'bg-[#2f837d]/10 text-[#2f837d]' : 'hover:bg-gray-50 text-gray-700'"
                         >
-                            <span class="text-sm font-medium">{{ dept }}</span>
+                            <span class="text-sm font-medium">{{ $t(dept) }}</span>
                             <div 
                                 class="h-5 w-5 rounded-full border flex items-center justify-center transition-colors"
                                 :class="localDepartment.includes(dept) ? 'border-[#2f837d] bg-[#2f837d]' : 'border-gray-300 group-hover:border-gray-400'"

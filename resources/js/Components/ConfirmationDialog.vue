@@ -8,7 +8,7 @@ const props = defineProps({
     },
     title: {
         type: String,
-        default: 'ยืนยันการดำเนินการ',
+        default: null,
     },
     message: {
         type: String,
@@ -16,11 +16,11 @@ const props = defineProps({
     },
     confirmText: {
         type: String,
-        default: 'ยืนยัน',
+        default: null,
     },
     cancelText: {
         type: String,
-        default: 'ยกเลิก',
+        default: null,
     },
     confirmButtonClass: {
         type: String,
@@ -76,7 +76,7 @@ const handleBackdropClick = () => {
                     >
                         <div class="relative mb-4">
                             <h3 class="text-center text-xl font-semibold text-gray-900">
-                                {{ title }}
+                                {{ title || $t('Confirm Action') }}
                             </h3>
                             <button
                                 type="button"
@@ -97,7 +97,7 @@ const handleBackdropClick = () => {
                                 @click="handleCancel"
                                 class="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                                {{ cancelText }}
+                                {{ cancelText || $t('Cancel') }}
                             </button>
                             <button
                                 type="button"
@@ -107,7 +107,7 @@ const handleBackdropClick = () => {
                                     confirmButtonClass
                                 ]"
                             >
-                                {{ confirmText }}
+                                {{ confirmText || $t('Confirm') }}
                             </button>
                         </div>
                     </div>

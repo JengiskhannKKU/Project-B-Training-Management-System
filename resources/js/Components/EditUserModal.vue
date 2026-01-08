@@ -70,7 +70,7 @@ const updateField = (field, value) => {
                             class="text-2xl font-semibold text-black"
                             id="modal-title"
                         >
-                            Edit User
+                            {{ $t('Edit User') }}
                         </h3>
                         <button
                             @click="closeModal"
@@ -88,7 +88,7 @@ const updateField = (field, value) => {
                                 for="name"
                                 class="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Name
+                                {{ $t('Name') }}
                             </label>
                             <input
                                 id="name"
@@ -96,7 +96,7 @@ const updateField = (field, value) => {
                                 @input="updateField('name', $event.target.value)"
                                 type="text"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                                placeholder="Enter name"
+                                :placeholder="$t('Enter name')"
                             />
                         </div>
 
@@ -106,7 +106,7 @@ const updateField = (field, value) => {
                                 for="email"
                                 class="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Email
+                                {{ $t('Email') }}
                             </label>
                             <input
                                 id="email"
@@ -114,7 +114,7 @@ const updateField = (field, value) => {
                                 @input="updateField('email', $event.target.value)"
                                 type="email"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                                placeholder="Enter email"
+                                :placeholder="$t('Enter your email')"
                             />
                         </div>
 
@@ -124,7 +124,7 @@ const updateField = (field, value) => {
                                 for="phone"
                                 class="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Phone
+                                {{ $t('Phone') }}
                             </label>
                             <input
                                 id="phone"
@@ -132,7 +132,7 @@ const updateField = (field, value) => {
                                 @input="updateField('phone', $event.target.value)"
                                 type="tel"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                                placeholder="Enter phone number"
+                                :placeholder="$t('Enter phone number')"
                             />
                         </div>
 
@@ -144,7 +144,7 @@ const updateField = (field, value) => {
                                     for="role"
                                     class="block text-sm font-medium text-gray-700 mb-1"
                                 >
-                                    Role
+                                    {{ $t('Role') }}
                                 </label>
                                 <select
                                     id="role"
@@ -153,7 +153,7 @@ const updateField = (field, value) => {
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                                 >
                                     <option value="" disabled>
-                                        Select role
+                                        {{ $t('Select role') }}
                                     </option>
                                     <option
                                         v-for="role in roleOptions"
@@ -171,7 +171,7 @@ const updateField = (field, value) => {
                                     for="status"
                                     class="block text-sm font-medium text-gray-700 mb-1"
                                 >
-                                    Status
+                                    {{ $t('Status') }}
                                 </label>
                                 <select
                                     id="status"
@@ -180,7 +180,7 @@ const updateField = (field, value) => {
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                                 >
                                     <option value="" disabled>
-                                        Select status
+                                        {{ $t('Select status') }}
                                     </option>
                                     <option
                                         v-for="status in statusOptions"
@@ -199,7 +199,7 @@ const updateField = (field, value) => {
                                 for="department"
                                 class="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Department
+                                {{ $t('Department') }}
                             </label>
                             <select
                                 id="department"
@@ -208,7 +208,7 @@ const updateField = (field, value) => {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                             >
                                 <option value="" disabled>
-                                    Select department
+                                    {{ $t('Select department') }}
                                 </option>
                                 <option
                                     v-for="dept in departmentOptions"
@@ -229,13 +229,13 @@ const updateField = (field, value) => {
                             @click="closeModal"
                             class="flex-1 px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button
                             @click="saveUser"
                             class="flex-1 px-6 py-2 bg-[#3d9792] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
                         >
-                            Save
+                            {{ $t('Save') }}
                         </button>
                     </div>
                 </div>

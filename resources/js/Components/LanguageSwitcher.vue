@@ -12,7 +12,7 @@
                         ? 'bg-[#2F837D] text-white shadow-sm scale-105' 
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'
                 ]"
-                :aria-label="currentLocale === 'th' ? 'Currently in Thai' : 'Switch to Thai'"
+                :aria-label="currentLocale === 'th' ? $t('Currently in Thai') : $t('Switch to Thai')"
                 :disabled="currentLocale === 'th'"
             >
                 <Transition
@@ -41,7 +41,7 @@
                         ? 'bg-[#2F837D] text-white shadow-sm scale-105' 
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'
                 ]"
-                :aria-label="currentLocale === 'en' ? 'Currently in English' : 'Switch to English'"
+                :aria-label="currentLocale === 'en' ? $t('Currently in English') : $t('Switch to English')"
                 :disabled="currentLocale === 'en'"
             >
                 <Transition

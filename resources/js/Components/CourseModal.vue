@@ -20,6 +20,7 @@ import {
     Trash2,
     Loader2,
 } from 'lucide-vue-next';
+import { trans } from 'laravel-vue-i18n';
 
 const toast = useToast();
 
@@ -112,27 +113,27 @@ const validateForm = () => {
 
     // Required field validations
     if (!form.title.trim()) {
-        errors.value.title = 'Program title is required';
+        errors.value.title = trans('Program title is required');
     }
 
     if (!form.short_description.trim()) {
-        errors.value.short_description = 'Short description is required';
+        errors.value.short_description = trans('Short description is required');
     }
 
     if (!form.full_description.trim()) {
-        errors.value.full_description = 'Full description is required';
+        errors.value.full_description = trans('Full description is required');
     }
 
     if (!form.category) {
-        errors.value.category = 'Please select a category';
+        errors.value.category = trans('Please select a category');
     }
 
     if (!form.duration_hours || form.duration_hours < 1) {
-        errors.value.duration_hours = 'Duration must be at least 1 hour';
+        errors.value.duration_hours = trans('Duration must be at least 1 hour');
     }
 
     if (!form.code.trim()) {
-        errors.value.code = 'Program code is required';
+        errors.value.code = trans('Program code is required');
     }
 
     return Object.keys(errors.value).length === 0;
@@ -151,7 +152,7 @@ const handleSubmit = async () => {
 };
 
 const saveDraft = () => {
-    toast.info('Draft saved locally. Connect API to persist.', { timeout: 3500 });
+    toast.info(trans('Draft saved locally. Connect API to persist.'), { timeout: 3500 });
 };
 
 const confirmRequest = () => {
@@ -183,10 +184,10 @@ const confirmRequest = () => {
 
     if (outcomePreview.value === 'rejected') {
         showRejectedDialog.value = true;
-        toast.error('Program request rejected (UI preview)', { timeout: 4000 });
+        toast.error(trans('Program request rejected (UI preview)'), { timeout: 4000 });
     } else {
         showSuccessDialog.value = true;
-        toast.success('Program published successfully (UI preview)', { timeout: 4000 });
+        toast.success(trans('Program published successfully (UI preview)'), { timeout: 4000 });
     }
 
     emit('success', payload);
@@ -233,13 +234,13 @@ const handleImageUpload = async (event: Event) => {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-        toast.error('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        toast.error(trans('Please select a valid image file (JPEG, PNG, GIF, or WebP)'));
         return;
     }
 
     // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
-        toast.error('Image file size must be less than 2MB');
+        toast.error(trans('Image file size must be less than 2MB'));
         return;
     }
 
@@ -265,9 +266,9 @@ const handleImageUpload = async (event: Event) => {
 
         imageUrl.value = data.data.url;
         imagePath.value = data.data.path;
-        toast.success('Image uploaded successfully');
+        toast.success(trans('Image uploaded successfully'));
     } catch (error: any) {
-        const message = error?.response?.data?.message || error?.message || 'Failed to upload image';
+        const message = error?.response?.data?.message || error?.message || trans('Failed to upload image');
         toast.error(message);
         imagePreview.value = null;
     } finally {
@@ -298,12 +299,12 @@ const triggerFileInput = () => {
                 <div class="flex items-center justify-between">
                     <div class="text-center flex-1">
                         <h2 class="text-xl font-bold text-gray-900">
-                            {{ isEditMode ? 'Edit Program' : 'Create New Program' }}
+                            {{ isEditMode ? $t('Edit Program') : $t('Create New Program') }}
                         </h2>
                         <p class="mt-1 text-sm text-gray-500">
                             {{ isEditMode
-                                ? 'Update the program information below.'
-                                : 'To create a training program, start by identifying the need and define clear learning objectives.'
+                                ? $t('Update the program information below.')
+                                : $t('To create a training program, start by identifying the need and define clear learning objectives.')
                             }}
                         </p>
                     </div>
@@ -317,7 +318,7 @@ const triggerFileInput = () => {
                 <!-- Program Title -->
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700">
-                        Program Title <span class="text-red-500">*</span>
+                        {{ $t('Program Title') }} <span class="text-red-500">*</span>
                     </label>
                     <input id="title" v-model="form.title" type="text"
                         placeholder="e.g., Advanced UX Design for Enterprise Application" :class="[
@@ -333,7 +334,7 @@ const triggerFileInput = () => {
                 <div>
                     <div class="flex items-center justify-between">
                         <label for="short_description" class="block text-sm font-medium text-gray-700">
-                            Short Description <span class="text-red-500">*</span>
+                            {{ $t('Short Description') }} <span class="text-red-500">*</span>
                         </label>
                         <span class="text-xs text-gray-500">{{ form.short_description.length }}/300</span>
                     </div>
@@ -349,7 +350,7 @@ const triggerFileInput = () => {
                 <!-- Full Description -->
                 <div>
                     <label for="full_description" class="block text-sm font-medium text-gray-700">
-                        Full Description / Objectives <span class="text-red-500">*</span>
+                        {{ $t('Full Description / Objectives') }} <span class="text-red-500">*</span>
                     </label>
                     <div :class="[
                         'mt-1 rounded-md border',
@@ -391,21 +392,21 @@ const triggerFileInput = () => {
                 <!-- Program Category -->
                 <div>
                     <label for="category" class="block text-sm font-medium text-gray-700">
-                        Program Category <span class="text-red-500">*</span>
+                        {{ $t('Program Category') }} <span class="text-red-500">*</span>
                     </label>
                     <select id="category" v-model="form.category" :class="[
                         'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
                         errors.category ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
                     ]">
-                        <option value="">Select Category</option>
-                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                        <option value="">{{ $t('Select Category') }}</option>
+                        <option v-for="cat in categories" :key="cat" :value="cat">{{ $t(cat) }}</option>
                     </select>
                     <p v-if="errors.category" class="mt-1 text-sm text-red-600">{{ errors.category }}</p>
                 </div>
 
                 <!-- Program Level -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">Program Level</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">{{ $t('Program Level') }}</label>
                     <div class="grid grid-cols-3 gap-3">
                         <label
                             class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition"
@@ -413,9 +414,9 @@ const triggerFileInput = () => {
                             <input type="radio" v-model="form.level" value="beginner" class="sr-only" />
                             <div class="text-center">
                                 <div class="text-sm font-medium"
-                                    :class="form.level === 'beginner' ? 'text-teal-700' : 'text-gray-900'">Beginner
+                                    :class="form.level === 'beginner' ? 'text-teal-700' : 'text-gray-900'">{{ $t('Beginner') }}
                                 </div>
-                                <div class="text-xs text-gray-500">No prior experience required</div>
+                                <div class="text-xs text-gray-500">{{ $t('No prior experience required') }}</div>
                             </div>
                         </label>
                         <label
@@ -425,8 +426,8 @@ const triggerFileInput = () => {
                             <div class="text-center">
                                 <div class="text-sm font-medium"
                                     :class="form.level === 'intermediate' ? 'text-teal-700' : 'text-gray-900'">
-                                    Intermediate</div>
-                                <div class="text-xs text-gray-500">Some experience required</div>
+                                    {{ $t('Intermediate') }}</div>
+                                <div class="text-xs text-gray-500">{{ $t('Some experience required') }}</div>
                             </div>
                         </label>
                         <label
@@ -435,9 +436,9 @@ const triggerFileInput = () => {
                             <input type="radio" v-model="form.level" value="advanced" class="sr-only" />
                             <div class="text-center">
                                 <div class="text-sm font-medium"
-                                    :class="form.level === 'advanced' ? 'text-teal-700' : 'text-gray-900'">Advanced
+                                    :class="form.level === 'advanced' ? 'text-teal-700' : 'text-gray-900'">{{ $t('Advanced') }}
                                 </div>
-                                <div class="text-xs text-gray-500">Extensive experience required</div>
+                                <div class="text-xs text-gray-500">{{ $t('Extensive experience required') }}</div>
                             </div>
                         </label>
                     </div>
@@ -449,7 +450,7 @@ const triggerFileInput = () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="duration_hours" class="block text-sm font-medium text-gray-700">
-                            Duration (Hours) <span class="text-red-500">*</span>
+                            {{ $t('Duration (Hours)') }} <span class="text-red-500">*</span>
                         </label>
                         <input id="duration_hours" v-model="form.duration_hours" type="number" min="1" :class="[
                             'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
@@ -473,7 +474,7 @@ const triggerFileInput = () => {
 
                 <!-- Program Thumbnail -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Program Thumbnail</label>
+                    <label class="block text-sm font-medium text-gray-700">{{ $t('Program Thumbnail') }}</label>
 
                     <!-- Hidden file input -->
                     <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
@@ -486,8 +487,8 @@ const triggerFileInput = () => {
                             <div class="text-center">
                                 <UploadCloud :size="48" class="mx-auto text-teal-500" />
                                 <div class="mt-4 flex text-sm text-gray-600">
-                                    <span class="font-medium text-teal-600 hover:text-teal-500">Click to upload</span>
-                                    <p class="pl-1">or drag and drop</p>
+                                    <span class="font-medium text-teal-600 hover:text-teal-500">{{ $t('Click to upload') }}</span>
+                                    <p class="pl-1">{{ $t('or drag and drop') }}</p>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP (max 2MB)</p>
                             </div>
@@ -503,7 +504,7 @@ const triggerFileInput = () => {
                                 class="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <div class="text-center text-white">
                                     <Loader2 :size="32" class="animate-spin mx-auto" />
-                                    <p class="mt-2 text-sm">Uploading...</p>
+                                    <p class="mt-2 text-sm">{{ $t('Uploading...') }}</p>
                                 </div>
                             </div>
                             <!-- Remove button -->
@@ -523,27 +524,26 @@ const triggerFileInput = () => {
                 <!-- Certificate Template -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="certificate_template" class="block text-sm font-medium text-gray-700">Certificate
-                            Template</label>
+                        <label for="certificate_template" class="block text-sm font-medium text-gray-700">{{ $t('Certificate Template') }}</label>
                         <select id="certificate_template" v-model="form.certificate_template"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500">
-                            <option value="standard">Standard</option>
-                            <option value="premium">Premium</option>
-                            <option value="custom">Custom</option>
+                            <option value="standard">{{ $t('Standard') }}</option>
+                            <option value="premium">{{ $t('Premium') }}</option>
+                            <option value="custom">{{ $t('Custom') }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Certificate Type</label>
+                        <label class="block text-sm font-medium text-gray-700">{{ $t('Certificate Type') }}</label>
                         <div class="mt-1 flex gap-4">
                             <label class="flex items-center">
                                 <input type="radio" v-model="form.certificate_type" value="free"
                                     class="border-gray-300 text-teal-600 focus:ring-teal-500">
-                                <span class="ml-2 text-sm text-gray-700">Free</span>
+                                <span class="ml-2 text-sm text-gray-700">{{ $t('Free') }}</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" v-model="form.certificate_type" value="paid"
                                     class="border-gray-300 text-teal-600 focus:ring-teal-500">
-                                <span class="ml-2 text-sm text-gray-700">Paid</span>
+                                <span class="ml-2 text-sm text-gray-700">{{ $t('Paid') }}</span>
                             </label>
                         </div>
                     </div>
@@ -552,7 +552,7 @@ const triggerFileInput = () => {
                 <!-- Buttons -->
                 <div class="flex flex-col gap-3 border-t pt-6">
                     <div class="flex flex-wrap items-center gap-3">
-                        <span class="text-sm font-medium text-gray-700">Preview admin response:</span>
+                        <span class="text-sm font-medium text-gray-700">{{ $t('Preview admin response:') }}</span>
                         <label class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
                             :class="outcomePreview === 'success' ? 'border-teal-300 text-teal-700' : 'border-gray-200 text-gray-600'">
                             <input type="radio" class="sr-only" value="success" v-model="outcomePreview" />
@@ -565,16 +565,16 @@ const triggerFileInput = () => {
                             <XCircle :size="16" />
                             Rejected
                         </label>
-                        <span class="text-xs text-gray-500">UI-only preview; will be wired to real API later.</span>
+                        <span class="text-xs text-gray-500">{{ $t('UI-only preview; will be wired to real API later.') }}</span>
                     </div>
                     <div class="flex items-center justify-between gap-4">
                         <button type="button" @click="saveDraft"
                             class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Save draft
+                            {{ $t('Save draft') }}
                         </button>
                         <button type="submit"
                             class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                            Confirm
+                            {{ $t('Confirm') }}
                         </button>
                     </div>
                 </div>
@@ -590,19 +590,19 @@ const triggerFileInput = () => {
                 class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
                 <AlertTriangle :size="28" />
             </div>
-            <h3 class="text-center text-lg font-semibold text-gray-900">Are you sure you want to request this program?
+            <h3 class="text-center text-lg font-semibold text-gray-900">{{ $t('Are you sure you want to request this program?') }}
             </h3>
             <p class="mt-2 text-center text-sm text-gray-600">
-                Please wait for admin approval after requesting this program.
+                {{ $t('Please wait for admin approval after requesting this program.') }}
             </p>
             <div class="mt-6 flex items-center justify-center gap-3">
                 <button @click="closeAllDialogs"
                     class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
+                    {{ $t('Cancel') }}
                 </button>
                 <button @click="confirmRequest"
                     class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                    Confirm
+                    {{ $t('Confirm') }}
                 </button>
             </div>
         </div>
@@ -616,59 +616,59 @@ const triggerFileInput = () => {
                 class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
                 <CheckCircle2 :size="28" />
             </div>
-            <h3 class="text-center text-lg font-semibold text-gray-900">Program published successfully !</h3>
+            <h3 class="text-center text-lg font-semibold text-gray-900">{{ $t('Program published successfully !') }}</h3>
             <p class="mt-1 text-center text-sm text-gray-600">Leadership Fundamentals is now live</p>
             <div class="mt-5 space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
-                <p class="text-sm font-semibold text-emerald-800">What happens next</p>
+                <p class="text-sm font-semibold text-emerald-800">{{ $t('What happens next') }}</p>
                 <div class="space-y-2 text-sm text-emerald-900">
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />
-                        <span>Registration is now open for students.</span>
+                        <span>{{ $t('Registration is now open for students.') }}</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />
-                        <span>Students can now view and enroll in the program.</span>
+                        <span>{{ $t('Students can now view and enroll in the program.') }}</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />
-                        <span>Notifications have been sent to relevant group.</span>
+                        <span>{{ $t('Notifications have been sent to relevant group.') }}</span>
                     </div>
                 </div>
             </div>
             <div class="mt-6 flex items-center justify-center gap-3">
                 <button @click="closeAllDialogs"
                     class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Close
+                    {{ $t('Close') }}
                 </button>
                 <button @click="closeAllDialogs"
                     class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                    View Program
+                    {{ $t('View Program') }}
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Rejected Dialog -->
+            <!-- Rejected Dialog -->
     <div v-if="showRejectedDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
         @click.self="closeAllDialogs">
         <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
             <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-500">
                 <XCircle :size="28" />
             </div>
-            <h3 class="text-center text-lg font-semibold text-gray-900">Program has rejected</h3>
+            <h3 class="text-center text-lg font-semibold text-gray-900">{{ $t('Program has rejected') }}</h3>
             <p class="mt-1 text-center text-sm text-gray-600">Leadership Fundamentals is not live</p>
             <div class="mt-5 space-y-3 rounded-xl border border-rose-100 bg-rose-50/60 p-4">
-                <p class="text-sm font-semibold text-rose-800">What happens next</p>
-                <p class="text-sm text-rose-900">Revise the program then send the request again.</p>
+                <p class="text-sm font-semibold text-rose-800">{{ $t('What happens next') }}</p>
+                <p class="text-sm text-rose-900">{{ $t('Revise the program then send the request again.') }}</p>
             </div>
             <div class="mt-6 flex items-center justify-center gap-3">
                 <button @click="closeAllDialogs"
                     class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Close
+                    {{ $t('Close') }}
                 </button>
                 <button @click="closeAllDialogs"
                     class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                    View Program
+                    {{ $t('View Program') }}
                 </button>
             </div>
         </div>
@@ -680,8 +680,8 @@ const triggerFileInput = () => {
         <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Upload and attach files</h3>
-                    <p class="text-sm text-gray-600">Upload and attach files to this project.</p>
+                    <h3 class="text-lg font-semibold text-gray-900">{{ $t('Upload and attach files') }}</h3>
+                    <p class="text-sm text-gray-600">{{ $t('Upload and attach files to this project.') }}</p>
                 </div>
                 <button @click="showAttachmentsModal = false" class="rounded p-2 hover:bg-gray-100">
                     <X :size="18" />
@@ -689,11 +689,11 @@ const triggerFileInput = () => {
             </div>
             <div class="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
                 <UploadCloud class="mx-auto text-teal-500" :size="36" />
-                <p class="mt-2 text-sm font-semibold text-gray-800">Click to upload</p>
+                <p class="mt-2 text-sm font-semibold text-gray-800">{{ $t('Click to upload') }}</p>
                 <p class="text-xs text-gray-500">SVG, PNG, JPG or GIF (max. 1280×720px)</p>
                 <button type="button" @click="simulateUpload"
                     class="mt-3 rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
-                    Simulate upload
+                    {{ $t('Simulate upload') }}
                 </button>
             </div>
 
@@ -723,11 +723,11 @@ const triggerFileInput = () => {
             <div class="mt-5 flex items-center justify-end gap-3">
                 <button @click="showAttachmentsModal = false"
                     class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
+                    {{ $t('Cancel') }}
                 </button>
                 <button @click="showAttachmentsModal = false"
                     class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                    Attach files
+                    {{ $t('Attach files') }}
                 </button>
             </div>
         </div>

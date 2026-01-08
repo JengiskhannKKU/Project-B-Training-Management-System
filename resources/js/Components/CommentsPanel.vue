@@ -74,13 +74,13 @@ const filteredReviews = computed(() => {
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
         <!-- Header Controls -->
         <div class="p-4 border-b border-gray-200 space-y-3">
-            <h2 class="text-lg font-semibold text-gray-900">Reviews</h2>
+            <h2 class="text-lg font-semibold text-gray-900">{{ $t('Reviews') }}</h2>
 
             <!-- Filter and Sort Row -->
             <div class="flex items-center gap-3 flex-wrap">
                 <!-- Filter Dropdown -->
                 <div class="flex-1 min-w-[150px]">
-                    <label class="sr-only">Filter</label>
+                    <label class="sr-only">{{ $t('Filter') }}</label>
                     <div class="relative">
                         <Filter class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
                         <select
@@ -92,7 +92,7 @@ const filteredReviews = computed(() => {
                                 :key="option.value"
                                 :value="option.value"
                             >
-                                {{ option.label }}
+                                {{ $t(option.label) }}
                             </option>
                         </select>
                     </div>
@@ -100,7 +100,7 @@ const filteredReviews = computed(() => {
 
                 <!-- Sort Dropdown -->
                 <div class="flex-1 min-w-[150px]">
-                    <label class="sr-only">Sort</label>
+                    <label class="sr-only">{{ $t('Sort') }}</label>
                     <div class="relative">
                         <ArrowUpDown class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" :size="16" />
                         <select
@@ -112,7 +112,7 @@ const filteredReviews = computed(() => {
                                 :key="option.value"
                                 :value="option.value"
                             >
-                                {{ option.label }}
+                                {{ $t(option.label) }}
                             </option>
                         </select>
                     </div>
@@ -125,7 +125,7 @@ const filteredReviews = computed(() => {
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search by review text or course name..."
+                    :placeholder="$t('Search by review text or course name...')"
                     class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
             </div>
@@ -134,7 +134,7 @@ const filteredReviews = computed(() => {
         <!-- Reviews List (Scrollable) -->
         <div class="flex-1 overflow-y-auto p-4 space-y-4">
             <div v-if="filteredReviews.length === 0" class="text-center py-12">
-                <p class="text-gray-500">No reviews found matching your criteria.</p>
+                <p class="text-gray-500">{{ $t('No reviews found matching your criteria.') }}</p>
             </div>
 
             <ReviewCard
@@ -147,7 +147,7 @@ const filteredReviews = computed(() => {
         <!-- Results Counter -->
         <div class="p-3 border-t border-gray-200 bg-gray-50">
             <p class="text-xs text-gray-600 text-center">
-                Showing {{ filteredReviews.length }} of {{ reviews.length }} review{{ reviews.length !== 1 ? 's' : '' }}
+                {{ $t('Showing {shown} of {total} reviews', { shown: filteredReviews.length, total: reviews.length }) }}
             </p>
         </div>
     </div>

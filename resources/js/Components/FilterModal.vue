@@ -87,7 +87,7 @@ const handleReset = () => {
                             <ListFilterIcon class="h-5 w-5 text-white" />
                         </div>
                         <h3 class="text-xl font-bold text-gray-900">
-                            {{ title }}
+                            {{ $t(title) }}
                         </h3>
                     </div>
                     <button
@@ -105,7 +105,7 @@ const handleReset = () => {
                         <label
                             class="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            Assignment
+                            {{ $t('Assignment') }}
                         </label>
                         <select
                             :value="selectedAssignment"
@@ -117,8 +117,8 @@ const handleReset = () => {
                             "
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         >
-                            <option value="all">All Courses</option>
-                            <option value="my">My Courses</option>
+                            <option value="all">{{ $t('All Courses') }}</option>
+                            <option value="my">{{ $t('My Courses') }}</option>
                         </select>
                     </div>
 
@@ -127,7 +127,7 @@ const handleReset = () => {
                         <label
                             class="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            {{ departmentLabel }}
+                            {{ $t(departmentLabel) }}
                         </label>
                         <select
                             :value="selectedDepartment"
@@ -139,13 +139,13 @@ const handleReset = () => {
                             "
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         >
-                            <option value="all">All {{ departmentLabel }}s</option>
+                            <option value="all">{{ $t('All') }} {{ $t(departmentLabel) }}</option>
                             <option
                                 v-for="dept in departments"
                                 :key="dept"
                                 :value="dept"
                             >
-                                {{ dept }}
+                                {{ $t(dept) }}
                             </option>
                         </select>
                     </div>
@@ -155,7 +155,7 @@ const handleReset = () => {
                         <label
                             class="block text-sm font-medium text-gray-700 mb-2"
                         >
-                            Status
+                            {{ $t('Status') }}
                         </label>
                         <select
                             :value="selectedStatus"
@@ -167,13 +167,13 @@ const handleReset = () => {
                             "
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
                         >
-                            <option value="all">All Status</option>
+                            <option value="all">{{ $t('All Status') }}</option>
                             <option
                                 v-for="status in statusOptions"
                                 :key="status"
                                 :value="status"
                             >
-                                {{ status }}
+                                {{ $t(status) }}
                             </option>
                         </select>
                     </div>
@@ -185,13 +185,13 @@ const handleReset = () => {
                         @click="handleReset"
                         class="flex-1 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                     >
-                        Reset
+                        {{ $t('Reset') }}
                     </button>
                     <button
                         @click="handleClose"
                         class="flex-1 px-4 py-2 bg-gradient-to-r from-[#2f837d] to-[#257067] text-white rounded-lg hover:shadow-lg transition-all font-medium"
                     >
-                        Apply
+                        {{ $t('Apply') }}
                     </button>
                 </div>
                 </div>

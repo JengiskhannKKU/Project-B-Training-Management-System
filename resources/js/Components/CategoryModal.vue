@@ -131,7 +131,7 @@ const handleSave = () => {
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between p-6 border-b border-gray-200">
                     <h2 class="text-xl font-semibold text-gray-900">
-                        {{ mode === "add" ? "Create Category" : "Edit Category" }}
+                        {{ mode === "add" ? $t('Create Category') : $t('Edit Category') }}
                     </h2>
                     <button
                         @click="handleClose"
@@ -146,12 +146,12 @@ const handleSave = () => {
                     <!-- Name Field -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Category Name
+                            {{ $t('Category Name') }}
                         </label>
                         <input
                             v-model="formData.name"
                             type="text"
-                            placeholder="Enter category name"
+                            :placeholder="$t('Enter category name')"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent outline-none transition-all"
                         />
                     </div>
@@ -159,7 +159,7 @@ const handleSave = () => {
                     <!-- Icon and Color Field -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Icon & Color
+                            {{ $t('Icon & Color') }}
                         </label>
                         <div class="relative">
                             <button
@@ -177,7 +177,7 @@ const handleSave = () => {
                                             :style="{ color: getColorHex(formData.color) }"
                                         />
                                     </div>
-                                    <span class="text-gray-700">{{ formData.icon }}</span>
+                                    <span class="text-gray-700">{{ $t('icon.' + formData.icon) }}</span>
                                 </div>
                                 <ChevronDown :size="20" class="text-gray-400" />
                             </button>
@@ -190,7 +190,7 @@ const handleSave = () => {
                                 >
                                     <!-- Color Selection Section -->
                                     <div class="p-3 border-b border-gray-200 bg-gray-50">
-                                        <p class="text-xs font-medium text-gray-600 mb-2">Select Color</p>
+                                        <p class="text-xs font-medium text-gray-600 mb-2">{{ $t('Select Color') }}</p>
                                         <div class="flex gap-2 flex-wrap">
                                             <button
                                                 v-for="color in availableColors"
@@ -199,7 +199,7 @@ const handleSave = () => {
                                                 class="w-7 h-7 rounded-full transition-all hover:scale-110"
                                                 :class="{ 'ring-2 ring-offset-2 ring-gray-400': formData.color === color.value }"
                                                 :style="{ backgroundColor: color.hex }"
-                                                :title="color.name"
+                                                :title="$t('color.' + color.value)"
                                             ></button>
                                         </div>
                                     </div>
@@ -218,7 +218,7 @@ const handleSave = () => {
                                                 :size="20"
                                                 class="text-gray-600"
                                             />
-                                            <span class="text-gray-700">{{ icon.name }}</span>
+                                            <span class="text-gray-700">{{ $t('icon.' + icon.name) }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -233,13 +233,13 @@ const handleSave = () => {
                         @click="handleClose"
                         class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                     >
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button
                         @click="handleSave"
                         class="px-5 py-2.5 bg-[#2f837d] text-white rounded-lg font-medium hover:bg-[#26685f] transition-colors"
                     >
-                        {{ mode === "add" ? "Create" : "Save Changes" }}
+                        {{ mode === "add" ? $t('Create') : $t('Save Changes') }}
                     </button>
                 </div>
             </div>

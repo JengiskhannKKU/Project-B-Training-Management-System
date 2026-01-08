@@ -85,7 +85,7 @@ const getStarType = (index: number, rating: number) => {
                     <span class="ml-1 text-sm text-gray-600">({{ rating }})</span>
                 </div>
                 <span :class="getLevelColor(level || 'Beginner')" class="rounded px-2 py-1 text-xs font-medium">
-                    {{ formatLevel(level || 'Beginner') }}
+                    {{ $t(formatLevel(level || 'Beginner')) }}
                 </span>
             </div>
 
@@ -97,7 +97,7 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ students_count }} students</span>
+                        <span class="truncate">{{ students_count }} {{ $t('students') }}</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />

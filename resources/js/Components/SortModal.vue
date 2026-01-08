@@ -74,7 +74,7 @@ const handleReset = () => {
                             <ArrowDownNarrowWide class="h-5 w-5 text-white" />
                         </div>
                         <h3 class="text-xl font-bold text-gray-900">
-                            {{ title }}
+                            {{ $t(title) }}
                         </h3>
                     </div>
                     <button
@@ -87,7 +87,7 @@ const handleReset = () => {
 
                 <!-- Modal Content -->
                 <p class="text-sm text-gray-600 mb-4">
-                    Choose a field to sort by:
+                    {{ $t('Choose a field to sort by:') }}
                 </p>
 
                 <!-- Sort Options -->
@@ -103,9 +103,9 @@ const handleReset = () => {
                                 : 'bg-gray-50 hover:bg-gray-100 text-gray-900',
                         ]"
                     >
-                        <span class="font-medium">{{ option.label }}</span>
+                        <span class="font-medium">{{ $t(option.label) }}</span>
                         <span v-if="sortColumn === option.value" class="text-xs">
-                            {{ sortDirection === "asc" ? option.directionLabels.asc : option.directionLabels.desc }}
+                            {{ sortDirection === "asc" ? $t(option.directionLabels.asc) : $t(option.directionLabels.desc) }}
                         </span>
                     </button>
                 </div>
@@ -116,13 +116,13 @@ const handleReset = () => {
                         @click="handleReset"
                         class="flex-1 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                     >
-                        Reset
+                        {{ $t('Reset') }}
                     </button>
                     <button
                         @click="handleClose"
                         class="flex-1 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
                     >
-                        Close
+                        {{ $t('Close') }}
                     </button>
                 </div>
                 </div>

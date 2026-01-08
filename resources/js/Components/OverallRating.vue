@@ -30,7 +30,7 @@ const getStarFill = (index) => {
 
 <template>
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Overall Rating</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ $t('Overall Rating') }}</h2>
 
         <!-- Large Rating Display -->
         <div class="text-center mb-6">
@@ -56,7 +56,7 @@ const getStarFill = (index) => {
             </div>
 
             <p class="text-sm text-gray-500">
-                Based on {{ totalReviews }} review{{ totalReviews !== 1 ? 's' : '' }}
+                {{ $t('Based on {count} reviews', { count: totalReviews }) }}
             </p>
         </div>
 

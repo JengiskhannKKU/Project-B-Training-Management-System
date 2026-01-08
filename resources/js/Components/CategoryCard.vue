@@ -87,7 +87,7 @@ const categoryColor = computed(() => {
             </h3>
             <div class="flex items-center text-xs text-gray-500">
                 <BookOpen :size="14" class="mr-1" />
-                {{ category.courses }} courses
+                {{ category.courses }} {{ $t('courses') }}
             </div>
         </div>
 

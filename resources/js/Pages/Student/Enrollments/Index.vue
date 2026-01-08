@@ -17,6 +17,8 @@ import {
 } from "lucide-vue-next";
 import SortDropdown from "@/Components/SortDropdown.vue";
 
+import { formatDate, formatTime } from "@/utils/dateFormatter";
+
 const toast = useToast();
 const enrollments = ref([]);
 const certificates = ref([]);
@@ -62,14 +64,9 @@ const normalizeDate = (value) => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const formatDate = (value) => {
-    if (!value) return "-";
-    return value;
-};
-
-const formatTime = (session) => {
-    const start = session?.start_time ? session.start_time.slice(0, 5) : "--:--";
-    const end = session?.end_time ? session.end_time.slice(0, 5) : "--:--";
+const formatSessionTime = (session) => {
+    const start = session?.start_time ? formatTime(session.start_time) : "--:--";
+    const end = session?.end_time ? formatTime(session.end_time) : "--:--";
     return `${start} - ${end}`;
 };
 
@@ -264,7 +261,6 @@ onMounted(fetchEnrollments);
                 </div>
 
                 <div class="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-                <div class="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
                     <div class="flex items-center gap-3">
                         <div class="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 text-pink-600">
                             <Award class="h-5 w-5" />
@@ -272,11 +268,6 @@ onMounted(fetchEnrollments);
                         <div>
                             <div class="text-xl font-semibold text-gray-900">
                                 {{ certificateCount }}
-                            </div>
-                            <div class="text-sm text-gray-500">Certificates</div>
-                        </div>
-                    </div>
-                </div>
                             </div>
                             <div class="text-sm text-gray-500">Certificates</div>
                         </div>
@@ -398,7 +389,7 @@ onMounted(fetchEnrollments);
                                     <div>
                                         <div class="text-xs text-gray-400">Date</div>
                                         <div class="font-semibold text-gray-900">
-                                            {{ formatDate(enrollment.session?.start_date) }}
+                                            {{ formatDate(enrollment.session?.start_date) || '-' }}
                                         </div>
                                     </div>
                                 </div>
@@ -420,7 +411,7 @@ onMounted(fetchEnrollments);
                                     <div>
                                         <div class="text-xs text-gray-400">Time</div>
                                         <div class="font-semibold text-gray-900">
-                                            {{ formatTime(enrollment.session) }}
+                                            {{ formatSessionTime(enrollment.session) }}
                                         </div>
                                     </div>
                                 </div>
