@@ -5,15 +5,14 @@ import axios from "axios";
 import { useToast } from "vue-toastification";
 import { Eye, Trash2, Search } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import LoadingSpinner from "@/Components/LoadingSpinner.vue";
-import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import Skeleton from "@/Components/Skeleton.vue";
+import { useAlert } from "@/composables/useAlert";
 
 const toast = useToast();
+const alert = useAlert();
 
 const certificates = ref([]);
 const isLoading = ref(false);
-const showRevokeModal = ref(false);
-const revokeTarget = ref(null);
 const isRevoking = ref(false);
 
 const filters = ref({
@@ -65,23 +64,22 @@ const resetFilters = async () => {
     await fetchCertificates();
 };
 
-const openRevokeModal = (certificate) => {
-    revokeTarget.value = certificate;
-    showRevokeModal.value = true;
-};
+const revokeCertificate = async (certificate) => {
+    const confirmed = await alert.confirm({
+        title: 'Revoke Certificate',
+        message: 'Are you sure you want to revoke this certificate? This action cannot be undone.',
+        confirmText: 'Revoke',
+        cancelText: 'Cancel'
+    });
 
-const revokeCertificate = async () => {
-    if (!revokeTarget.value) {
-        return;
-    }
+    if (!confirmed) return;
 
     isRevoking.value = true;
     try {
         await ensureCsrf();
-        await axios.post(`/api/admin/certificates/${revokeTarget.value.id}/revoke`);
+        await axios.post(`/api/admin/certificates/${certificate.id}/revoke`);
         toast.success("Certificate revoked.");
-        revokeTarget.value.status = "revoked";
-        showRevokeModal.value = false;
+        certificate.status = "revoked";
     } catch (error) {
         const message =
             error?.response?.data?.message ||
@@ -192,8 +190,34 @@ onMounted(fetchCertificates);
                     </h2>
                 </div>
 
-                <div v-if="isLoading" class="py-10">
-                    <LoadingSpinner size="lg" text="Loading certificates..." />
+                <!-- Skeleton Loading State -->
+                <div v-if="isLoading" class="mt-4 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Certificate Code</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Recipient</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Program</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Session</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Issued At</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Issued By</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr v-for="n in 5" :key="n" :class="n % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
+                                <td class="px-4 py-3"><Skeleton variant="text" width="100px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="100px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="120px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="100px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="rectangular" width="60px" height="22px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="80px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="80px" height="16px" /></td>
+                                <td class="px-4 py-3"><Skeleton variant="text" width="100px" height="16px" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div v-else-if="certificates.length === 0" class="py-10 text-center text-sm text-gray-500">
@@ -272,7 +296,7 @@ onMounted(fetchCertificates);
                                         <button
                                             type="button"
                                             :disabled="certificate.status === 'revoked' || isRevoking"
-                                            @click="openRevokeModal(certificate)"
+                                            @click="revokeCertificate(certificate)"
                                             class="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
                                         >
                                             <Trash2 :size="14" />
@@ -285,17 +309,6 @@ onMounted(fetchCertificates);
                     </table>
                 </div>
             </div>
-
-            <ConfirmationDialog
-                :show="showRevokeModal"
-                title="Revoke Certificate"
-                message="Are you sure you want to revoke this certificate? This action cannot be undone."
-                confirmText="Revoke"
-                confirmButtonClass="bg-red-600 hover:bg-red-700"
-                @confirm="revokeCertificate"
-                @close="showRevokeModal = false"
-                @cancel="showRevokeModal = false"
-            />
         </div>
     </AdminLayout>
 </template>

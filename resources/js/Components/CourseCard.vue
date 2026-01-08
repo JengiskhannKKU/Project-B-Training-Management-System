@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Star, GraduationCap, Gem, CalendarClock, Clock, MapPin } from 'lucide-vue-next';
+import { formatDate, formatTime } from '@/utils/dateFormatter';
 
 interface CourseCardProps {
     id: number;
@@ -106,11 +107,11 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <CalendarClock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ date }}</span>
+                        <span class="truncate">{{ formatDate(date) }}</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Clock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ time }}</span>
+                        <span class="truncate">{{ formatTime(time) }}</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

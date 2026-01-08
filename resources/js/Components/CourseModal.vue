@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import axios from 'axios';
@@ -73,6 +73,22 @@ const form = useForm({
     level: props.course?.level || 'beginner',
     certificate_template: props.course?.certificate_template || 'standard',
     certificate_type: props.course?.certificate_type || 'free',
+    // New fields required by backend
+    code: (props.course as any)?.code || '',
+    duration_hours: (props.course as any)?.duration_hours || 40,
+    status: (props.course as any)?.status || 'active',
+});
+
+// Auto-generate code from title
+watch(() => form.title, (newVal) => {
+    if (!isEditMode.value && newVal) {
+        // Simple slugify: uppercase, replace non-alphanumeric with dash, trim dashes
+        form.code = newVal
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .substring(0, 20);
+    }
 });
 
 const attachments = ref([
@@ -111,6 +127,14 @@ const validateForm = () => {
         errors.value.category = 'Please select a category';
     }
 
+    if (!form.duration_hours || form.duration_hours < 1) {
+        errors.value.duration_hours = 'Duration must be at least 1 hour';
+    }
+
+    if (!form.code.trim()) {
+        errors.value.code = 'Program code is required';
+    }
+
     return Object.keys(errors.value).length === 0;
 };
 
@@ -133,11 +157,19 @@ const saveDraft = () => {
 const confirmRequest = () => {
     showConfirmDialog.value = false;
     const formPayload = typeof form.data === 'function' ? form.data() : { ...form };
-    
+
     // Add image_url to payload if uploaded
     const payload = {
         ...formPayload,
+        // Map frontend 'title' to backend 'name'
+        name: form.title,
+        // Ensure description is present (map full_description)
+        description: form.full_description,
         image_url: imageUrl.value || null,
+        // Include new fields
+        code: form.code,
+        duration_hours: form.duration_hours,
+        status: form.status,
     };
 
     // If consumer wants to skip preview overlays, emit directly
@@ -224,13 +256,13 @@ const handleImageUpload = async (event: Event) => {
         await axios.get('/sanctum/csrf-cookie');
         const formData = new FormData();
         formData.append('image', file);
-        
+
         const { data } = await axios.post(`/api/${props.uploadUrlPrefix}/upload/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
         });
-        
+
         imageUrl.value = data.data.url;
         imagePath.value = data.data.path;
         toast.success('Image uploaded successfully');
@@ -259,7 +291,8 @@ const triggerFileInput = () => {
 
 <template>
     <!-- Program Modal -->
-    <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" @click.self="handleClose">
+    <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+        @click.self="handleClose">
         <div class="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
             <div class="sticky top-0 z-10 border-b bg-white px-6 py-4">
                 <div class="flex items-center justify-between">
@@ -286,18 +319,15 @@ const triggerFileInput = () => {
                     <label for="title" class="block text-sm font-medium text-gray-700">
                         Program Title <span class="text-red-500">*</span>
                     </label>
-                    <input
-                        id="title"
-                        v-model="form.title"
-                        type="text"
-                        placeholder="e.g., Advanced UX Design for Enterprise Application"
-                        :class="[
+                    <input id="title" v-model="form.title" type="text"
+                        placeholder="e.g., Advanced UX Design for Enterprise Application" :class="[
                             'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
                             errors.title ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
-                        ]"
-                    />
+                        ]" />
                     <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
                 </div>
+
+
 
                 <!-- Short Description -->
                 <div>
@@ -307,18 +337,13 @@ const triggerFileInput = () => {
                         </label>
                         <span class="text-xs text-gray-500">{{ form.short_description.length }}/300</span>
                     </div>
-                    <textarea
-                        id="short_description"
-                        v-model="form.short_description"
-                        rows="2"
-                        maxlength="300"
-                        placeholder="A brief summary of what the program is about."
-                        :class="[
+                    <textarea id="short_description" v-model="form.short_description" rows="2" maxlength="300"
+                        placeholder="A brief summary of what the program is about." :class="[
                             'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
                             errors.short_description ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
-                        ]"
-                    ></textarea>
-                    <p v-if="errors.short_description" class="mt-1 text-sm text-red-600">{{ errors.short_description }}</p>
+                        ]"></textarea>
+                    <p v-if="errors.short_description" class="mt-1 text-sm text-red-600">{{ errors.short_description }}
+                    </p>
                 </div>
 
                 <!-- Full Description -->
@@ -355,15 +380,12 @@ const triggerFileInput = () => {
                                 <Code :size="16" />
                             </button>
                         </div>
-                        <textarea
-                            id="full_description"
-                            v-model="form.full_description"
-                            rows="4"
+                        <textarea id="full_description" v-model="form.full_description" rows="4"
                             placeholder="Describe the program in detail. You can use Markdown for formatting."
-                            class="block w-full border-0 p-3 focus:ring-0"
-                        ></textarea>
+                            class="block w-full border-0 p-3 focus:ring-0"></textarea>
                     </div>
-                    <p v-if="errors.full_description" class="mt-1 text-sm text-red-600">{{ errors.full_description }}</p>
+                    <p v-if="errors.full_description" class="mt-1 text-sm text-red-600">{{ errors.full_description }}
+                    </p>
                 </div>
 
                 <!-- Program Category -->
@@ -371,14 +393,10 @@ const triggerFileInput = () => {
                     <label for="category" class="block text-sm font-medium text-gray-700">
                         Program Category <span class="text-red-500">*</span>
                     </label>
-                    <select
-                        id="category"
-                        v-model="form.category"
-                        :class="[
-                            'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
-                            errors.category ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
-                        ]"
-                    >
+                    <select id="category" v-model="form.category" :class="[
+                        'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
+                        errors.category ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
+                    ]">
                         <option value="">Select Category</option>
                         <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
                     </select>
@@ -389,49 +407,82 @@ const triggerFileInput = () => {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-3">Program Level</label>
                     <div class="grid grid-cols-3 gap-3">
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="form.level === 'beginner' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
+                        <label
+                            class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition"
+                            :class="form.level === 'beginner' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
                             <input type="radio" v-model="form.level" value="beginner" class="sr-only" />
                             <div class="text-center">
-                                <div class="text-sm font-medium" :class="form.level === 'beginner' ? 'text-teal-700' : 'text-gray-900'">Beginner</div>
+                                <div class="text-sm font-medium"
+                                    :class="form.level === 'beginner' ? 'text-teal-700' : 'text-gray-900'">Beginner
+                                </div>
                                 <div class="text-xs text-gray-500">No prior experience required</div>
                             </div>
                         </label>
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="form.level === 'intermediate' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
+                        <label
+                            class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition"
+                            :class="form.level === 'intermediate' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
                             <input type="radio" v-model="form.level" value="intermediate" class="sr-only" />
                             <div class="text-center">
-                                <div class="text-sm font-medium" :class="form.level === 'intermediate' ? 'text-teal-700' : 'text-gray-900'">Intermediate</div>
+                                <div class="text-sm font-medium"
+                                    :class="form.level === 'intermediate' ? 'text-teal-700' : 'text-gray-900'">
+                                    Intermediate</div>
                                 <div class="text-xs text-gray-500">Some experience required</div>
                             </div>
                         </label>
-                        <label class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition" :class="form.level === 'advanced' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
+                        <label
+                            class="relative flex cursor-pointer items-center justify-center rounded-lg border-2 px-4 py-3 transition"
+                            :class="form.level === 'advanced' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:border-gray-300'">
                             <input type="radio" v-model="form.level" value="advanced" class="sr-only" />
                             <div class="text-center">
-                                <div class="text-sm font-medium" :class="form.level === 'advanced' ? 'text-teal-700' : 'text-gray-900'">Advanced</div>
+                                <div class="text-sm font-medium"
+                                    :class="form.level === 'advanced' ? 'text-teal-700' : 'text-gray-900'">Advanced
+                                </div>
                                 <div class="text-xs text-gray-500">Extensive experience required</div>
                             </div>
                         </label>
                     </div>
                 </div>
 
+
+
+                <!-- Duration and Status -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="duration_hours" class="block text-sm font-medium text-gray-700">
+                            Duration (Hours) <span class="text-red-500">*</span>
+                        </label>
+                        <input id="duration_hours" v-model="form.duration_hours" type="number" min="1" :class="[
+                            'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
+                            errors.duration_hours ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
+                        ]" />
+                        <p v-if="errors.duration_hours" class="mt-1 text-sm text-red-600">{{ errors.duration_hours }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700">
+                            Status <span class="text-red-500">*</span>
+                        </label>
+                        <select id="status" v-model="form.status"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Program Thumbnail -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Program Thumbnail</label>
-                    
+
                     <!-- Hidden file input -->
-                    <input
-                        ref="fileInputRef"
-                        type="file"
-                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
-                        class="hidden"
-                        @change="handleImageUpload"
-                    />
-                    
+                    <input ref="fileInputRef" type="file" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                        class="hidden" @change="handleImageUpload" />
+
                     <!-- Upload area / Preview -->
                     <div v-if="!imagePreview" class="mt-1">
-                        <div
-                            @click="triggerFileInput"
-                            class="flex cursor-pointer justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 hover:border-teal-400 transition-colors"
-                        >
+                        <div @click="triggerFileInput"
+                            class="flex cursor-pointer justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 py-10 hover:border-teal-400 transition-colors">
                             <div class="text-center">
                                 <UploadCloud :size="48" class="mx-auto text-teal-500" />
                                 <div class="mt-4 flex text-sm text-gray-600">
@@ -442,30 +493,23 @@ const triggerFileInput = () => {
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Image preview with remove option -->
                     <div v-else class="mt-1 relative">
                         <div class="relative rounded-lg overflow-hidden border border-gray-200">
-                            <img
-                                :src="imagePreview"
-                                alt="Program thumbnail preview"
-                                class="w-full h-48 object-cover"
-                            />
+                            <img :src="imagePreview" alt="Program thumbnail preview" class="w-full h-48 object-cover" />
                             <!-- Upload progress overlay -->
-                            <div v-if="imageUploading" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <div v-if="imageUploading"
+                                class="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <div class="text-center text-white">
                                     <Loader2 :size="32" class="animate-spin mx-auto" />
                                     <p class="mt-2 text-sm">Uploading...</p>
                                 </div>
                             </div>
                             <!-- Remove button -->
-                            <button
-                                v-if="!imageUploading"
-                                type="button"
-                                @click="removeImage"
+                            <button v-if="!imageUploading" type="button" @click="removeImage"
                                 class="absolute top-2 right-2 rounded-full bg-red-500 p-2 text-white hover:bg-red-600 shadow-lg"
-                                title="Remove image"
-                            >
+                                title="Remove image">
                                 <Trash2 :size="16" />
                             </button>
                         </div>
@@ -479,12 +523,10 @@ const triggerFileInput = () => {
                 <!-- Certificate Template -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="certificate_template" class="block text-sm font-medium text-gray-700">Certificate Template</label>
-                        <select
-                            id="certificate_template"
-                            v-model="form.certificate_template"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500"
-                        >
+                        <label for="certificate_template" class="block text-sm font-medium text-gray-700">Certificate
+                            Template</label>
+                        <select id="certificate_template" v-model="form.certificate_template"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500">
                             <option value="standard">Standard</option>
                             <option value="premium">Premium</option>
                             <option value="custom">Custom</option>
@@ -494,11 +536,13 @@ const triggerFileInput = () => {
                         <label class="block text-sm font-medium text-gray-700">Certificate Type</label>
                         <div class="mt-1 flex gap-4">
                             <label class="flex items-center">
-                                <input type="radio" v-model="form.certificate_type" value="free" class="border-gray-300 text-teal-600 focus:ring-teal-500">
+                                <input type="radio" v-model="form.certificate_type" value="free"
+                                    class="border-gray-300 text-teal-600 focus:ring-teal-500">
                                 <span class="ml-2 text-sm text-gray-700">Free</span>
                             </label>
                             <label class="flex items-center">
-                                <input type="radio" v-model="form.certificate_type" value="paid" class="border-gray-300 text-teal-600 focus:ring-teal-500">
+                                <input type="radio" v-model="form.certificate_type" value="paid"
+                                    class="border-gray-300 text-teal-600 focus:ring-teal-500">
                                 <span class="ml-2 text-sm text-gray-700">Paid</span>
                             </label>
                         </div>
@@ -524,10 +568,12 @@ const triggerFileInput = () => {
                         <span class="text-xs text-gray-500">UI-only preview; will be wired to real API later.</span>
                     </div>
                     <div class="flex items-center justify-between gap-4">
-                        <button type="button" @click="saveDraft" class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <button type="button" @click="saveDraft"
+                            class="rounded-lg border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                             Save draft
                         </button>
-                        <button type="submit" class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                        <button type="submit"
+                            class="rounded-lg bg-teal-600 px-6 py-2 text-sm font-medium text-white hover:bg-teal-700">
                             Confirm
                         </button>
                     </div>
@@ -537,20 +583,25 @@ const triggerFileInput = () => {
     </div>
 
     <!-- Confirm Request Dialog -->
-    <div v-if="showConfirmDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+    <div v-if="showConfirmDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeAllDialogs">
         <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
-            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+            <div
+                class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-500">
                 <AlertTriangle :size="28" />
             </div>
-            <h3 class="text-center text-lg font-semibold text-gray-900">Are you sure you want to request this program?</h3>
+            <h3 class="text-center text-lg font-semibold text-gray-900">Are you sure you want to request this program?
+            </h3>
             <p class="mt-2 text-center text-sm text-gray-600">
                 Please wait for admin approval after requesting this program.
             </p>
             <div class="mt-6 flex items-center justify-center gap-3">
-                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button @click="closeAllDialogs"
+                    class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Cancel
                 </button>
-                <button @click="confirmRequest" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button @click="confirmRequest"
+                    class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
                     Confirm
                 </button>
             </div>
@@ -558,9 +609,11 @@ const triggerFileInput = () => {
     </div>
 
     <!-- Success Dialog -->
-    <div v-if="showSuccessDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+    <div v-if="showSuccessDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeAllDialogs">
         <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
-            <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+            <div
+                class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
                 <CheckCircle2 :size="28" />
             </div>
             <h3 class="text-center text-lg font-semibold text-gray-900">Program published successfully !</h3>
@@ -583,10 +636,12 @@ const triggerFileInput = () => {
                 </div>
             </div>
             <div class="mt-6 flex items-center justify-center gap-3">
-                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button @click="closeAllDialogs"
+                    class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Close
                 </button>
-                <button @click="closeAllDialogs" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button @click="closeAllDialogs"
+                    class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
                     View Program
                 </button>
             </div>
@@ -594,7 +649,8 @@ const triggerFileInput = () => {
     </div>
 
     <!-- Rejected Dialog -->
-    <div v-if="showRejectedDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="closeAllDialogs">
+    <div v-if="showRejectedDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeAllDialogs">
         <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
             <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-500">
                 <XCircle :size="28" />
@@ -606,10 +662,12 @@ const triggerFileInput = () => {
                 <p class="text-sm text-rose-900">Revise the program then send the request again.</p>
             </div>
             <div class="mt-6 flex items-center justify-center gap-3">
-                <button @click="closeAllDialogs" class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button @click="closeAllDialogs"
+                    class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Close
                 </button>
-                <button @click="closeAllDialogs" class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button @click="closeAllDialogs"
+                    class="w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
                     View Program
                 </button>
             </div>
@@ -617,7 +675,8 @@ const triggerFileInput = () => {
     </div>
 
     <!-- Attachments Modal -->
-    <div v-if="showAttachmentsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="showAttachmentsModal = false">
+    <div v-if="showAttachmentsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="showAttachmentsModal = false">
         <div class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
             <div class="flex items-start justify-between gap-3">
                 <div>
@@ -632,21 +691,15 @@ const triggerFileInput = () => {
                 <UploadCloud class="mx-auto text-teal-500" :size="36" />
                 <p class="mt-2 text-sm font-semibold text-gray-800">Click to upload</p>
                 <p class="text-xs text-gray-500">SVG, PNG, JPG or GIF (max. 1280×720px)</p>
-                <button
-                    type="button"
-                    @click="simulateUpload"
-                    class="mt-3 rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
-                >
+                <button type="button" @click="simulateUpload"
+                    class="mt-3 rounded-lg border border-teal-200 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50">
                     Simulate upload
                 </button>
             </div>
 
             <div class="mt-4 space-y-3">
-                <div
-                    v-for="file in attachments"
-                    :key="file.id"
-                    class="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
-                >
+                <div v-for="file in attachments" :key="file.id"
+                    class="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-full bg-teal-50 text-teal-600">
                         <Paperclip :size="18" />
                     </div>
@@ -656,28 +709,24 @@ const triggerFileInput = () => {
                             <span class="text-xs text-gray-500">{{ file.size }}</span>
                         </div>
                         <div class="mt-2 h-2 rounded-full bg-gray-100">
-                            <div
-                                class="h-2 rounded-full transition-all"
+                            <div class="h-2 rounded-full transition-all"
                                 :class="file.status === 'uploaded' ? 'bg-teal-500' : 'bg-amber-400'"
-                                :style="{ width: `${file.progress}%` }"
-                            ></div>
+                                :style="{ width: `${file.progress}%` }"></div>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        class="text-gray-400 hover:text-rose-500"
-                        @click="removeAttachment(file.id)"
-                    >
+                    <button type="button" class="text-gray-400 hover:text-rose-500" @click="removeAttachment(file.id)">
                         <X :size="16" />
                     </button>
                 </div>
             </div>
 
             <div class="mt-5 flex items-center justify-end gap-3">
-                <button @click="showAttachmentsModal = false" class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button @click="showAttachmentsModal = false"
+                    class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Cancel
                 </button>
-                <button @click="showAttachmentsModal = false" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+                <button @click="showAttachmentsModal = false"
+                    class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
                     Attach files
                 </button>
             </div>

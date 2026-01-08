@@ -14,6 +14,8 @@ class CertificateRequest extends Model
         'trainer_id',
         'program_id',
         'session_id',
+        'enrollment_id',
+        'requested_by',
         'type',
         'status',
         'approved_by',
@@ -43,5 +45,15 @@ class CertificateRequest extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class);
+    }
+
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
     }
 }

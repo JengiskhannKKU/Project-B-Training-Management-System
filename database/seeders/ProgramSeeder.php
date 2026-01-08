@@ -1,8 +1,10 @@
 <?php
 
+
 namespace Database\Seeders;
 
 use App\Models\Program;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -10,6 +12,17 @@ class ProgramSeeder extends Seeder
 {
     public function run(): void
     {
+        $admin = User::firstWhere('email', 'admin@example.com');
+        $trainer = User::firstWhere('email', 'trainer@example.com');
+        $trainer2 = User::firstWhere('email', 'sarah.trainer@example.com'); // Sarah Tech
+        $trainer3 = User::firstWhere('email', 'mike.trainer@example.com'); // Mike Security
+
+        // Fallback user if seeding specific emails failed or names changed
+        $creator = $trainer ?? User::whereHas('role', function ($q) {
+            $q->where('name', 'trainer'); })->first() ?? User::first();
+        $approver = $admin ?? User::whereHas('role', function ($q) {
+            $q->where('name', 'admin'); })->first() ?? User::first();
+
         $programs = [
             [
                 'name' => 'Web Development Fundamentals',
@@ -18,10 +31,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Web Development',
                 'duration_hours' => 40,
                 'level' => 'beginner',
-                'image_url' => 'https://via.placeholder.com/400x300/4F46E5/FFFFFF?text=Web+Dev',
-                'created_by' => 2,
+                'image_url' => 'https://placehold.co/400x300/4F46E5/FFFFFF?text=Web+Dev',
+                'created_by' => $trainer->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(30),
                 'approval_note' => 'Excellent curriculum for beginners.',
                 'status' => 'active',
@@ -33,10 +46,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Web Development',
                 'duration_hours' => 60,
                 'level' => 'advanced',
-                'image_url' => 'https://via.placeholder.com/400x300/06B6D4/FFFFFF?text=React',
-                'created_by' => 2,
+                'image_url' => 'https://placehold.co/400x300/06B6D4/FFFFFF?text=React',
+                'created_by' => $trainer->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(25),
                 'approval_note' => 'Great advanced content.',
                 'status' => 'active',
@@ -48,10 +61,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Data Science',
                 'duration_hours' => 80,
                 'level' => 'intermediate',
-                'image_url' => 'https://via.placeholder.com/400x300/10B981/FFFFFF?text=Data+Science',
-                'created_by' => 3,
+                'image_url' => 'https://placehold.co/400x300/10B981/FFFFFF?text=Data+Science',
+                'created_by' => $trainer2->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(20),
                 'approval_note' => 'Comprehensive data science program.',
                 'status' => 'active',
@@ -63,10 +76,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Security',
                 'duration_hours' => 50,
                 'level' => 'beginner',
-                'image_url' => 'https://via.placeholder.com/400x300/EF4444/FFFFFF?text=Security',
-                'created_by' => 4,
+                'image_url' => 'https://placehold.co/400x300/EF4444/FFFFFF?text=Security',
+                'created_by' => $trainer3->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(15),
                 'approval_note' => 'Essential security training.',
                 'status' => 'active',
@@ -78,10 +91,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Cloud Computing',
                 'duration_hours' => 70,
                 'level' => 'intermediate',
-                'image_url' => 'https://via.placeholder.com/400x300/F59E0B/FFFFFF?text=Cloud+AWS',
-                'created_by' => 2,
+                'image_url' => 'https://placehold.co/400x300/F59E0B/FFFFFF?text=Cloud+AWS',
+                'created_by' => $trainer->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(10),
                 'approval_note' => 'Solid cloud computing curriculum.',
                 'status' => 'active',
@@ -93,8 +106,8 @@ class ProgramSeeder extends Seeder
                 'category' => 'Data Science',
                 'duration_hours' => 90,
                 'level' => 'advanced',
-                'image_url' => 'https://via.placeholder.com/400x300/8B5CF6/FFFFFF?text=Machine+Learning',
-                'created_by' => 3,
+                'image_url' => 'https://placehold.co/400x300/8B5CF6/FFFFFF?text=Machine+Learning',
+                'created_by' => $trainer2->id ?? $creator->id,
                 'approval_status' => 'pending',
                 'approved_by' => null,
                 'approved_at' => null,
@@ -108,10 +121,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'Mobile Development',
                 'duration_hours' => 60,
                 'level' => 'intermediate',
-                'image_url' => 'https://via.placeholder.com/400x300/EC4899/FFFFFF?text=Mobile+Dev',
-                'created_by' => 2,
+                'image_url' => 'https://placehold.co/400x300/EC4899/FFFFFF?text=Mobile+Dev',
+                'created_by' => $trainer->id ?? $creator->id,
                 'approval_status' => 'rejected',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(5),
                 'approval_note' => 'Needs more practical examples. Please revise and resubmit.',
                 'status' => 'inactive',
@@ -123,10 +136,10 @@ class ProgramSeeder extends Seeder
                 'category' => 'DevOps',
                 'duration_hours' => 55,
                 'level' => 'intermediate',
-                'image_url' => 'https://via.placeholder.com/400x300/14B8A6/FFFFFF?text=DevOps',
-                'created_by' => 4,
+                'image_url' => 'https://placehold.co/400x300/14B8A6/FFFFFF?text=DevOps',
+                'created_by' => $trainer3->id ?? $creator->id,
                 'approval_status' => 'approved',
-                'approved_by' => 1,
+                'approved_by' => $admin->id ?? $approver->id,
                 'approved_at' => Carbon::now()->subDays(8),
                 'approval_note' => 'Excellent DevOps curriculum.',
                 'status' => 'active',
@@ -134,7 +147,11 @@ class ProgramSeeder extends Seeder
         ];
 
         foreach ($programs as $program) {
-            Program::create($program);
+            Program::updateOrCreate(
+                ['code' => $program['code']],
+                $program
+            );
         }
     }
 }
+
