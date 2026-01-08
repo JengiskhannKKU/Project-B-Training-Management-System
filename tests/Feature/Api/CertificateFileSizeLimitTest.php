@@ -91,8 +91,8 @@ class CertificateFileSizeLimitTest extends TestCase
         // Arrange: Set a reasonable max size
         config(['certificates.max_file_sizes.background_image' => 5120]); // 5MB
 
-        // Create a small image
-        $image = UploadedFile::fake()->image('background.png', 100, 100)->size(50); // 50 KB
+        // Create an image that meets minimum dimension requirements (800x600)
+        $image = UploadedFile::fake()->image('background.png', 1000, 800)->size(50); // 50 KB
 
         // Act: Create template with valid background
         $response = $this->actingAs($this->admin)

@@ -106,8 +106,11 @@ class CertificateRenderer
 
     private function drawText($image, $value, array $config, CertificateTemplate $template, ?int $defaultColor): void
     {
-        $x = (int) ($config['x'] ?? 0);
-        $y = (int) ($config['y'] ?? 0);
+        $canvasWidth = imagesx($image);
+        $canvasHeight = imagesy($image);
+
+        $x = $this->resolveCoordinate($config['x'] ?? 0, $canvasWidth);
+        $y = $this->resolveCoordinate($config['y'] ?? 0, $canvasHeight);
         $size = (int) ($config['size'] ?? $template->font_size ?? 16);
         $color = $this->resolveColor($image, $config['color'] ?? $template->text_color) ?? $defaultColor;
 
@@ -140,11 +143,14 @@ class CertificateRenderer
             return;
         }
 
+        $canvasWidth = imagesx($image);
+        $canvasHeight = imagesy($image);
+
         $size = (int) ($config['size'] ?? 160);
-        $x = (int) ($config['x'] ?? 0);
-        $y = (int) ($config['y'] ?? 0);
-        $width = (int) ($config['width'] ?? $size);
-        $height = (int) ($config['height'] ?? $size);
+        $x = $this->resolveCoordinate($config['x'] ?? 0, $canvasWidth);
+        $y = $this->resolveCoordinate($config['y'] ?? 0, $canvasHeight);
+        $width = $this->resolveCoordinate($config['width'] ?? $size, $canvasWidth);
+        $height = $this->resolveCoordinate($config['height'] ?? $size, $canvasHeight);
 
         $qrBinary = $this->buildQrCode($payload, $size);
         $qrImage = imagecreatefromstring($qrBinary);
@@ -248,5 +254,24 @@ class CertificateRenderer
         }
 
         return 1;
+    }
+
+    /**
+     * Resolve coordinate value (supports both pixel integers and percentage strings).
+     *
+     * @param mixed $value Coordinate value (int or "50%")
+     * @param int $dimension Canvas dimension (width or height)
+     * @return int Resolved pixel value
+     */
+    private function resolveCoordinate($value, int $dimension): int
+    {
+        // Handle percentage strings (e.g., "50%")
+        if (is_string($value) && str_ends_with($value, '%')) {
+            $percentage = (float) rtrim($value, '%');
+            return (int) round($dimension * $percentage / 100);
+        }
+
+        // Handle pixel values (int or numeric string)
+        return (int) $value;
     }
 }

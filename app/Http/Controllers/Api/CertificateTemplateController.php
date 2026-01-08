@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\CertificateTemplate;
 use App\Models\Program;
 use App\Models\TrainingSession;
+use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CertificateTemplateController extends Controller
 {
@@ -101,6 +103,12 @@ class CertificateTemplateController extends Controller
 
         $data = $this->buildTemplateData($request, $validated);
 
+        // Validate layout coordinates are within image bounds
+        $this->validateLayoutBounds(
+            $data['layout_config'] ?? null,
+            $data['background_image'] ?? null
+        );
+
         $template = CertificateTemplate::create($data);
 
         return $this->createdResponse(
@@ -126,6 +134,14 @@ class CertificateTemplateController extends Controller
         }
 
         $data = $this->buildTemplateData($request, $validated, $certificateTemplate);
+
+        // Validate layout coordinates are within image bounds
+        // Use existing background_image if no new one is provided
+        $backgroundImage = $data['background_image'] ?? $certificateTemplate->background_image;
+        $this->validateLayoutBounds(
+            $data['layout_config'] ?? null,
+            $backgroundImage
+        );
 
         $certificateTemplate->update($data);
 
@@ -168,7 +184,27 @@ class CertificateTemplateController extends Controller
             'scope' => [$isCreate ? 'required' : 'sometimes', Rule::in(['global', 'program', 'session'])],
             'program_id' => ['nullable', 'integer', 'exists:programs,id'],
             'session_id' => ['nullable', 'integer', 'exists:training_sessions,id'],
-            'background_image' => ['nullable', 'image', "max:{$maxBackgroundSize}"],
+            'background_image' => [
+                'nullable',
+                'image',
+                "max:{$maxBackgroundSize}",
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $imageInfo = @getimagesize($value->getRealPath());
+                        if ($imageInfo) {
+                            [$width, $height] = $imageInfo;
+                            // Reject too small (quality loss)
+                            if ($width < 800 || $height < 600) {
+                                $fail("The {$attribute} must be at least 800x600 pixels for acceptable quality.");
+                            }
+                            // Reject too large (memory issues)
+                            if ($width > 10000 || $height > 10000) {
+                                $fail("The {$attribute} dimensions are too large (max 10000x10000 pixels).");
+                            }
+                        }
+                    }
+                },
+            ],
             'layout_config' => ['nullable'],
             'font_family' => ['nullable', 'string', 'max:255'],
             'font_size' => ['nullable', 'integer', 'min:1', 'max:200'],
@@ -275,8 +311,16 @@ class CertificateTemplateController extends Controller
 
         if ($request->hasFile('background_image')) {
             $file = $request->file('background_image');
-            $data['background_image'] = $file->getContent();
-            $data['background_mime_type'] = $file->getMimeType();
+
+            // Auto-resize to standard dimensions (1920x1080)
+            $imageService = app(ImageProcessingService::class);
+            $resized = $imageService->resizeToStandard(
+                $file->getContent(),
+                $file->getMimeType()
+            );
+
+            $data['background_image'] = $resized['content'];
+            $data['background_mime_type'] = $resized['mime_type']; // Always image/png after resize
         }
 
         $scope = $data['scope'] ?? $template?->scope;
@@ -324,5 +368,86 @@ class CertificateTemplateController extends Controller
             $template->background_mime_type,
             base64_encode($template->background_image)
         );
+    }
+
+    /**
+     * Validate that layout coordinates are within image bounds.
+     *
+     * @param array|null $layoutConfig Layout configuration with coordinates
+     * @param string|null $backgroundImage Binary image content
+     * @throws ValidationException if coordinates are out of bounds
+     */
+    private function validateLayoutBounds(?array $layoutConfig, ?string $backgroundImage): void
+    {
+        if (!$layoutConfig || !$backgroundImage) {
+            return; // No validation needed if no layout or background
+        }
+
+        $imageService = app(ImageProcessingService::class);
+        $dimensions = $imageService->getImageDimensions($backgroundImage);
+        $width = $dimensions['width'];
+        $height = $dimensions['height'];
+
+        $errors = [];
+
+        foreach ($layoutConfig as $field => $config) {
+            if ($field === 'canvas') {
+                continue; // Canvas is only for templates without background
+            }
+
+            if (!is_array($config)) {
+                continue; // Skip non-array config values
+            }
+
+            // Extract coordinates (support both pixel and percentage)
+            $x = $this->resolveCoordinate($config['x'] ?? 0, $width);
+            $y = $this->resolveCoordinate($config['y'] ?? 0, $height);
+
+            // Validate X coordinate
+            if ($x < 0 || $x > $width) {
+                $errors["layout_config.{$field}.x"] = "X coordinate ({$x}) must be within image width (0-{$width})";
+            }
+
+            // Validate Y coordinate
+            if ($y < 0 || $y > $height) {
+                $errors["layout_config.{$field}.y"] = "Y coordinate ({$y}) must be within image height (0-{$height})";
+            }
+
+            // Validate QR code bounds (has width/height)
+            if ($field === 'qr') {
+                $qrWidth = $this->resolveCoordinate($config['width'] ?? $config['size'] ?? 160, $width);
+                $qrHeight = $this->resolveCoordinate($config['height'] ?? $config['size'] ?? 160, $height);
+
+                if ($x + $qrWidth > $width) {
+                    $errors["layout_config.{$field}.width"] = "QR code extends beyond image width";
+                }
+                if ($y + $qrHeight > $height) {
+                    $errors["layout_config.{$field}.height"] = "QR code extends beyond image height";
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * Resolve coordinate value (supports both pixel integers and percentage strings).
+     *
+     * @param mixed $value Coordinate value (int or "50%")
+     * @param int $dimension Canvas dimension (width or height)
+     * @return int Resolved pixel value
+     */
+    private function resolveCoordinate($value, int $dimension): int
+    {
+        // Handle percentage strings (e.g., "50%")
+        if (is_string($value) && str_ends_with($value, '%')) {
+            $percentage = (float) rtrim($value, '%');
+            return (int) round($dimension * $percentage / 100);
+        }
+
+        // Handle pixel values (int or numeric string)
+        return (int) $value;
     }
 }
