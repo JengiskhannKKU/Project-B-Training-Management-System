@@ -83,26 +83,26 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ students_count }} students</span>
+                        <span class="truncate">{{ students_count || 0 }} students</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ price }}</span>
+                        <span class="truncate">{{ price || 'Free' }}</span>
                     </div>
                 </div>
                 <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div v-if="date" class="flex items-center gap-2 min-w-0">
                         <CalendarClock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatDate(date) }}</span>
+                        <span class="truncate">{{ formatDate(date) || 'No date' }}</span>
                     </div>
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div v-if="time" class="flex items-center gap-2 min-w-0">
                         <Clock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatTime(time) }}</span>
+                        <span class="truncate">{{ formatTime(time) || 'No time' }}</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div v-if="location" class="flex items-center gap-2">
                     <MapPin :size="16" class="text-[#2F837D] flex-shrink-0" />
-                    <span class="truncate">{{ location }}</span>
+                    <span class="truncate">{{ location || 'Online' }}</span>
                 </div>
             </div>
 

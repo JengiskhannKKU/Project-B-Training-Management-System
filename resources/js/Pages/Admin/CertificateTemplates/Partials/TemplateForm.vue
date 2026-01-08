@@ -67,6 +67,7 @@ const layoutEditorRef = ref(null);
 const layoutConfig = ref(null);
 const canvasSize = ref({ width: 1600, height: 1200 });
 const qrSize = ref(160);
+const selectedPlaceholder = ref(null);
 
 // Preview modal
 const showPreview = ref(false);
@@ -94,6 +95,10 @@ const fontFamily = computed(() => {
     if (!form.font_family) return '"Prompt", sans-serif';
     if (form.font_family.includes("Prompt")) return '"Prompt", sans-serif';
     return '"Prompt", sans-serif';
+});
+
+const placeholderStyles = computed(() => {
+    return layoutEditorRef.value?.placeholderStyles || {};
 });
 
 // =====================
@@ -255,6 +260,16 @@ const handleFetchSessions = (programId) => {
     fetchSessions(programId);
 };
 
+const handleSelectedPlaceholderUpdate = (key) => {
+    selectedPlaceholder.value = key;
+};
+
+const handlePlaceholderStyleUpdate = (payload) => {
+    if (layoutEditorRef.value) {
+        layoutEditorRef.value.updatePlaceholderStyle(payload.key, payload.property, payload.value);
+    }
+};
+
 const handleSubmit = async () => {
     resetErrors();
     isSubmitting.value = true;
@@ -413,6 +428,7 @@ onMounted(async () => {
                         @update:layout-config="handleLayoutUpdate"
                         @update:canvas-size="handleCanvasSizeUpdate"
                         @update:qr-size="(val) => qrSize = val"
+                        @update:selected-placeholder="handleSelectedPlaceholderUpdate"
                         @preview="handlePreview"
                     />
                 </div>
@@ -433,11 +449,14 @@ onMounted(async () => {
                         :font-size="form.font_size"
                         :text-color="form.text_color"
                         :qr-size="qrSize"
+                        :selected-placeholder="selectedPlaceholder"
+                        :placeholder-styles="placeholderStyles"
                         :errors="errors"
                         @update:font-family="(val) => form.font_family = val"
                         @update:font-size="(val) => form.font_size = val"
                         @update:text-color="(val) => form.text_color = val"
                         @update:qr-size="(val) => qrSize = val"
+                        @update:placeholder-style="handlePlaceholderStyleUpdate"
                     />
 
                     <BackgroundUploader

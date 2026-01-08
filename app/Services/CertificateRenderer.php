@@ -111,7 +111,9 @@ class CertificateRenderer
 
         $x = $this->resolveCoordinate($config['x'] ?? 0, $canvasWidth);
         $y = $this->resolveCoordinate($config['y'] ?? 0, $canvasHeight);
-        $size = (int) ($config['size'] ?? $template->font_size ?? 16);
+
+        // Support both 'fontSize' and 'size' for backward compatibility
+        $size = (int) ($config['fontSize'] ?? $config['size'] ?? $template->font_size ?? 16);
         $color = $this->resolveColor($image, $config['color'] ?? $template->text_color) ?? $defaultColor;
 
         if ($color === null) {
@@ -124,7 +126,13 @@ class CertificateRenderer
         }
 
         $text = (string) $value;
-        $fontPath = $this->resolveFontPath($config['font'] ?? $template->font_family);
+
+        // Get font style if specified
+        $fontStyle = $config['fontStyle'] ?? 'normal';
+        $fontFamily = $config['fontFamily'] ?? $config['font'] ?? $template->font_family;
+
+        // Resolve font path with style support
+        $fontPath = $this->resolveFontPathWithStyle($fontFamily, $fontStyle);
 
         if ($fontPath) {
             // imagettftext treats y as the baseline.
@@ -202,6 +210,63 @@ class CertificateRenderer
         }
 
         return null;
+    }
+
+    private function resolveFontPathWithStyle(?string $fontFamily, string $fontStyle = 'normal'): ?string
+    {
+        if (!$fontFamily) {
+            return null;
+        }
+
+        // If fontStyle is normal, use the original font
+        if ($fontStyle === 'normal') {
+            return $this->resolveFontPath($fontFamily);
+        }
+
+        // Try to find a styled font variant
+        // For example: Prompt-Regular.ttf -> Prompt-Bold.ttf or Prompt-Italic.ttf
+        $styledFontFamily = $this->getStyledFontName($fontFamily, $fontStyle);
+
+        // Try the styled font first
+        $styledPath = $this->resolveFontPath($styledFontFamily);
+        if ($styledPath) {
+            return $styledPath;
+        }
+
+        // Fallback to original font if styled version not found
+        return $this->resolveFontPath($fontFamily);
+    }
+
+    private function getStyledFontName(string $fontFamily, string $fontStyle): string
+    {
+        // Common patterns for font file naming
+        $patterns = [
+            'bold' => ['Regular' => 'Bold', 'regular' => 'bold', '-Regular' => '-Bold', '-regular' => '-bold'],
+            'italic' => ['Regular' => 'Italic', 'regular' => 'italic', '-Regular' => '-Italic', '-regular' => '-italic'],
+        ];
+
+        if (!isset($patterns[$fontStyle])) {
+            return $fontFamily;
+        }
+
+        // Try to replace common patterns
+        foreach ($patterns[$fontStyle] as $search => $replace) {
+            if (str_contains($fontFamily, $search)) {
+                return str_replace($search, $replace, $fontFamily);
+            }
+        }
+
+        // If no pattern matched, try to insert style before extension
+        // Example: MyFont.ttf -> MyFont-Bold.ttf
+        $extension = pathinfo($fontFamily, PATHINFO_EXTENSION);
+        $baseName = pathinfo($fontFamily, PATHINFO_FILENAME);
+
+        if ($extension) {
+            $styleCapitalized = ucfirst($fontStyle);
+            return "{$baseName}-{$styleCapitalized}.{$extension}";
+        }
+
+        return $fontFamily;
     }
 
     private function resolveColor($image, ?string $color): ?int

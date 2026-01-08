@@ -31,6 +31,12 @@ export function useLayoutEditor(options = {}) {
     // Layout positions for active placeholders (natural coordinates)
     const layoutPositions = reactive({});
 
+    // Placeholder styles (per placeholder styling)
+    const placeholderStyles = reactive({});
+
+    // Selected placeholder for styling
+    const selectedPlaceholder = ref(null);
+
     // QR size
     const qrSize = ref(160);
 
@@ -145,6 +151,16 @@ export function useLayoutEditor(options = {}) {
         activePlaceholders.value.push(key);
         layoutPositions[key] = position || getDefaultPosition(key);
 
+        // Initialize default styles if not exists
+        if (!placeholderStyles[key]) {
+            placeholderStyles[key] = {
+                color: null,
+                fontSize: null,
+                fontStyle: 'normal',
+                fontFamily: null,
+            };
+        }
+
         if (key === "qr") {
             qrSize.value = layoutPositions[key].size || 160;
         }
@@ -155,6 +171,11 @@ export function useLayoutEditor(options = {}) {
         if (index > -1) {
             activePlaceholders.value.splice(index, 1);
             delete layoutPositions[key];
+            delete placeholderStyles[key];
+        }
+        // Deselect if removed placeholder was selected
+        if (selectedPlaceholder.value === key) {
+            selectedPlaceholder.value = null;
         }
     };
 
@@ -162,6 +183,40 @@ export function useLayoutEditor(options = {}) {
         if (!layoutPositions[key]) return;
         layoutPositions[key].x = Math.round(x);
         layoutPositions[key].y = Math.round(y);
+    };
+
+    // =====================
+    // Placeholder Styling
+    // =====================
+    const selectPlaceholder = (key) => {
+        selectedPlaceholder.value = key;
+    };
+
+    const getPlaceholderStyles = (key) => {
+        // Return default styles if not set
+        return placeholderStyles[key] || {
+            color: null,
+            fontSize: null,
+            fontStyle: 'normal',
+            fontFamily: null,
+        };
+    };
+
+    const updatePlaceholderStyle = (key, property, value) => {
+        if (!placeholderStyles[key]) {
+            placeholderStyles[key] = {
+                color: null,
+                fontSize: null,
+                fontStyle: 'normal',
+                fontFamily: null,
+            };
+        }
+        placeholderStyles[key][property] = value;
+    };
+
+    const updateSelectedPlaceholderStyle = (property, value) => {
+        if (!selectedPlaceholder.value) return;
+        updatePlaceholderStyle(selectedPlaceholder.value, property, value);
     };
 
     // =====================
@@ -280,7 +335,9 @@ export function useLayoutEditor(options = {}) {
             const position = layoutPositions[key];
             if (!position) return;
 
+            const styles = getPlaceholderStyles(key);
             const def = getPlaceholderDefinition(key);
+
             if (def?.isQr) {
                 const size = Math.round(position.size || qrSize.value || 160);
                 config.qr = {
@@ -295,6 +352,12 @@ export function useLayoutEditor(options = {}) {
                     x: Math.round(position.x || 0),
                     y: Math.round(position.y || 0),
                 };
+
+                // Add styling properties if they are set
+                if (styles.color) config[key].color = styles.color;
+                if (styles.fontSize) config[key].fontSize = styles.fontSize;
+                if (styles.fontStyle && styles.fontStyle !== 'normal') config[key].fontStyle = styles.fontStyle;
+                if (styles.fontFamily) config[key].fontFamily = styles.fontFamily;
             }
         });
 
@@ -305,6 +368,7 @@ export function useLayoutEditor(options = {}) {
         // Clear current state
         activePlaceholders.value = [];
         Object.keys(layoutPositions).forEach((key) => delete layoutPositions[key]);
+        Object.keys(placeholderStyles).forEach((key) => delete placeholderStyles[key]);
 
         if (!config) return;
 
@@ -329,6 +393,14 @@ export function useLayoutEditor(options = {}) {
                 size: Number(savedPos.size ?? savedPos.width ?? 160),
             };
 
+            // Apply styles if present
+            placeholderStyles[key] = {
+                color: savedPos.color || null,
+                fontSize: savedPos.fontSize ? Number(savedPos.fontSize) : null,
+                fontStyle: savedPos.fontStyle || 'normal',
+                fontFamily: savedPos.fontFamily || null,
+            };
+
             if (key === "qr") {
                 qrSize.value = layoutPositions[key].size || 160;
             }
@@ -338,6 +410,8 @@ export function useLayoutEditor(options = {}) {
     const resetLayout = () => {
         activePlaceholders.value = [];
         Object.keys(layoutPositions).forEach((key) => delete layoutPositions[key]);
+        Object.keys(placeholderStyles).forEach((key) => delete placeholderStyles[key]);
+        selectedPlaceholder.value = null;
     };
 
     // =====================
@@ -447,6 +521,8 @@ export function useLayoutEditor(options = {}) {
         placeholderDefinitions,
         activePlaceholders,
         layoutPositions,
+        placeholderStyles,
+        selectedPlaceholder,
 
         // Drag state
         draggingKey,
@@ -467,6 +543,12 @@ export function useLayoutEditor(options = {}) {
         addPlaceholder,
         removePlaceholder,
         updatePlaceholderPosition,
+
+        // Placeholder styling
+        selectPlaceholder,
+        getPlaceholderStyles,
+        updatePlaceholderStyle,
+        updateSelectedPlaceholderStyle,
 
         // Drag handlers
         handleDragStart,

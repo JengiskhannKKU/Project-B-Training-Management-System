@@ -32,6 +32,7 @@ const sortColumn = ref('created_at');
 const sortDirection = ref('desc');
 const showExportModal = ref(false);
 const showCreateModal = ref(false);
+const editingCourse = ref<any>(null);
 const currentPage = ref(1);
 const itemsPerPage = ref(9); // 9 cards per page for grid layout
 const isSubmittingProgram = ref(false);
@@ -273,6 +274,45 @@ const resetSort = () => {
 
 const handleModalClose = () => {
     showCreateModal.value = false;
+    editingCourse.value = null;
+};
+
+const handleEditCourse = (course: any) => {
+    editingCourse.value = {
+        id: course.id,
+        title: course.name,
+        short_description: course.description || '',
+        full_description: course.description || '',
+        category: course.department || course.category || '',
+        level: course.level || 'beginner',
+        code: course.code || '',
+        duration_hours: course.duration_hours || 40,
+        status: course.status || 'active',
+        image_url: course.image_url || '',
+    };
+    showCreateModal.value = true;
+};
+
+const handleDeleteCourse = async (courseId: number) => {
+    if (!confirm('Are you sure you want to delete this program? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        await axios.delete(`/api/programs/${courseId}`);
+        toast.success('Program deleted successfully!');
+        await fetchPrograms();
+    } catch (error: any) {
+        const message =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to delete program.';
+        toast.error(message);
+        if ([401, 403, 419].includes(error?.response?.status)) {
+            showApiLogin.value = true;
+        }
+    }
 };
 
 const handleCreateProgram = async (payload: Record<string, unknown> | undefined) => {
@@ -281,17 +321,24 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
     try {
         await axios.get('/sanctum/csrf-cookie');
 
-        // Admin creates program directly (no approval needed)
-        await axios.post('/api/admin/programs', payload);
+        if (editingCourse.value?.id) {
+            // Update existing program
+            await axios.put(`/api/programs/${editingCourse.value.id}`, payload);
+            toast.success('Program updated successfully!');
+        } else {
+            // Create new program
+            await axios.post('/api/programs', payload);
+            toast.success('Program created successfully!');
+        }
 
-        toast.success('Program created successfully!');
         showCreateModal.value = false;
+        editingCourse.value = null;
         await fetchPrograms();
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            'Failed to create program.';
+            `Failed to ${editingCourse.value ? 'update' : 'create'} program.`;
         toast.error(message);
         if ([401, 403, 419].includes(error?.response?.status)) {
             showApiLogin.value = true;
@@ -367,8 +414,26 @@ const fetchPrograms = async () => {
         const { data } = await axios.get('/api/programs');
         const list = data?.data || data || [];
 
+        // Transform and map API data to match CourseCard props
+        const mappedList = list.map((program: any) => ({
+            id: program.id,
+            name: program.name,
+            image_url: program.image_url || '',
+            rating: program.rating || 0,
+            level: program.level || 'beginner',
+            students_count: program.students_count || program.enrollments_count || 0,
+            price: program.price || 'Free',
+            date: program.start_date || program.created_at || '',
+            time: program.start_time || '',
+            location: program.location || 'Online',
+            department: program.category || 'General',
+            status: program.status || 'active',
+            created_by_id: program.created_by,
+            created_at: program.created_at,
+        }));
+
         // Sort programs by ID or created_at in descending order (newest first)
-        const sortedList = list.sort((a: any, b: any) => {
+        const sortedList = mappedList.sort((a: any, b: any) => {
             // Try to sort by created_at if available, otherwise by id
             if (a.created_at && b.created_at) {
                 return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -574,6 +639,9 @@ onMounted(() => {
                             :date="course.date"
                             :time="course.time"
                             :location="course.location"
+                            :show-actions="true"
+                            @edit="handleEditCourse(course)"
+                            @delete="handleDeleteCourse(course.id)"
                         />
                     </div>
 
@@ -687,6 +755,7 @@ onMounted(() => {
 
             <CourseModal
                 :show="showCreateModal"
+                :course="editingCourse"
                 uploadUrlPrefix="admin"
                 :enable-preview-dialogs="false"
                 @close="handleModalClose"

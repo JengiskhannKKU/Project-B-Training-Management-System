@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Star, GraduationCap, Gem, CalendarClock, Clock, MapPin } from 'lucide-vue-next';
+import { Star, GraduationCap, Gem, CalendarClock, Clock, MapPin, Pencil, Trash2 } from 'lucide-vue-next';
 import { formatDate, formatTime } from '@/utils/dateFormatter';
 
 interface CourseCardProps {
@@ -15,9 +15,26 @@ interface CourseCardProps {
     time?: string;
     location?: string;
     href?: string;
+    showActions?: boolean;
 }
 
-defineProps<CourseCardProps>();
+const props = defineProps<CourseCardProps>();
+const emit = defineEmits<{
+    edit: [id: number];
+    delete: [id: number];
+}>();
+
+const handleEdit = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    emit('edit', props.id);
+};
+
+const handleDelete = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    emit('delete', props.id);
+};
 
 const formatLevel = (level: string) => {
     if (!level) return 'Beginner';
@@ -48,8 +65,26 @@ const getStarType = (index: number, rating: number) => {
 <template>
     <Link
         :href="href || `/trainer/programs/${id}`"
-        class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer"
+        class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer relative group"
     >
+        <!-- Action Buttons (top-right corner, visible on hover) -->
+        <div v-if="showActions" class="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+                @click="handleEdit"
+                class="p-2 bg-white rounded-lg shadow-md hover:bg-blue-50 hover:shadow-lg transition-all"
+                title="Edit course"
+            >
+                <Pencil :size="16" class="text-blue-600" />
+            </button>
+            <button
+                @click="handleDelete"
+                class="p-2 bg-white rounded-lg shadow-md hover:bg-red-50 hover:shadow-lg transition-all"
+                title="Delete course"
+            >
+                <Trash2 :size="16" class="text-red-600" />
+            </button>
+        </div>
+
         <div class="aspect-video w-full overflow-hidden flex-shrink-0">
             <img
                 v-if="image_url"
@@ -97,26 +132,26 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ students_count }} students</span>
+                        <span class="truncate">{{ students_count || 0 }} students</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ price }}</span>
+                        <span class="truncate">{{ price || 'Free' }}</span>
                     </div>
                 </div>
                 <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div v-if="date" class="flex items-center gap-2 min-w-0">
                         <CalendarClock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatDate(date) }}</span>
+                        <span class="truncate">{{ formatDate(date) || 'No date' }}</span>
                     </div>
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div v-if="time" class="flex items-center gap-2 min-w-0">
                         <Clock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatTime(time) }}</span>
+                        <span class="truncate">{{ formatTime(time) || 'No time' }}</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div v-if="location" class="flex items-center gap-2">
                     <MapPin :size="16" class="text-[#2F837D] flex-shrink-0" />
-                    <span class="truncate">{{ location }}</span>
+                    <span class="truncate">{{ location || 'Online' }}</span>
                 </div>
             </div>
         </div>

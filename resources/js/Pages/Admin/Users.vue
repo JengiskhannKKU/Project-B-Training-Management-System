@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { Head, router } from "@inertiajs/vue3";
+import axios from "axios";
+import { useToast } from "vue-toastification";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import {
     Search,
@@ -19,6 +21,7 @@ import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import EditUserModal from "@/Components/EditUserModal.vue";
 import TableActionButton from "@/Components/TableActionButton.vue";
+import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -29,53 +32,9 @@ const props = defineProps({
     },
 });
 
-const users = ref([
-    {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        contact: "0123456789",
-        department: "IT",
-        role: "Admin",
-        status: "Active",
-    },
-    {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        contact: "0123456791",
-        department: "HR",
-        role: "Trainer",
-        status: "Active",
-    },
-    {
-        id: 3,
-        name: "Bob Johnson",
-        email: "bob@example.com",
-        contact: "0123456792",
-        department: "Engineering",
-        role: "Trainee",
-        status: "Active",
-    },
-    {
-        id: 4,
-        name: "Alice Williams",
-        email: "alice@example.com",
-        contact: "0123456793",
-        department: "Marketing",
-        role: "Trainee",
-        status: "Inactive",
-    },
-    {
-        id: 5,
-        name: "Charlie Brown",
-        email: "charlie@example.com",
-        contact: "0123456794",
-        department: "IT",
-        role: "Trainer",
-        status: "Active",
-    },
-]);
+const toast = useToast();
+const users = ref([]);
+const isLoading = ref(false);
 
 const searchQuery = ref("");
 const selectedDepartment = ref([]);
@@ -99,11 +58,47 @@ const editForm = ref({
     department: "",
 });
 
+// Fetch users from API
+const fetchUsers = async () => {
+    isLoading.value = true;
+    try {
+        const response = await axios.get('/api/admin/users', {
+            params: {
+                per_page: 100 // Get more users for client-side filtering
+            }
+        });
+
+        // Transform API data to match component structure
+        const apiUsers = response.data?.data?.data || response.data?.data || [];
+        users.value = apiUsers.map(user => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            contact: user.profile?.phone || user.phone || '-',
+            department: user.profile?.department || user.department || '-',
+            role: user.role?.name ? capitalizeRole(user.role.name) : 'Trainee',
+            status: user.status === 'active' ? 'Active' : 'Inactive',
+        }));
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Unable to load users');
+        users.value = [];
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Helper function to capitalize role names
+const capitalizeRole = (role) => {
+    if (role === 'student') return 'Trainee';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
 // Available options for dropdowns
 const roleOptions = ["Admin", "Trainer", "Trainee"];
 const statusOptions = ["Active", "Inactive"];
 const departmentOptions = computed(() => {
-    return [...new Set(users.value.map((user) => user.department))];
+    return [...new Set(users.value.map((user) => user.department))].filter(d => d !== '-');
 });
 
 // Format phone number to 012-345-6789
@@ -440,6 +435,11 @@ watch(
     },
     { immediate: true }
 );
+
+// Fetch users on component mount
+onMounted(() => {
+    fetchUsers();
+});
 </script>
 
 <template>
@@ -587,8 +587,14 @@ watch(
                         </button>
                     </div>
                 </div>
+                <!-- Loading State -->
+                <div v-if="isLoading" class="flex items-center justify-center py-12">
+                    <LoadingSpinner size="lg" text="Loading users..." />
+                </div>
+
                 <!-- Users Table -->
                 <div
+                    v-else
                     class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden"
                 >
                     <div class="overflow-x-auto">

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
-import { Move, Scan, Eye, RefreshCw, X, GripVertical } from "lucide-vue-next";
+import { Move, Scan, Eye, RefreshCw, X, GripVertical, Type } from "lucide-vue-next";
 import { useLayoutEditor } from "@/composables/useLayoutEditor";
 
 const props = defineProps({
@@ -48,6 +48,7 @@ const emit = defineEmits([
     "update:layoutConfig",
     "update:canvasSize",
     "update:qrSize",
+    "update:selectedPlaceholder",
     "preview",
     "reset",
 ]);
@@ -60,6 +61,8 @@ const {
     placeholderDefinitions,
     activePlaceholders,
     layoutPositions,
+    placeholderStyles,
+    selectedPlaceholder,
     draggingKey,
     isDraggingFromToolbar,
     draggedPlaceholder,
@@ -70,6 +73,9 @@ const {
     getPlaceholderDefinition,
     addPlaceholder,
     removePlaceholder,
+    selectPlaceholder,
+    getPlaceholderStyles,
+    updatePlaceholderStyle,
     handleDragStart,
     handleDragMove,
     handleDragEnd,
@@ -94,6 +100,12 @@ const inactivePlaceholders = computed(() =>
 const activeItems = computed(() =>
     activePlaceholders.value.map((key) => getPlaceholderDefinition(key)).filter(Boolean)
 );
+
+// Check if placeholder has custom styling
+const hasCustomStyling = (key) => {
+    const styles = getPlaceholderStyles(key);
+    return !!(styles.color || styles.fontSize || (styles.fontStyle && styles.fontStyle !== 'normal'));
+};
 
 // Placeholder style calculation
 const getStyle = (placeholder) => {
@@ -124,20 +136,30 @@ const getStyle = (placeholder) => {
     return style;
 };
 
-// Editor text style
-const editorTextStyle = computed(() => {
-    const baseSize = Number(props.fontSize) || 28;
+// Editor text style - per placeholder
+const getEditorTextStyle = (placeholderKey) => {
+    const styles = getPlaceholderStyles(placeholderKey);
+    const baseSize = Number(styles.fontSize || props.fontSize) || 28;
     const { getFontScale } = editorTransform.value;
     const fontSize = Math.max(12, baseSize * getFontScale());
 
-    return {
+    const style = {
         fontSize: `${fontSize}px`,
-        color: props.textColor,
-        fontFamily: props.fontFamily,
+        color: styles.color || props.textColor || '#1f2937',
+        fontFamily: styles.fontFamily || props.fontFamily || 'Prompt, sans-serif',
         whiteSpace: "nowrap",
         lineHeight: 1.1,
     };
-});
+
+    // Apply font style
+    if (styles.fontStyle === 'bold') {
+        style.fontWeight = 'bold';
+    } else if (styles.fontStyle === 'italic') {
+        style.fontStyle = 'italic';
+    }
+
+    return style;
+};
 
 // Handle drop on canvas
 const onCanvasDrop = (event) => {
@@ -168,6 +190,15 @@ const onPlaceholderDragStart = (key, event) => {
     handleDragStart(key, event);
 };
 
+// Handle placeholder selection
+const onPlaceholderClick = (key, event) => {
+    // Don't select if we're dragging
+    if (draggingKey.value) return;
+
+    selectPlaceholder(key);
+    emit("update:selectedPlaceholder", key);
+};
+
 // Emit layout updates
 const emitLayoutUpdate = () => {
     emit("update:layoutConfig", buildLayoutConfig());
@@ -196,6 +227,16 @@ watch(() => props.qrSizeValue, (val) => {
 watch(layoutPositions, () => {
     emitLayoutUpdate();
 }, { deep: true });
+
+// Watch for placeholder styles changes
+watch(placeholderStyles, () => {
+    emitLayoutUpdate();
+}, { deep: true });
+
+// Watch for selected placeholder changes
+watch(selectedPlaceholder, (newVal) => {
+    emit("update:selectedPlaceholder", newVal);
+});
 
 // Track if initial config has been applied (to prevent infinite loop)
 const initialConfigApplied = ref(false);
@@ -230,6 +271,8 @@ defineExpose({
     canvasNatural,
     layoutPositions,
     activePlaceholders,
+    placeholderStyles,
+    updatePlaceholderStyle,
     updateDisplaySize,
 });
 
@@ -285,8 +328,13 @@ onBeforeUnmount(() => {
         <div class="px-6 pb-6 space-y-4">
             <!-- Placeholder Toolbar -->
             <div class="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                <div class="w-full text-xs font-medium text-gray-500 mb-1">
-                    {{ inactivePlaceholders.length > 0 ? 'Drag to add:' : 'All placeholders added' }}
+                <div class="w-full space-y-1 mb-1">
+                    <div class="text-xs font-medium text-gray-700">
+                        {{ inactivePlaceholders.length > 0 ? '📦 Drag placeholders to canvas' : '✓ All placeholders added' }}
+                    </div>
+                    <div class="text-[10px] text-gray-500">
+                        {{ activePlaceholders.length > 0 ? '💡 Click a placeholder on canvas to customize its style' : '' }}
+                    </div>
                 </div>
                 <div
                     v-for="placeholder in inactivePlaceholders"
@@ -339,31 +387,36 @@ onBeforeUnmount(() => {
                         :key="placeholder.key"
                         class="absolute cursor-move group transition-shadow"
                         :class="[
-                            draggingKey?.key === placeholder.key 
-                                ? 'z-50 shadow-2xl' 
+                            draggingKey?.key === placeholder.key
+                                ? 'z-50 shadow-2xl'
+                                : selectedPlaceholder === placeholder.key
+                                ? 'z-40 shadow-xl'
                                 : 'z-10 hover:z-40 hover:shadow-xl'
                         ]"
                         :style="getStyle(placeholder)"
                         @mousedown="onPlaceholderDragStart(placeholder.key, $event)"
                         @mouseup="onCanvasDragEnd"
+                        @click="onPlaceholderClick(placeholder.key, $event)"
                     >
                         <!-- Text Placeholder Container -->
                         <div
                             v-if="!placeholder.isQr"
-                            class="relative w-full h-full rounded-xl border-2 transition-all overflow-hidden"
+                            class="relative w-full h-full rounded-xl transition-all overflow-hidden cursor-pointer"
                             :class="[
                                 draggingKey?.key === placeholder.key
-                                    ? 'border-[#2f837d] bg-[#2f837d]/15 shadow-lg'
-                                    : 'border-dashed border-[#2f837d]/60 bg-white/80 hover:border-[#2f837d] hover:bg-[#2f837d]/10'
+                                    ? 'border-[3px] border-[#2f837d] bg-[#2f837d]/15 shadow-lg'
+                                    : selectedPlaceholder === placeholder.key
+                                    ? 'border-[3px] border-[#2f837d] bg-[#2f837d]/10 shadow-lg ring-4 ring-[#2f837d]/30'
+                                    : 'border-2 border-dashed border-[#2f837d]/60 bg-white/80 hover:border-[#2f837d] hover:bg-[#2f837d]/10 hover:border-solid'
                             ]"
                         >
                             <!-- Preview Text - Centered -->
-                            <div 
+                            <div
                                 class="absolute inset-0 flex items-center justify-center px-3 overflow-hidden"
                             >
-                                <span 
+                                <span
                                     class="truncate text-center"
-                                    :style="editorTextStyle"
+                                    :style="getEditorTextStyle(placeholder.key)"
                                 >
                                     {{ previewData[placeholder.key] }}
                                 </span>
@@ -375,22 +428,51 @@ onBeforeUnmount(() => {
                                 :class="[
                                     draggingKey?.key === placeholder.key
                                         ? 'bg-[#2f837d] text-white'
+                                        : selectedPlaceholder === placeholder.key
+                                        ? 'bg-[#2f837d] text-white ring-2 ring-white/50'
                                         : 'bg-gray-800/70 text-white/90 group-hover:bg-[#2f837d]'
                                 ]"
                             >
                                 <Move class="h-2.5 w-2.5" />
                                 <span>{{ placeholder.label }}</span>
+                                <span
+                                    v-if="hasCustomStyling(placeholder.key)"
+                                    class="ml-0.5 text-[8px]"
+                                    title="Has custom styling"
+                                >
+                                    ✨
+                                </span>
+                            </div>
+
+                            <!-- Click to Edit Badge - Top Center (shows when not selected) -->
+                            <div
+                                v-if="selectedPlaceholder !== placeholder.key"
+                                class="absolute top-1.5 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-semibold bg-[#2f837d] text-white shadow-md"
+                            >
+                                <Type class="h-2 w-2" />
+                                <span>Click to edit style</span>
+                            </div>
+
+                            <!-- Selected Badge - Top Center (shows when selected) -->
+                            <div
+                                v-if="selectedPlaceholder === placeholder.key"
+                                class="absolute top-1.5 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-semibold bg-[#2f837d] text-white shadow-lg animate-pulse"
+                            >
+                                <Type class="h-2 w-2" />
+                                <span>Editing style →</span>
                             </div>
                         </div>
 
                         <!-- QR Placeholder Container -->
                         <div
                             v-if="placeholder.isQr"
-                            class="relative w-full h-full rounded-xl border-2 transition-all overflow-hidden"
+                            class="relative w-full h-full rounded-xl transition-all overflow-hidden cursor-pointer"
                             :class="[
                                 draggingKey?.key === placeholder.key
-                                    ? 'border-teal-500 bg-teal-100/80 shadow-lg'
-                                    : 'border-dashed border-teal-400/60 bg-teal-50/70 hover:border-teal-500 hover:bg-teal-100/70'
+                                    ? 'border-[3px] border-teal-500 bg-teal-100/80 shadow-lg'
+                                    : selectedPlaceholder === placeholder.key
+                                    ? 'border-[3px] border-teal-500 bg-teal-100/70 shadow-lg ring-4 ring-teal-500/30'
+                                    : 'border-2 border-dashed border-teal-400/60 bg-teal-50/70 hover:border-teal-500 hover:bg-teal-100/70 hover:border-solid'
                             ]"
                         >
                             <!-- QR Icon -->
