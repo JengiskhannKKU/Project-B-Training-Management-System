@@ -32,10 +32,21 @@ const form = useForm({
     gender: "",
     
     // Internal Specific
+    sub_category: "Student", // Default to Student
     faculty: "",
     major: "",
     student_id: "",
     degree_level: "",
+    year_of_study: "",
+    
+    // Personnel Specific
+    academic_title: "",
+    personnel_id: "",
+    organization: "",
+    department: "",
+    job_position: "",
+    employment_status: "",
+    personnel_type: "",
     
     // External Specific
     category: "", // Student, Personnel, Outsider, Other
@@ -48,8 +59,8 @@ const form = useForm({
 const steps = computed(() => [
     { id: 0, name: trans('User Type'), isComplete: !!userType.value },
     { id: 1, name: trans('Account'), isComplete: checkAccountValidity() },
-    { id: 2, name: trans('Personal'), isComplete: checkPersonalValidity() },
-    { id: 3, name: userType.value === 'internal' ? trans('Education') : trans('Work/Affiliation'), isComplete: checkEducationWorkValidity() }
+    { id: 2, name: userType.value === 'internal' ? trans('Education/Work') : trans('Work/Affiliation'), isComplete: checkEducationWorkValidity() },
+    { id: 3, name: trans('Personal'), isComplete: checkPersonalValidity() }
 ]);
 
 const maxStep = ref(0);
@@ -155,7 +166,12 @@ const checkEducationWorkValidity = () => {
     const requiredFields = [];
     
     if (userType.value === 'internal') {
-        requiredFields.push('faculty', 'major', 'student_id', 'degree_level');
+        if (form.sub_category === 'Student') {
+            requiredFields.push('faculty', 'major', 'degree_level', 'year_of_study');
+        } else {
+            // Personnel
+            requiredFields.push('academic_title', 'organization', 'job_position', 'employment_status', 'personnel_type');
+        }
     } else {
         requiredFields.push('category', 'organization_name');
     }
@@ -185,10 +201,17 @@ const validateStep = (currentStep) => {
             isValid = false;
         }
     } else if (currentStep === 2) {
-        const requiredFields = [
-            'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
-            'last_name_en', 'phone', 'birthdate', 'gender'
-        ];
+         const requiredFields = [];
+        
+        if (userType.value === 'internal') {
+            if (form.sub_category === 'Student') {
+                requiredFields.push('faculty', 'major', 'degree_level', 'year_of_study');
+            } else {
+                requiredFields.push('academic_title', 'organization', 'job_position', 'employment_status', 'personnel_type');
+            }
+        } else {
+            requiredFields.push('category', 'organization_name');
+        }
 
         requiredFields.forEach(field => {
             if (!form[field]) {
@@ -197,13 +220,10 @@ const validateStep = (currentStep) => {
             }
         });
     } else if (currentStep === 3) {
-         const requiredFields = [];
-        
-        if (userType.value === 'internal') {
-            requiredFields.push('faculty', 'major', 'student_id', 'degree_level');
-        } else {
-            requiredFields.push('category', 'organization_name');
-        }
+        const requiredFields = [
+            'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
+            'last_name_en', 'phone', 'birthdate', 'gender'
+        ];
 
         requiredFields.forEach(field => {
             if (!form[field]) {
@@ -251,8 +271,8 @@ const selectUserType = (type) => {
 const submit = () => {
     // Validate ALL steps before submitting
     const isAccountValid = validateStep(1);
-    const isPersonalValid = validateStep(2);
-    const isEducationWorkValid = validateStep(3);
+    const isEducationWorkValid = validateStep(2);
+    const isPersonalValid = validateStep(3);
 
     if (!isAccountValid) {
         step.value = 1;
@@ -260,15 +280,15 @@ const submit = () => {
         return;
     }
 
-    if (!isPersonalValid) {
+    if (!isEducationWorkValid) {
         step.value = 2;
-        errorMessage.value = trans("Please check the Personal Information tab for errors.");
+        errorMessage.value = trans("Please check the Education/Work Information tab for errors.");
         return;
     }
 
-    if (!isEducationWorkValid) {
+    if (!isPersonalValid) {
         step.value = 3;
-        errorMessage.value = trans("Please check the Education/Work Information tab for errors.");
+        errorMessage.value = trans("Please check the Personal Information tab for errors.");
         return;
     }
 
@@ -453,8 +473,189 @@ const organizationLabel = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Step 2: Personal Info -->
+                    <!-- Step 2: Education / Work Info -->
                     <div v-if="step === 2" class="space-y-4">
+                        
+                        <!-- Internal Specific -->
+                        <div v-if="userType === 'internal'" class="space-y-4">
+                            <h3 class="font-medium text-gray-900">{{ $t('University Information') }}</h3>
+                            
+                            <!-- Sub-Category Toggle -->
+                            <div class="flex space-x-6 p-4 bg-gray-50 rounded-lg">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" v-model="form.sub_category" value="Student" class="w-4 h-4 text-[#3D9792] focus:ring-[#3D9792] border-gray-300" />
+                                    <span class="ml-2 text-sm font-medium text-gray-700">{{ $t('Student') }}</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" v-model="form.sub_category" value="Personnel" class="w-4 h-4 text-[#3D9792] focus:ring-[#3D9792] border-gray-300" />
+                                    <span class="ml-2 text-sm font-medium text-gray-700">{{ $t('University Personnel') }}</span>
+                                </label>
+                            </div>
+
+                            <!-- Student Fields -->
+                            <div v-if="form.sub_category === 'Student'" class="space-y-4">
+                                <div>
+                                    <InputLabel for="faculty" :value="$t('Faculty')" />
+                                    <TextInput id="faculty" type="text" class="mt-1 block w-full" v-model="form.faculty" />
+                                    <InputError :message="localErrors.faculty" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="major" :value="$t('Major / Department')" />
+                                    <TextInput id="major" type="text" class="mt-1 block w-full" v-model="form.major" />
+                                    <InputError :message="localErrors.major" class="mt-2" />
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <InputLabel for="student_id" :value="$t('Student ID')" />
+                                        <TextInput id="student_id" type="text" class="mt-1 block w-full" v-model="form.student_id" />
+                                        <InputError :message="localErrors.student_id" class="mt-2" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="year_of_study" :value="$t('Year of Study')" />
+                                        <TextInput id="year_of_study" type="text" class="mt-1 block w-full" v-model="form.year_of_study" />
+                                        <InputError :message="localErrors.year_of_study" class="mt-2" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <InputLabel for="degree_level" :value="$t('Degree Level')" />
+                                    <select 
+                                        id="degree_level" 
+                                        v-model="form.degree_level"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                    >
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Bachelor">{{ $t('Bachelor') }}</option>
+                                        <option value="Master">{{ $t('Master') }}</option>
+                                        <option value="Doctoral">{{ $t('Doctoral') }}</option>
+                                    </select>
+                                    <InputError :message="localErrors.degree_level" class="mt-2" />
+                                </div>
+                            </div>
+
+                            <!-- Personnel Fields -->
+                            <div v-if="form.sub_category === 'Personnel'" class="space-y-4">
+                                <div>
+                                    <InputLabel for="academic_title" :value="$t('Academic / Professional Title')" />
+                                    <select 
+                                        id="academic_title" 
+                                        v-model="form.academic_title"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                    >
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Mr.">{{ $t('Mr.') }}</option>
+                                        <option value="Ms.">{{ $t('Ms.') }}</option>
+                                        <option value="Mrs.">{{ $t('Mrs.') }}</option>
+                                        <option value="Dr.">{{ $t('Dr.') }}</option>
+                                        <option value="Lecturer">{{ $t('Lecturer') }}</option>
+                                        <option value="Asst. Prof.">{{ $t('Asst. Prof.') }}</option>
+                                        <option value="Assoc. Prof.">{{ $t('Assoc. Prof.') }}</option>
+                                        <option value="Prof.">{{ $t('Prof.') }}</option>
+                                        <option value="Other">{{ $t('Other') }}</option>
+                                    </select>
+                                    <InputError :message="localErrors.academic_title" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="personnel_id" :value="$t('Personnel ID (Optional)')" />
+                                    <TextInput id="personnel_id" type="text" class="mt-1 block w-full" v-model="form.personnel_id" />
+                                    <InputError :message="localErrors.personnel_id" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="organization" :value="$t('Organization / Faculty / Office')" />
+                                    <TextInput id="organization" type="text" class="mt-1 block w-full" v-model="form.organization" />
+                                    <InputError :message="localErrors.organization" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="department" :value="$t('Department (Optional)')" />
+                                    <TextInput id="department" type="text" class="mt-1 block w-full" v-model="form.department" />
+                                    <InputError :message="localErrors.department" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="job_position" :value="$t('Job Position')" />
+                                    <select 
+                                        id="job_position" 
+                                        v-model="form.job_position"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                    >
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Lecturer">{{ $t('Lecturer') }}</option>
+                                        <option value="Staff">{{ $t('Staff') }}</option>
+                                        <option value="Researcher">{{ $t('Researcher') }}</option>
+                                        <option value="System Administrator">{{ $t('System Administrator') }}</option>
+                                        <option value="Other">{{ $t('Other') }}</option>
+                                    </select>
+                                    <InputError :message="localErrors.job_position" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="employment_status" :value="$t('Employment Status')" />
+                                    <select 
+                                        id="employment_status" 
+                                        v-model="form.employment_status"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                    >
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Full-time">{{ $t('Full-time') }}</option>
+                                        <option value="Part-time">{{ $t('Part-time') }}</option>
+                                        <option value="Contract">{{ $t('Contract') }}</option>
+                                    </select>
+                                    <InputError :message="localErrors.employment_status" class="mt-2" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="personnel_type" :value="$t('Personnel Type')" />
+                                    <select 
+                                        id="personnel_type" 
+                                        v-model="form.personnel_type"
+                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                    >
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Government Officer">{{ $t('Government Officer') }}</option>
+                                        <option value="University Employee">{{ $t('University Employee') }}</option>
+                                        <option value="Temporary Employee">{{ $t('Temporary Employee') }}</option>
+                                        <option value="Other">{{ $t('Other') }}</option>
+                                    </select>
+                                    <InputError :message="localErrors.personnel_type" class="mt-2" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- External Specific -->
+                        <div v-if="userType === 'external'" class="space-y-4">
+                            <h3 class="font-medium text-gray-900">{{ $t('Affiliation Information') }}</h3>
+
+                            <div>
+                                <InputLabel for="category" :value="$t('Category')" />
+                                <select 
+                                    id="category" 
+                                    v-model="form.category"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
+                                >
+                                    <option value="">{{ $t('Select...') }}</option>
+                                    <option value="Student">{{ $t('Student') }}</option>
+                                    <option value="Personnel">{{ $t('Personnel') }}</option>
+                                    <option value="Outsider">{{ $t('Outsider') }}</option>
+                                    <option value="Other">{{ $t('Other') }}</option>
+                                </select>
+                                <InputError :message="localErrors.category" class="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel for="organization_name" :value="$t(organizationLabel)" />
+                                <TextInput id="organization_name" type="text" class="mt-1 block w-full" v-model="form.organization_name" :placeholder="$t(organizationLabel)" />
+                                <InputError :message="localErrors.organization_name" class="mt-2" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Personal Info -->
+                    <div v-if="step === 3" class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                              <!-- Prefix -->
                             <div class="col-span-1">
@@ -530,74 +731,6 @@ const organizationLabel = computed(() => {
                             </div>
                         </div>
                     </div>
-
-                    <!-- Step 3: Education / Work Info -->
-                    <!-- Internal Specific Fields -->
-                    <div v-if="step === 3 && userType === 'internal'" class="space-y-4">
-                            <h3 class="font-medium text-gray-900">{{ $t('University Information') }}</h3>
-                            
-                             <div>
-                                <InputLabel for="faculty" :value="$t('Faculty')" />
-                                <TextInput id="faculty" type="text" class="mt-1 block w-full" v-model="form.faculty" />
-                                <InputError :message="localErrors.faculty" class="mt-2" />
-                            </div>
-
-                             <div>
-                                <InputLabel for="major" :value="$t('Major / Department')" />
-                                <TextInput id="major" type="text" class="mt-1 block w-full" v-model="form.major" />
-                                <InputError :message="localErrors.major" class="mt-2" />
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <InputLabel for="student_id" :value="$t('Student / Staff ID')" />
-                                    <TextInput id="student_id" type="text" class="mt-1 block w-full" v-model="form.student_id" />
-                                    <InputError :message="localErrors.student_id" class="mt-2" />
-                                </div>
-                                <div>
-                                    <InputLabel for="degree_level" :value="$t('Degree Level')" />
-                                    <select 
-                                        id="degree_level" 
-                                        v-model="form.degree_level"
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
-                                    >
-                                        <option value="">{{ $t('Select...') }}</option>
-                                        <option value="Bachelor">{{ $t('Bachelor') }}</option>
-                                        <option value="Master">{{ $t('Master') }}</option>
-                                        <option value="Doctoral">{{ $t('Doctoral') }}</option>
-                                        <option value="Other">{{ $t('Other / Staff') }}</option>
-                                    </select>
-                                    <InputError :message="localErrors.degree_level" class="mt-2" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- External Specific Fields -->
-                        <div v-if="step === 3 && userType === 'external'" class="space-y-4">
-                            <h3 class="font-medium text-gray-900">{{ $t('Affiliation Information') }}</h3>
-
-                            <div>
-                                <InputLabel for="category" :value="$t('Category')" />
-                                <select 
-                                    id="category" 
-                                    v-model="form.category"
-                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
-                                >
-                                    <option value="">{{ $t('Select...') }}</option>
-                                    <option value="Student">{{ $t('Student') }}</option>
-                                    <option value="Personnel">{{ $t('Personnel') }}</option>
-                                    <option value="Outsider">{{ $t('Outsider') }}</option>
-                                    <option value="Other">{{ $t('Other') }}</option>
-                                </select>
-                                <InputError :message="localErrors.category" class="mt-2" />
-                            </div>
-
-                            <div>
-                                <InputLabel for="organization_name" :value="$t(organizationLabel)" />
-                                <TextInput id="organization_name" type="text" class="mt-1 block w-full" v-model="form.organization_name" :placeholder="$t(organizationLabel)" />
-                                <InputError :message="localErrors.organization_name" class="mt-2" />
-                            </div>
-                        </div>
 
                     <!-- Navigation Buttons -->
                     <div class="flex items-center justify-between pt-4">
