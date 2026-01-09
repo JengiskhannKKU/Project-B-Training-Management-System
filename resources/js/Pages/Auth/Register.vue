@@ -110,6 +110,7 @@ const jumpToStep = (targetStep) => {
     if (targetStep === 0) {
         step.value = 0;
         userType.value = null;
+        form.reset();
         return;
     }
 
@@ -237,6 +238,7 @@ const prevStep = () => {
         step.value--;
         if (step.value === 0) {
             userType.value = null;
+            form.reset();
         }
     }
 };
