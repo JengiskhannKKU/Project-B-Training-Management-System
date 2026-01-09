@@ -308,11 +308,11 @@ const organizationLabel = computed(() => {
 <template>
     <Head :title="$t('Register')" />
 
-    <div class="relative min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="relative min-h-screen bg-gray-50 flex flex-col items-center pt-12 sm:pt-20 pb-12 sm:px-6 lg:px-8">
         <div class="absolute right-4 top-4 z-50">
             <LanguageSwitcher />
         </div>
-        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
             <img
                 src="/images/project_logo.png"
                 alt="Project Logo"
