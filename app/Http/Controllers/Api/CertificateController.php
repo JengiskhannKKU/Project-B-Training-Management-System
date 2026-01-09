@@ -162,6 +162,10 @@ class CertificateController extends Controller
 
     public function revoke(Request $request, Certificate $certificate)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can revoke certificates.');
+        }
+
         $data = $request->validate([
             'note' => ['nullable', 'string'],
         ]);
@@ -246,8 +250,8 @@ class CertificateController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        if (!$user->isRole('admin') && $session->trainer_id !== $user->id) {
-            return $this->forbiddenResponse('Only the session trainer or admin can generate certificates.');
+        if (!$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can generate certificates.');
         }
 
         if ($session->status !== 'completed') {
@@ -275,8 +279,8 @@ class CertificateController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        if (!$user->isRole('admin') && $program->created_by !== $user->id) {
-            return $this->forbiddenResponse('Only the program owner or admin can generate certificates.');
+        if (!$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can generate certificates.');
         }
 
         if ($program->approval_status !== 'approved') {

@@ -36,6 +36,11 @@ class AttendanceController extends Controller
             'note' => ['nullable', 'string'],
         ]);
 
+        $session = TrainingSession::findOrFail($data['session_id']);
+        if (!$request->user()->isRole('admin') && $session->trainer_id !== $request->user()->id) {
+            return $this->forbiddenResponse('You can only record attendance for your own sessions.');
+        }
+
         $enrollment = Enrollment::where('id', $data['enrollment_id'])
             ->where('session_id', $data['session_id'])
             ->first();
@@ -62,6 +67,11 @@ class AttendanceController extends Controller
 
     public function update(Request $request, Attendance $attendance)
     {
+        $session = TrainingSession::find($attendance->session_id);
+        if ($session && !$request->user()->isRole('admin') && $session->trainer_id !== $request->user()->id) {
+             return $this->forbiddenResponse('You can only update attendance for your own sessions.');
+        }
+
         $data = $request->validate([
             'status' => ['sometimes', 'required', Rule::in($this->statusOptions())],
             'note' => ['nullable', 'string'],
@@ -79,6 +89,10 @@ class AttendanceController extends Controller
 
     public function bulkStore(Request $request, TrainingSession $session)
     {
+        if (!$request->user()->isRole('admin') && $session->trainer_id !== $request->user()->id) {
+            return $this->forbiddenResponse('You can only record attendance for your own sessions.');
+        }
+
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
             'items.*.enrollment_id' => ['required', 'integer', 'exists:enrollments,id'],

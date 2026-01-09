@@ -16,6 +16,11 @@ class TrainingSessionController extends Controller
     public function index(Request $request)
     {
         $query = TrainingSession::query()->latest();
+        $user = $request->user();
+
+        if ($user && $user->isRole('trainer')) {
+            $query->where('trainer_id', $user->id);
+        }
 
         if ($request->filled('program_id')) {
             $query->where('program_id', $request->integer('program_id'));
@@ -29,6 +34,10 @@ class TrainingSessionController extends Controller
     
     public function store(Request $request)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can create sessions.');
+        }
+
         $data = $request->validate([
             'program_id' => ['required', 'integer', 'exists:programs,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -58,6 +67,11 @@ class TrainingSessionController extends Controller
      */
     public function show(TrainingSession $session)
     {
+        $user = request()->user();
+        if ($user && $user->isRole('trainer') && $session->trainer_id !== $user->id) {
+             return $this->forbiddenResponse('You are not authorized to view this session.');
+        }
+
         $session->load('program');
         return $this->successResponse($session, 'Session retrieved successfully');
     }
@@ -67,6 +81,10 @@ class TrainingSessionController extends Controller
      */
     public function update(Request $request, TrainingSession $session)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can update sessions.');
+        }
+
         $data = $request->validate([
             'program_id' => ['sometimes', 'required', 'integer', 'exists:programs,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
@@ -116,6 +134,10 @@ class TrainingSessionController extends Controller
      */
     public function destroy(TrainingSession $session)
     {
+        if (!request()->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can delete sessions.');
+        }
+
         $session->delete();
 
         return $this->successResponse(null, 'Session deleted successfully');

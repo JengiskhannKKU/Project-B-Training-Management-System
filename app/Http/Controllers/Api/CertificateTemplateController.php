@@ -88,18 +88,11 @@ class CertificateTemplateController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validatePayload($request, true);
-
-        if ($request->user()?->isRole('trainer')) {
-            $denial = $this->denyIfTrainerCannotManage(
-                $request->user()->id,
-                $validated,
-                null
-            );
-            if ($denial) {
-                return $denial;
-            }
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can create certificate templates.');
         }
+
+        $validated = $this->validatePayload($request, true);
 
         $data = $this->buildTemplateData($request, $validated);
 
@@ -120,18 +113,11 @@ class CertificateTemplateController extends Controller
 
     public function update(Request $request, CertificateTemplate $certificateTemplate)
     {
-        $validated = $this->validatePayload($request, false);
-
-        if ($request->user()?->isRole('trainer')) {
-            $denial = $this->denyIfTrainerCannotManage(
-                $request->user()->id,
-                $validated,
-                $certificateTemplate
-            );
-            if ($denial) {
-                return $denial;
-            }
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can update certificate templates.');
         }
+
+        $validated = $this->validatePayload($request, false);
 
         $data = $this->buildTemplateData($request, $validated, $certificateTemplate);
 
@@ -161,12 +147,8 @@ class CertificateTemplateController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        if ($user->isRole('trainer')) {
-            $certificateTemplate->load(['program:id,created_by', 'session:id,trainer_id']);
-            $denial = $this->denyIfTrainerCannotAccess($user->id, $certificateTemplate);
-            if ($denial) {
-                return $denial;
-            }
+        if (!$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can delete certificate templates.');
         }
 
         $certificateTemplate->delete();

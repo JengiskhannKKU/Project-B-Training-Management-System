@@ -24,6 +24,10 @@ class ProgramController extends Controller
      */
     public function store(Request $request)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can create programs.');
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', 'unique:programs,code'],
@@ -55,6 +59,10 @@ class ProgramController extends Controller
      */
     public function update(Request $request, Program $program)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can update programs.');
+        }
+
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('programs', 'code')->ignore($program->id)],
@@ -80,6 +88,10 @@ class ProgramController extends Controller
      */
     public function destroy(Program $program)
     {
+        if (!request()->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can delete programs.');
+        }
+
         $program->delete();
 
         return $this->successResponse(null, 'Program deleted successfully');
