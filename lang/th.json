@@ -414,5 +414,10 @@
     "Failed to auto-save attendance.": "ไม่สามารถบันทึกอัตโนมัติได้",
     "Session completed successfully!": "ปิดรอบอบรมสำเร็จ!",
     "Failed to complete session. Please try again.": "ไม่สามารถปิดรอบอบรมได้ กรุณาลองอีกครั้ง",
-    "Failed to generate certificates.": "ไม่สามารถสร้างใบรับรองได้"
+    "Failed to generate certificates.": "ไม่สามารถสร้างใบรับรองได้",
+    "Are you sure you want to complete this session?": "คุณแน่ใจหรือไม่ว่าต้องการปิดรอบอบรมนี้?",
+    "After completion:": "หลังจากปิดรอบอบรม:",
+    "Complete": "ปิดรอบ",
+    "Attendance records will be locked (only admin can modify)": "บันทึกการเข้าเรียนจะถูกล็อค (เฉพาะผู้ดูแลระบบสามารถแก้ไขได้)",
+    "No new enrollments will be allowed": "ไม่อนุญาตให้มีการลงทะเบียนใหม่"
 }

@@ -453,19 +453,10 @@ const autoSaveAttendance = async () => {
 
 // Complete session
 const isCompleting = ref(false);
+const showCompleteSessionModal = ref(false);
 
 const completeSession = async () => {
-    // Show confirmation dialog
-    const confirmed = confirm(
-        'Are you sure you want to complete this session?\n\n' +
-        'After completion:\n' +
-        '- Attendance records will be locked (only admin can modify)\n' +
-        '- No new enrollments will be allowed\n' +
-        '- This action cannot be undone'
-    );
-
-    if (!confirmed) return;
-
+    showCompleteSessionModal.value = false;
     isCompleting.value = true;
 
     try {
@@ -543,7 +534,7 @@ onMounted(() => {
                         <span class="font-medium">{{ $t('Auto-saved') }}</span>
                     </div>
                     <!-- Complete Session Button -->
-                    <button v-if="!isSessionCompleted" @click="completeSession" :disabled="isCompleting || isLoading"
+                    <button v-if="!isSessionCompleted" @click="showCompleteSessionModal = true" :disabled="isCompleting || isLoading"
                         class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                         <CheckCircle :size="20" />
                         <span v-if="isCompleting">{{ $t('Completing...') }}</span>
@@ -1047,11 +1038,38 @@ onMounted(() => {
             <ExportModal :show="showExportModal" activeTab="trainees" dataType="attendance"
                 @close="showExportModal = false" @exportCSV="exportToCSV" @exportPDF="exportToPDF" />
 
+            <!-- Complete Session Confirmation Dialog -->
+            <ConfirmationDialog :show="showCompleteSessionModal" :title="$t('Complete Session')"
+                :confirmText="$t('Complete')" :cancelText="$t('Cancel')" confirmButtonClass="bg-green-600 hover:bg-green-700" @confirm="completeSession"
+                @close="showCompleteSessionModal = false" @cancel="showCompleteSessionModal = false">
+                <template #message>
+                    <div class="space-y-3">
+                        <p class="font-medium text-gray-900">{{ $t('Are you sure you want to complete this session?') }}</p>
+                        <div class="text-left bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <p class="font-semibold text-amber-900 mb-2">{{ $t('After completion:') }}</p>
+                            <ul class="space-y-1.5 text-amber-800 text-xs">
+                                <li class="flex items-start gap-2">
+                                    <span class="mt-0.5">•</span>
+                                    <span>{{ $t('Attendance records will be locked (only admin can modify)') }}</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="mt-0.5">•</span>
+                                    <span>{{ $t('No new enrollments will be allowed') }}</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="mt-0.5">•</span>
+                                    <span>{{ $t('This action cannot be undone') }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
+            </ConfirmationDialog>
 
-
+            <!-- Generate Certificates Confirmation Dialog -->
             <ConfirmationDialog :show="showGenerateCertificatesModal" :title="$t('Generate Certificates')"
                 :message="$t('Generate certificates for all eligible trainees in this session?')" :confirmText="$t('Generate')"
-                confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
+                :cancelText="$t('Cancel')" confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
                 @close="showGenerateCertificatesModal = false" @cancel="showGenerateCertificatesModal = false" />
         </div>
     </TrainerLayout>

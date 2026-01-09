@@ -88,7 +88,9 @@ const handleBackdropClick = () => {
                         </div>
 
                         <div class="mb-6 text-center text-sm text-gray-600">
-                            {{ message }}
+                            <slot name="message">
+                                <p class="whitespace-pre-line">{{ message }}</p>
+                            </slot>
                         </div>
 
                         <div class="flex gap-3">

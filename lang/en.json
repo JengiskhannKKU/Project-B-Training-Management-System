@@ -414,5 +414,10 @@
     "Failed to generate certificates.": "Failed to generate certificates.",
     "Last 7 days": "Last 7 days",
     "Average attendance rate": "Average attendance rate",
-    "Participation trends": "Participation trends"
+    "Participation trends": "Participation trends",
+    "Are you sure you want to complete this session?": "Are you sure you want to complete this session?",
+    "After completion:": "After completion:",
+    "Complete": "Complete",
+    "Attendance records will be locked (only admin can modify)": "Attendance records will be locked (only admin can modify)",
+    "No new enrollments will be allowed": "No new enrollments will be allowed"
 }
