@@ -48,7 +48,8 @@ const form = useForm({
 const steps = computed(() => [
     { id: 0, name: trans('User Type'), isComplete: !!userType.value },
     { id: 1, name: trans('Account'), isComplete: checkAccountValidity() },
-    { id: 2, name: trans('Personal'), isComplete: checkPersonalValidity() }
+    { id: 2, name: trans('Personal'), isComplete: checkPersonalValidity() },
+    { id: 3, name: userType.value === 'internal' ? trans('Education') : trans('Work/Affiliation'), isComplete: checkEducationWorkValidity() }
 ]);
 
 const maxStep = ref(0);
@@ -142,6 +143,15 @@ const checkPersonalValidity = () => {
         'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
         'last_name_en', 'phone', 'birthdate', 'gender'
     ];
+
+    for (const field of requiredFields) {
+        if (!form[field]) return false;
+    }
+    return true;
+};
+
+const checkEducationWorkValidity = () => {
+    const requiredFields = [];
     
     if (userType.value === 'internal') {
         requiredFields.push('faculty', 'major', 'student_id', 'degree_level');
@@ -178,6 +188,15 @@ const validateStep = (currentStep) => {
             'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
             'last_name_en', 'phone', 'birthdate', 'gender'
         ];
+
+        requiredFields.forEach(field => {
+            if (!form[field]) {
+                localErrors.value[field] = trans("This field is required.");
+                isValid = false;
+            }
+        });
+    } else if (currentStep === 3) {
+         const requiredFields = [];
         
         if (userType.value === 'internal') {
             requiredFields.push('faculty', 'major', 'student_id', 'degree_level');
@@ -206,6 +225,10 @@ const nextStep = () => {
         if (validateStep(1)) {
             step.value = 2;
         }
+    } else if (step.value === 2) {
+        if (validateStep(2)) {
+            step.value = 3;
+        }
     }
 };
 
@@ -227,6 +250,7 @@ const submit = () => {
     // Validate ALL steps before submitting
     const isAccountValid = validateStep(1);
     const isPersonalValid = validateStep(2);
+    const isEducationWorkValid = validateStep(3);
 
     if (!isAccountValid) {
         step.value = 1;
@@ -237,6 +261,12 @@ const submit = () => {
     if (!isPersonalValid) {
         step.value = 2;
         errorMessage.value = trans("Please check the Personal Information tab for errors.");
+        return;
+    }
+
+    if (!isEducationWorkValid) {
+        step.value = 3;
+        errorMessage.value = trans("Please check the Education/Work Information tab for errors.");
         return;
     }
 
@@ -519,7 +549,7 @@ const organizationLabel = computed(() => {
                         </div>
 
                         <!-- Internal Specific Fields -->
-                        <div v-if="userType === 'internal'" class="space-y-4 border-t pt-4">
+                        <div v-if="step === 3 && userType === 'internal'" class="space-y-4">
                             <h3 class="font-medium text-gray-900">{{ $t('University Information') }}</h3>
                             
                              <div>
@@ -559,7 +589,7 @@ const organizationLabel = computed(() => {
                         </div>
 
                         <!-- External Specific Fields -->
-                        <div v-if="userType === 'external'" class="space-y-4 border-t pt-4">
+                        <div v-if="step === 3 && userType === 'external'" class="space-y-4">
                             <h3 class="font-medium text-gray-900">{{ $t('Affiliation Information') }}</h3>
 
                             <div>
@@ -600,7 +630,7 @@ const organizationLabel = computed(() => {
                         </button>
 
                         <PrimaryButton
-                            v-if="step === 1"
+                            v-if="step === 1 || step === 2"
                             type="button"
                             @click="nextStep"
                         >
@@ -608,7 +638,7 @@ const organizationLabel = computed(() => {
                         </PrimaryButton>
 
                         <PrimaryButton
-                            v-if="step === 2"
+                            v-if="step === 3"
                             class="ml-4"
                             :class="{ 'opacity-25': form.processing }"
                             :disabled="form.processing"
