@@ -378,6 +378,7 @@ const organizationLabel = computed(() => {
                         <div class="mt-4 text-center">
                              <Link
                                 :href="route('login')"
+                                @click="clearStorage"
                                 class="font-medium text-[#3D9792] hover:text-[#2d7773]"
                             >
                                 {{ $t('Log in') }}
@@ -583,7 +584,7 @@ const organizationLabel = computed(() => {
                         >
                             <span v-if="step > 0">{{ $t('← Back') }}</span>
                             <span v-else>
-                                <Link :href="route('login')">{{ $t('Back to Login') }}</Link>
+                                <Link :href="route('login')" @click="clearStorage">{{ $t('Back to Login') }}</Link>
                             </span>
                         </button>
 
