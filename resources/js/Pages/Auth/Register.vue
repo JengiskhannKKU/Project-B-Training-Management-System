@@ -106,7 +106,13 @@ const jumpToStep = (targetStep) => {
     
     if (targetStep === step.value) return;
 
-    if (targetStep === 0 || userType.value) {
+    if (targetStep === 0) {
+        step.value = 0;
+        userType.value = null;
+        return;
+    }
+
+    if (userType.value) {
         step.value = targetStep;
     }
 };
@@ -204,7 +210,12 @@ const nextStep = () => {
 };
 
 const prevStep = () => {
-    if (step.value > 0) step.value--;
+    if (step.value > 0) {
+        step.value--;
+        if (step.value === 0) {
+            userType.value = null;
+        }
+    }
 };
 
 const selectUserType = (type) => {
