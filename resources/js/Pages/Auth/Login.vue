@@ -4,6 +4,7 @@ import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 
 defineProps({
@@ -39,6 +40,9 @@ const submit = () => {
                 alt="Project Logo"
                 class="h-14 w-auto"
             />
+        </div>
+        <div class="absolute right-6 top-4 z-20">
+            <LanguageSwitcher />
         </div>
         <!-- div1: Left Side (Hidden on mobile) -->
         <div

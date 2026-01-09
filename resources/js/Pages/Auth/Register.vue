@@ -6,7 +6,9 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
+import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+import { trans } from 'laravel-vue-i18n';
 
 const step = ref(0); // 0: Selection, 1: Account, 2: Personal
 const userType = ref(null); // 'internal' | 'external'
@@ -101,15 +103,15 @@ const validateStep = (currentStep) => {
 
     if (currentStep === 1) {
         if (!form.email || !validateEmail(form.email)) {
-            localErrors.value.email = "Please enter a valid email address.";
+            localErrors.value.email = trans("Please enter a valid email address.");
             isValid = false;
         }
         if (!form.password || !validatePassword(form.password)) {
-            localErrors.value.password = "Password must be at least 8 characters.";
+            localErrors.value.password = trans("Password must be at least 8 characters.");
             isValid = false;
         }
         if (form.password !== form.password_confirmation) {
-            localErrors.value.password_confirmation = "Passwords do not match.";
+            localErrors.value.password_confirmation = trans("Passwords do not match.");
             isValid = false;
         }
     } else if (currentStep === 2) {
@@ -126,7 +128,7 @@ const validateStep = (currentStep) => {
 
         requiredFields.forEach(field => {
             if (!form[field]) {
-                localErrors.value[field] = "This field is required.";
+                localErrors.value[field] = trans("This field is required.");
                 isValid = false;
             }
         });
@@ -174,7 +176,7 @@ const submit = () => {
         },
         onError: (errors) => {
             if (Object.keys(errors).length > 0) {
-                errorMessage.value = "Please check the form for errors.";
+                errorMessage.value = trans("Please check the form for errors.");
             }
         },
     });
@@ -193,9 +195,12 @@ const organizationLabel = computed(() => {
 </script>
 
 <template>
-    <Head title="Register" />
+    <Head :title="$t('Register')" />
 
-    <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="relative min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div class="absolute right-4 top-4 z-50">
+            <LanguageSwitcher />
+        </div>
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <img
                 src="/images/project_logo.png"
@@ -203,12 +208,12 @@ const organizationLabel = computed(() => {
                 class="mx-auto h-16 w-auto"
             />
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Create your account
+                {{ $t('Create your account') }}
             </h2>
             <p class="mt-2 text-center text-sm text-gray-600">
-                <span v-if="step === 0">Select your user type to get started</span>
-                <span v-else-if="step === 1">Account Information</span>
-                <span v-else-if="step === 2">Personal Information</span>
+                <span v-if="step === 0">{{ $t('Select your user type to get started') }}</span>
+                <span v-else-if="step === 1">{{ $t('Account Information') }}</span>
+                <span v-else-if="step === 2">{{ $t('Personal Information') }}</span>
             </p>
         </div>
 
@@ -234,8 +239,8 @@ const organizationLabel = computed(() => {
                                 </svg>
                             </div>
                             <div class="ml-4 text-left">
-                                <h3 class="text-lg font-medium text-gray-900">Internal User</h3>
-                                <p class="text-sm text-gray-500">Khon Kaen University (Student/Staff)</p>
+                                <h3 class="text-lg font-medium text-gray-900">{{ $t('Internal User') }}</h3>
+                                <p class="text-sm text-gray-500">{{ $t('Khon Kaen University (Student/Staff)') }}</p>
                             </div>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-[#3D9792]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -254,8 +259,8 @@ const organizationLabel = computed(() => {
                                 </svg>
                             </div>
                             <div class="ml-4 text-left">
-                                <h3 class="text-lg font-medium text-gray-900">External User</h3>
-                                <p class="text-sm text-gray-500">General Public / Other Organizations</p>
+                                <h3 class="text-lg font-medium text-gray-900">{{ $t('External User') }}</h3>
+                                <p class="text-sm text-gray-500">{{ $t('General Public / Other Organizations') }}</p>
                             </div>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-hover:text-[#3D9792]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,7 +274,7 @@ const organizationLabel = computed(() => {
                                 <div class="w-full border-t border-gray-300"></div>
                             </div>
                             <div class="relative flex justify-center text-sm">
-                                <span class="px-2 bg-white text-gray-500">Already have an account?</span>
+                                <span class="px-2 bg-white text-gray-500">{{ $t('Already have an account?') }}</span>
                             </div>
                         </div>
                         <div class="mt-4 text-center">
@@ -277,7 +282,7 @@ const organizationLabel = computed(() => {
                                 :href="route('login')"
                                 class="font-medium text-[#3D9792] hover:text-[#2d7773]"
                             >
-                                Log in
+                                {{ $t('Log in') }}
                             </Link>
                         </div>
                     </div>
@@ -289,7 +294,7 @@ const organizationLabel = computed(() => {
                     <!-- Step 1: Account Info -->
                     <div v-if="step === 1" class="space-y-4">
                         <div>
-                            <InputLabel for="email" value="Email" />
+                            <InputLabel for="email" :value="$t('Email')" />
                             <TextInput
                                 id="email"
                                 type="email"
@@ -302,7 +307,7 @@ const organizationLabel = computed(() => {
                         </div>
 
                         <div>
-                            <InputLabel for="password" value="Password" />
+                            <InputLabel for="password" :value="$t('Password')" />
                             <TextInput
                                 id="password"
                                 type="password"
@@ -314,7 +319,7 @@ const organizationLabel = computed(() => {
                         </div>
 
                         <div>
-                            <InputLabel for="password_confirmation" value="Confirm Password" />
+                            <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
                             <TextInput
                                 id="password_confirmation"
                                 type="password"
@@ -331,34 +336,34 @@ const organizationLabel = computed(() => {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                              <!-- Prefix -->
                             <div class="col-span-1">
-                                <InputLabel for="prefix" value="Prefix" />
+                                <InputLabel for="prefix" :value="$t('Prefix')" />
                                 <select 
                                     id="prefix" 
                                     v-model="form.prefix"
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
                                 >
-                                    <option value="">Select...</option>
-                                    <option value="Mr.">Mr.</option>
-                                    <option value="Mrs.">Mrs.</option>
-                                    <option value="Ms.">Ms.</option>
-                                    <option value="Other">Other</option>
+                                    <option value="">{{ $t('Select...') }}</option>
+                                    <option value="Mr.">{{ $t('Mr.') }}</option>
+                                    <option value="Mrs.">{{ $t('Mrs.') }}</option>
+                                    <option value="Ms.">{{ $t('Ms.') }}</option>
+                                    <option value="Other">{{ $t('Other') }}</option>
                                 </select>
                                 <InputError :message="localErrors.prefix" class="mt-2" />
                             </div>
                             
                             <!-- Gender -->
                             <div class="col-span-1">
-                                <InputLabel for="gender" value="Gender" />
+                                <InputLabel for="gender" :value="$t('Gender')" />
                                 <select 
                                     id="gender" 
                                     v-model="form.gender"
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
                                 >
-                                    <option value="">Select...</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                    <option value="LGBTQ+">LGBTQ+</option>
-                                    <option value="Prefer not to say">Prefer not to say</option>
+                                    <option value="">{{ $t('Select...') }}</option>
+                                    <option value="Male">{{ $t('Male') }}</option>
+                                    <option value="Female">{{ $t('Female') }}</option>
+                                    <option value="LGBTQ+">{{ $t('LGBTQ+') }}</option>
+                                    <option value="Prefer not to say">{{ $t('Prefer not to say') }}</option>
                                 </select>
                                 <InputError :message="localErrors.gender" class="mt-2" />
                             </div>
@@ -366,12 +371,12 @@ const organizationLabel = computed(() => {
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="first_name_th" value="First Name (TH)" />
+                                <InputLabel for="first_name_th" :value="$t('First Name (TH)')" />
                                 <TextInput id="first_name_th" type="text" class="mt-1 block w-full" v-model="form.first_name_th" />
                                 <InputError :message="localErrors.first_name_th" class="mt-2" />
                             </div>
                             <div>
-                                <InputLabel for="last_name_th" value="Last Name (TH)" />
+                                <InputLabel for="last_name_th" :value="$t('Last Name (TH)')" />
                                 <TextInput id="last_name_th" type="text" class="mt-1 block w-full" v-model="form.last_name_th" />
                                 <InputError :message="localErrors.last_name_th" class="mt-2" />
                             </div>
@@ -379,12 +384,12 @@ const organizationLabel = computed(() => {
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="first_name_en" value="First Name (EN)" />
+                                <InputLabel for="first_name_en" :value="$t('First Name (EN)')" />
                                 <TextInput id="first_name_en" type="text" class="mt-1 block w-full" v-model="form.first_name_en" />
                                 <InputError :message="localErrors.first_name_en" class="mt-2" />
                             </div>
                             <div>
-                                <InputLabel for="last_name_en" value="Last Name (EN)" />
+                                <InputLabel for="last_name_en" :value="$t('Last Name (EN)')" />
                                 <TextInput id="last_name_en" type="text" class="mt-1 block w-full" v-model="form.last_name_en" />
                                 <InputError :message="localErrors.last_name_en" class="mt-2" />
                             </div>
@@ -392,12 +397,12 @@ const organizationLabel = computed(() => {
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="phone" value="Phone Number" />
+                                <InputLabel for="phone" :value="$t('Phone Number')" />
                                 <TextInput id="phone" type="tel" class="mt-1 block w-full" v-model="form.phone" />
                                 <InputError :message="localErrors.phone" class="mt-2" />
                             </div>
                             <div>
-                                <InputLabel for="birthdate" value="Date of Birth" />
+                                <InputLabel for="birthdate" :value="$t('Date of Birth')" />
                                 <TextInput id="birthdate" type="date" class="mt-1 block w-full" v-model="form.birthdate" />
                                 <InputError :message="localErrors.birthdate" class="mt-2" />
                             </div>
@@ -405,38 +410,38 @@ const organizationLabel = computed(() => {
 
                         <!-- Internal Specific Fields -->
                         <div v-if="userType === 'internal'" class="space-y-4 border-t pt-4">
-                            <h3 class="font-medium text-gray-900">University Information</h3>
+                            <h3 class="font-medium text-gray-900">{{ $t('University Information') }}</h3>
                             
                              <div>
-                                <InputLabel for="faculty" value="Faculty" />
+                                <InputLabel for="faculty" :value="$t('Faculty')" />
                                 <TextInput id="faculty" type="text" class="mt-1 block w-full" v-model="form.faculty" />
                                 <InputError :message="localErrors.faculty" class="mt-2" />
                             </div>
 
                              <div>
-                                <InputLabel for="major" value="Major / Department" />
+                                <InputLabel for="major" :value="$t('Major / Department')" />
                                 <TextInput id="major" type="text" class="mt-1 block w-full" v-model="form.major" />
                                 <InputError :message="localErrors.major" class="mt-2" />
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <InputLabel for="student_id" value="Student / Staff ID" />
+                                    <InputLabel for="student_id" :value="$t('Student / Staff ID')" />
                                     <TextInput id="student_id" type="text" class="mt-1 block w-full" v-model="form.student_id" />
                                     <InputError :message="localErrors.student_id" class="mt-2" />
                                 </div>
                                 <div>
-                                    <InputLabel for="degree_level" value="Degree Level" />
+                                    <InputLabel for="degree_level" :value="$t('Degree Level')" />
                                     <select 
                                         id="degree_level" 
                                         v-model="form.degree_level"
                                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
                                     >
-                                        <option value="">Select...</option>
-                                        <option value="Bachelor">Bachelor</option>
-                                        <option value="Master">Master</option>
-                                        <option value="Doctoral">Doctoral</option>
-                                        <option value="Other">Other / Staff</option>
+                                        <option value="">{{ $t('Select...') }}</option>
+                                        <option value="Bachelor">{{ $t('Bachelor') }}</option>
+                                        <option value="Master">{{ $t('Master') }}</option>
+                                        <option value="Doctoral">{{ $t('Doctoral') }}</option>
+                                        <option value="Other">{{ $t('Other / Staff') }}</option>
                                     </select>
                                     <InputError :message="localErrors.degree_level" class="mt-2" />
                                 </div>
@@ -445,27 +450,27 @@ const organizationLabel = computed(() => {
 
                         <!-- External Specific Fields -->
                         <div v-if="userType === 'external'" class="space-y-4 border-t pt-4">
-                            <h3 class="font-medium text-gray-900">Affiliation Information</h3>
+                            <h3 class="font-medium text-gray-900">{{ $t('Affiliation Information') }}</h3>
 
                             <div>
-                                <InputLabel for="category" value="Category" />
+                                <InputLabel for="category" :value="$t('Category')" />
                                 <select 
                                     id="category" 
                                     v-model="form.category"
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
                                 >
-                                    <option value="">Select...</option>
-                                    <option value="Student">Student</option>
-                                    <option value="Personnel">Personnel</option>
-                                    <option value="Outsider">Outsider</option>
-                                    <option value="Other">Other</option>
+                                    <option value="">{{ $t('Select...') }}</option>
+                                    <option value="Student">{{ $t('Student') }}</option>
+                                    <option value="Personnel">{{ $t('Personnel') }}</option>
+                                    <option value="Outsider">{{ $t('Outsider') }}</option>
+                                    <option value="Other">{{ $t('Other') }}</option>
                                 </select>
                                 <InputError :message="localErrors.category" class="mt-2" />
                             </div>
 
                             <div>
-                                <InputLabel for="organization_name" :value="organizationLabel" />
-                                <TextInput id="organization_name" type="text" class="mt-1 block w-full" v-model="form.organization_name" :placeholder="organizationLabel" />
+                                <InputLabel for="organization_name" :value="$t(organizationLabel)" />
+                                <TextInput id="organization_name" type="text" class="mt-1 block w-full" v-model="form.organization_name" :placeholder="$t(organizationLabel)" />
                                 <InputError :message="localErrors.organization_name" class="mt-2" />
                             </div>
                         </div>
@@ -478,9 +483,9 @@ const organizationLabel = computed(() => {
                             @click="prevStep"
                             class="text-sm text-gray-600 hover:text-gray-900 font-medium"
                         >
-                            <span v-if="step > 0">← Back</span>
+                            <span v-if="step > 0">{{ $t('← Back') }}</span>
                             <span v-else>
-                                <Link :href="route('login')">Back to Login</Link>
+                                <Link :href="route('login')">{{ $t('Back to Login') }}</Link>
                             </span>
                         </button>
 
@@ -489,7 +494,7 @@ const organizationLabel = computed(() => {
                             type="button"
                             @click="nextStep"
                         >
-                            Next Step
+                            {{ $t('Next Step') }}
                         </PrimaryButton>
 
                         <PrimaryButton
@@ -499,7 +504,7 @@ const organizationLabel = computed(() => {
                             :disabled="form.processing"
                         >
                             <LoadingSpinner v-if="form.processing" size="sm" color="white" inline />
-                            <span v-else>Complete Registration</span>
+                            <span v-else>{{ $t('Complete Registration') }}</span>
                         </PrimaryButton>
                     </div>
                 </form>
