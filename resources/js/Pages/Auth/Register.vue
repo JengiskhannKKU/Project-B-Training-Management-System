@@ -40,7 +40,6 @@ const form = useForm({
     year_of_study: "",
     
     // Personnel Specific
-    academic_title: "",
     personnel_id: "",
     organization: "",
     department: "",
@@ -57,10 +56,10 @@ const form = useForm({
 });
 
 const steps = computed(() => [
-    { id: 0, name: trans('User Type'), isComplete: !!userType.value },
-    { id: 1, name: trans('Account'), isComplete: checkAccountValidity() },
-    { id: 2, name: userType.value === 'internal' ? trans('Education/Work') : trans('Work/Affiliation'), isComplete: checkEducationWorkValidity() },
-    { id: 3, name: trans('Personal'), isComplete: checkPersonalValidity() }
+    { id: 0, name: 'User Type', isComplete: !!userType.value },
+    { id: 1, name: 'Account', isComplete: checkAccountValidity() },
+    { id: 2, name: userType.value === 'internal' ? 'Education/Work' : 'Work/Affiliation', isComplete: checkEducationWorkValidity() },
+    { id: 3, name: 'Personal', isComplete: checkPersonalValidity() }
 ]);
 
 const maxStep = ref(0);
@@ -73,19 +72,16 @@ onMounted(() => {
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
-            // Only restore if user hasn't finished (simple check)
-            if (parsed.email || parsed.first_name_en) {
-                // Merge saved data into form
-                Object.keys(parsed).forEach(key => {
-                    if (key in form) {
-                        form[key] = parsed[key];
-                    }
-                });
-                if (parsed.userType) userType.value = parsed.userType;
-                if (parsed.step) {
-                    step.value = parsed.step;
-                    maxStep.value = Math.max(parsed.step, parsed.maxStep || 0);
+            // Merge saved data into form
+            Object.keys(parsed).forEach(key => {
+                if (key in form) {
+                    form[key] = parsed[key];
                 }
+            });
+            if (parsed.userType) userType.value = parsed.userType;
+            if (parsed.step) {
+                step.value = parsed.step;
+                maxStep.value = Math.max(parsed.step, parsed.maxStep || 0);
             }
         } catch (e) {
             console.error("Failed to load saved form", e);
@@ -170,7 +166,7 @@ const checkEducationWorkValidity = () => {
             requiredFields.push('faculty', 'major', 'degree_level', 'year_of_study');
         } else {
             // Personnel
-            requiredFields.push('academic_title', 'organization', 'job_position', 'employment_status', 'personnel_type');
+            requiredFields.push('organization', 'job_position', 'employment_status', 'personnel_type');
         }
     } else {
         requiredFields.push('category', 'organization_name');
@@ -207,7 +203,7 @@ const validateStep = (currentStep) => {
             if (form.sub_category === 'Student') {
                 requiredFields.push('faculty', 'major', 'degree_level', 'year_of_study');
             } else {
-                requiredFields.push('academic_title', 'organization', 'job_position', 'employment_status', 'personnel_type');
+                requiredFields.push('organization', 'job_position', 'employment_status', 'personnel_type');
             }
         } else {
             requiredFields.push('category', 'organization_name');
@@ -374,7 +370,7 @@ const organizationLabel = computed(() => {
                                     class="mt-2 text-xs font-medium uppercase tracking-wide"
                                     :class="step === s.id ? 'text-[#3D9792]' : 'text-gray-500'"
                                 >
-                                    {{ s.name }}
+                                    {{ $t(s.name) }}
                                 </span>
                             </button>
                         </li>
@@ -538,27 +534,6 @@ const organizationLabel = computed(() => {
                             <!-- Personnel Fields -->
                             <div v-if="form.sub_category === 'Personnel'" class="space-y-4">
                                 <div>
-                                    <InputLabel for="academic_title" :value="$t('Academic / Professional Title')" />
-                                    <select 
-                                        id="academic_title" 
-                                        v-model="form.academic_title"
-                                        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-[#3D9792] focus:ring-[#3D9792]"
-                                    >
-                                        <option value="">{{ $t('Select...') }}</option>
-                                        <option value="Mr.">{{ $t('Mr.') }}</option>
-                                        <option value="Ms.">{{ $t('Ms.') }}</option>
-                                        <option value="Mrs.">{{ $t('Mrs.') }}</option>
-                                        <option value="Dr.">{{ $t('Dr.') }}</option>
-                                        <option value="Lecturer">{{ $t('Lecturer') }}</option>
-                                        <option value="Asst. Prof.">{{ $t('Asst. Prof.') }}</option>
-                                        <option value="Assoc. Prof.">{{ $t('Assoc. Prof.') }}</option>
-                                        <option value="Prof.">{{ $t('Prof.') }}</option>
-                                        <option value="Other">{{ $t('Other') }}</option>
-                                    </select>
-                                    <InputError :message="localErrors.academic_title" class="mt-2" />
-                                </div>
-
-                                <div>
                                     <InputLabel for="personnel_id" :value="$t('Personnel ID (Optional)')" />
                                     <TextInput id="personnel_id" type="text" class="mt-1 block w-full" v-model="form.personnel_id" />
                                     <InputError :message="localErrors.personnel_id" class="mt-2" />
@@ -669,6 +644,11 @@ const organizationLabel = computed(() => {
                                     <option value="Mr.">{{ $t('Mr.') }}</option>
                                     <option value="Mrs.">{{ $t('Mrs.') }}</option>
                                     <option value="Ms.">{{ $t('Ms.') }}</option>
+                                    <option value="Dr.">{{ $t('Dr.') }}</option>
+                                    <option value="Lecturer">{{ $t('Lecturer') }}</option>
+                                    <option value="Asst. Prof.">{{ $t('Asst. Prof.') }}</option>
+                                    <option value="Assoc. Prof.">{{ $t('Assoc. Prof.') }}</option>
+                                    <option value="Prof.">{{ $t('Prof.') }}</option>
                                     <option value="Other">{{ $t('Other') }}</option>
                                 </select>
                                 <InputError :message="localErrors.prefix" class="mt-2" />
