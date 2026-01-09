@@ -34,11 +34,6 @@ const currentPath = computed(() => page.url);
 
 const navigationItems = computed(() => [
     {
-        name: $t("Dashboard"),
-        path: "/trainer",
-        icon: LayoutDashboard,
-    },
-    {
         name: $t("My Courses"),
         path: "/trainer/programs",
         icon: BookOpen,
@@ -52,11 +47,6 @@ const navigationItems = computed(() => [
         name: $t("Attendance"),
         path: "/trainer/attendance",
         icon: BookCheck,
-    },
-    {
-        name: $t("Certificate Templates"),
-        path: "/trainer/certificate-templates",
-        icon: Award,
     },
     {
         name: $t("Feedback"),
@@ -117,7 +107,7 @@ onMounted(() => {
         >
             <div class="h-full px-6 pb-4 overflow-y-auto bg-white flex flex-col">
                 <div class="flex-1">
-                    <Link href="/trainer" class="flex pt-4 pb-14">
+                    <Link href="/trainer/sessions" class="flex pt-4 pb-14">
                         <img
                             src="/images/project_logo.png"
                             class="h-12 w-auto object-contain max-w-full"

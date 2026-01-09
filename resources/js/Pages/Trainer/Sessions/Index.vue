@@ -123,15 +123,6 @@ onMounted(() => {
                 title="Sessions Management"
                 description="View and manage all your training sessions."
             >
-                <template #actions>
-                    <button
-                        @click="() => {}"
-                        class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
-                    >
-                        <Plus :size="20" />
-                        <span>Create Session</span>
-                    </button>
-                </template>
             </PageHeader>
 
             <!-- Filters -->
@@ -381,12 +372,6 @@ onMounted(() => {
                                         >
                                             <ClipboardCheck class="h-5 w-5" />
                                         </Link>
-                                        <button
-                                            class="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
-                                            title="Edit Session"
-                                        >
-                                            <Pencil class="h-5 w-5" />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>

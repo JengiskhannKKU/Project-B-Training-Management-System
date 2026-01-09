@@ -503,13 +503,6 @@ const mockPrograms = [
                         Manage and track all your courses
                     </p>
                 </div>
-                <button
-                    @click="showCreateModal = true"
-                    class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
-                >
-                    <Plus :size="20" />
-                    <span>Create Course</span>
-                </button>
             </div>
 
             <!-- API token fallback (for dev when session cookies fail) -->

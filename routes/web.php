@@ -16,7 +16,7 @@ $redirectToRoleDashboard = function () {
 
     return redirect()->route(match ($role) {
         'admin' => 'admin.dashboard',
-        'trainer' => 'trainer.dashboard',
+        'trainer' => 'trainer.sessions.index',
         default => 'student.programs.index',
     });
 };
@@ -211,7 +211,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     Route::get('/trainer', function () {
-        return Inertia::render('Trainer/Dashboard');
+        return redirect()->route('trainer.sessions.index');
     })->name('trainer.dashboard');
 
     // Trainer Program Routes
@@ -259,20 +259,6 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     Route::get('/trainer/feedback', function () {
         return Inertia::render('Trainer/Feedback');
     })->name('trainer.feedback');
-
-    Route::get('/trainer/certificate-templates', function () {
-        return Inertia::render('Trainer/CertificateTemplates/Index');
-    })->name('trainer.certificate-templates.index');
-
-    Route::get('/trainer/certificate-templates/create', function () {
-        return Inertia::render('Trainer/CertificateTemplates/Create');
-    })->name('trainer.certificate-templates.create');
-
-    Route::get('/trainer/certificate-templates/{id}/edit', function ($id) {
-        return Inertia::render('Trainer/CertificateTemplates/Edit', [
-            'templateId' => $id,
-        ]);
-    })->name('trainer.certificate-templates.edit');
 
 
 
