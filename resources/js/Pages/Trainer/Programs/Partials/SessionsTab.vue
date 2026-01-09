@@ -13,6 +13,7 @@ defineProps<{
         capacity: string;
         status: string;
     }>;
+    isAdmin: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -80,7 +81,7 @@ const getStatusBadgeClass = (status: string) => {
                         <p>Export</p>
                     </button>
 
-                    <button @click="emit('add-session')" class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
+                    <button v-if="isAdmin" @click="emit('add-session')" class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -103,7 +104,7 @@ const getStatusBadgeClass = (status: string) => {
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Location</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Capacity</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
+                        <th v-if="isAdmin" class="px-4 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -145,7 +146,7 @@ const getStatusBadgeClass = (status: string) => {
                                 />
                             </div>
                         </td>
-                        <td class="px-4 py-3">
+                        <td v-if="isAdmin" class="px-4 py-3">
                             <div class="flex gap-2">
                                 <button @click="emit('delete-session', session)" class="text-gray-400 hover:text-red-600">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

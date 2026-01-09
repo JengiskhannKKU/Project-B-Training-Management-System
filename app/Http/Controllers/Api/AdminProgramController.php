@@ -14,6 +14,10 @@ class AdminProgramController extends Controller
      */
     public function store(Request $request)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can use this endpoint.');
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', 'unique:programs,code'],
@@ -46,6 +50,10 @@ class AdminProgramController extends Controller
      */
     public function update(Request $request, Program $program)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can use this endpoint.');
+        }
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('programs', 'code')->ignore($program->id)],

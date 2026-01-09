@@ -81,6 +81,7 @@ const ensureCsrf = () => axios.get('/sanctum/csrf-cookie');
 // Determine back link based on current URL
 const userRole = computed(() => (page.props.auth?.user as AppUser | undefined)?.role?.name || '');
 const isTrainer = computed(() => userRole.value === 'trainer' || !userRole.value);
+const isAdmin = computed(() => userRole.value === 'admin');
 
 const backLink = computed(() => {
     const currentUrl = page.url;
@@ -815,7 +816,7 @@ const getCertificateStatusColor = (status: string) => {
 
                 <div class="flex flex-col sm:flex-row gap-2">
                     <button
-                        v-if="activeTab === 'overview' && programApprovalStatus === 'rejected'"
+                        v-if="activeTab === 'overview' && programApprovalStatus === 'rejected' && isAdmin"
                         @click="resubmitProgram"
                         class="flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 w-full sm:w-auto"
                     >
@@ -825,7 +826,7 @@ const getCertificateStatusColor = (status: string) => {
                         Submit Again
                     </button>
                     <button
-                        v-if="activeTab === 'overview' && !page.url.startsWith('/admin/')"
+                        v-if="activeTab === 'overview' && isAdmin"
                         @click="showEditModal = true"
                         class="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 w-full sm:w-auto"
                     >
@@ -857,6 +858,7 @@ const getCertificateStatusColor = (status: string) => {
             <SessionsTab
                 v-if="activeTab === 'sessions'"
                 :sessions="sessions"
+                :is-admin="isAdmin"
                 @add-session="handleAddSession"
                 @edit-session="handleEditSession"
                 @delete-session="handleDeleteSession"
@@ -864,6 +866,7 @@ const getCertificateStatusColor = (status: string) => {
             <TraineesTab
                 v-if="activeTab === 'trainees'"
                 :trainees="trainees"
+                :is-admin="isAdmin"
                 :get-certificate-select-color="getCertificateSelectColor"
                 @add-trainee="handleAddTrainee"
                 @remove-trainee="handleRemoveTrainee"

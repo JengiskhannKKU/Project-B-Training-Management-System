@@ -14,6 +14,7 @@ defineProps<{
         avatar: string;
     }>;
     getCertificateSelectColor: (status: string) => string;
+    isAdmin: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -30,9 +31,9 @@ const emit = defineEmits<{
                 <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                 </svg>
-                <h2 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">ENROLLED TRAINEES (24)</h2>
+                <h2 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-900">ENROLLED TRAINEES ({{ trainees.length }})</h2>
             </div>
-            <button @click="emit('add-trainee')" class="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 w-full sm:w-auto">
+            <button v-if="isAdmin" @click="emit('add-trainee')" class="flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 w-full sm:w-auto">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -112,7 +113,7 @@ const emit = defineEmits<{
 
                             <div class="text-xs sm:text-sm">
                                 <div class="text-gray-500 mb-1">Certificates</div>
-                                <div class="relative">
+                                <div v-if="isAdmin" class="relative">
                                     <ChevronDown class="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none z-10" />
                                     <select v-model="trainee.certificate_status" @change="emit('update-certificate', trainee)" :class="['rounded-lg border pl-6 sm:pl-7 pr-2 sm:pr-3 py-1 sm:py-1.5 text-xs font-medium text-center focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none', getCertificateSelectColor(trainee.certificate_status)]" style="background-image: none;">
                                         <option value="Approved">Approved</option>
@@ -120,9 +121,12 @@ const emit = defineEmits<{
                                         <option value="Not Eligible">Not Eligible</option>
                                     </select>
                                 </div>
+                                <div v-else :class="['rounded-lg border px-3 py-1.5 text-xs font-medium text-center', getCertificateSelectColor(trainee.certificate_status)]">
+                                    {{ trainee.certificate_status }}
+                                </div>
                             </div>
 
-                            <button @click="emit('remove-trainee', trainee)" class="text-red-600 hover:text-red-700 p-1">
+                            <button v-if="isAdmin" @click="emit('remove-trainee', trainee)" class="text-red-600 hover:text-red-700 p-1">
                                 <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>

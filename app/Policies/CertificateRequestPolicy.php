@@ -84,13 +84,8 @@ class CertificateRequestPolicy
             return false;
         }
 
-        // Admin can approve all
-        if ($this->isAdmin($user)) {
-            return true;
-        }
-
-        // Trainer can approve if they own the resource
-        return $user->isRole('trainer') && $this->ownsResource($user, $certificateRequest);
+        // Only Admin can approve
+        return $this->isAdmin($user);
     }
 
     /**

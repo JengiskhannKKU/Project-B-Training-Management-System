@@ -17,6 +17,10 @@ class FileUploadController extends Controller
      */
     public function image(Request $request)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can upload program images.');
+        }
+
         $request->validate([
             'image' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
         ]);

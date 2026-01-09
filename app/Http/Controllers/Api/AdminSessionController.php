@@ -15,6 +15,10 @@ class AdminSessionController extends Controller
      */
     public function store(Request $request)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can use this endpoint.');
+        }
+
         $validated = $request->validate([
             'program_id' => ['required', 'integer', 'exists:programs,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -50,6 +54,10 @@ class AdminSessionController extends Controller
      */
     public function update(Request $request, TrainingSession $session)
     {
+        if (!$request->user()->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can use this endpoint.');
+        }
+
         $validated = $request->validate([
             'program_id' => ['sometimes', 'required', 'integer', 'exists:programs,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],

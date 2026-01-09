@@ -127,6 +127,14 @@ class ReviewController extends Controller
      */
     public function programReviews(Program $program): JsonResponse
     {
+        $user = request()->user();
+        if ($user && $user->isRole('trainer') && $program->created_by !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to view feedback for this program.',
+            ], 403);
+        }
+
         $reviews = Review::with('user:id,name')
             ->where('program_id', $program->id)
             ->orderBy('created_at', 'desc')
@@ -151,6 +159,14 @@ class ReviewController extends Controller
      */
     public function sessionReviews(TrainingSession $session): JsonResponse
     {
+        $user = request()->user();
+        if ($user && $user->isRole('trainer') && $session->trainer_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to view feedback for this session.',
+            ], 403);
+        }
+
         $reviews = Review::with('user:id,name')
             ->where('session_id', $session->id)
             ->orderBy('created_at', 'desc')
