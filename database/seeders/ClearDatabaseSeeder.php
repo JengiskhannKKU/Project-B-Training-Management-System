@@ -21,6 +21,7 @@ class ClearDatabaseSeeder extends Seeder
             'certificates',
             'certificate_templates',
             'enrollments',
+            'session_reviews',
             'training_sessions',
             'programs',
             'admin_requests',
