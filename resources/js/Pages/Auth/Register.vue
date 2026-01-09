@@ -339,7 +339,7 @@ const organizationLabel = computed(() => {
                                     class="h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors duration-200 bg-white"
                                     :class="[
                                         step === s.id ? 'border-[#3D9792] ring-2 ring-[#3D9792] ring-offset-2' : 
-                                        s.isComplete ? 'bg-[#3D9792] border-[#3D9792] text-white' : 
+                                        s.isComplete ? 'bg-white border-[#3D9792] text-[#3D9792]' : 
                                         'border-gray-300 text-gray-500 group-hover:border-gray-400'
                                     ]"
                                 >
