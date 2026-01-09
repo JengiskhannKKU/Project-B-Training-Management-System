@@ -10,69 +10,29 @@ import TopCoursesCard from '@/Components/Dashboard/TopCoursesCard.vue';
 import StudentEngagementCard from '@/Components/Trainer/Dashboard/StudentEngagementCard.vue';
 import DepartmentDistributionCard from '@/Components/Dashboard/DepartmentDistributionCard.vue';
 
-// Stats data for trainer-specific metrics
-const stats = {
-    trainees: {
-        value: 156,
-        growth: 15.2,
-        trend: 'up',
-        sparklineData: [95, 102, 108, 115, 122, 128, 135, 142, 148, 151, 154, 156],
+// Receive data from backend
+const props = defineProps({
+    stats: {
+        type: Object,
+        required: true,
     },
-    courses: {
-        total: 8,
-        active: 6,
-        pending: 2,
+    teachingHours: {
+        type: Object,
+        required: true,
     },
-    pendingCertifications: {
-        value: 23,
-        growth: -8.5,
-        trend: 'down',
+    topCourses: {
+        type: Array,
+        required: true,
     },
-};
-
-// Teaching hours data (last 7 days)
-const teachingHours = {
-    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    hours: [6, 8, 5, 7, 6, 3, 0],
-};
-
-// Top 3 courses of this trainer
-const topCourses = [
-    {
-        rank: 1,
-        name: 'Leadership Fundamentals',
-        category: 'Leadership & Management',
-        enrollments: 87,
-        badgeColor: 'bg-amber-500',
+    engagement: {
+        type: Object,
+        required: true,
     },
-    {
-        rank: 2,
-        name: 'Advanced Excel Mastery',
-        category: 'Technical Skills',
-        enrollments: 69,
-        badgeColor: 'bg-gray-400',
+    departments: {
+        type: Object,
+        required: true,
     },
-    {
-        rank: 3,
-        name: 'Effective Communication',
-        category: 'Soft Skills',
-        enrollments: 52,
-        badgeColor: 'bg-orange-600',
-    },
-];
-
-// Student engagement data
-const engagement = {
-    highlyEngaged: 89,
-    moderate: 48,
-    atRisk: 19,
-};
-
-// Department distribution of this trainer's courses
-const departments = {
-    data: [40, 30, 15, 10, 5],
-    labels: ['Engineering', 'Sales', 'Marketing', 'HR', 'Operations'],
-};
+});
 </script>
 
 <template>
@@ -97,11 +57,11 @@ const departments = {
                     <!-- Total Trainees Card -->
                     <StatsCard
                         :title="$t('Total Trainees')"
-                        :value="stats.trainees.value"
-                        :growth="stats.trainees.growth"
+                        :value="props.stats.trainees.value"
+                        :growth="props.stats.trainees.growth"
                         hover-color="blue"
                         sparkline-color="green"
-                        :sparkline-data="stats.trainees.sparklineData"
+                        :sparkline-data="props.stats.trainees.sparklineData"
                     >
                         <template #growth-icon>
                             <TrendingUp :size="12" />
@@ -111,21 +71,21 @@ const departments = {
                     <!-- Total Courses Card -->
                     <StatsCard
                         :title="$t('Total Courses')"
-                        :value="stats.courses.total"
+                        :value="props.stats.courses.total"
                         :icon="BookOpen"
                         icon-color="purple"
                         hover-color="purple"
-                        :badge="`${stats.courses.active} ${$t('active')}`"
+                        :badge="`${props.stats.courses.active} ${$t('active')}`"
                     />
 
                     <!-- Pending Certifications Card -->
                     <StatsCard
                         :title="$t('Pending Certifications')"
-                        :value="stats.pendingCertifications.value"
+                        :value="props.stats.pendingCertifications.value"
                         :icon="Award"
                         icon-color="emerald"
                         hover-color="emerald"
-                        :badge="stats.pendingCertifications.trend === 'down' ? $t('Decreasing') : $t('Increasing')"
+                        :badge="props.stats.pendingCertifications.trend === 'down' ? $t('Decreasing') : $t('Increasing')"
                     />
                 </div>
 
@@ -134,17 +94,17 @@ const departments = {
                     <!-- Teaching Hours Graph (2 columns) -->
                     <div class="lg:col-span-2">
                         <TeachingHoursCard
-                            :days="teachingHours.days"
-                            :hours="teachingHours.hours"
+                            :days="props.teachingHours.days"
+                            :hours="props.teachingHours.hours"
                         />
                     </div>
 
                     <!-- Student Engagement -->
                     <div>
                         <StudentEngagementCard
-                            :highly-engaged="engagement.highlyEngaged"
-                            :moderate="engagement.moderate"
-                            :at-risk="engagement.atRisk"
+                            :highly-engaged="props.engagement.highlyEngaged"
+                            :moderate="props.engagement.moderate"
+                            :at-risk="props.engagement.atRisk"
                         />
                     </div>
                 </div>
@@ -152,12 +112,12 @@ const departments = {
                 <!-- Bottom Section - Top Courses & Department Distribution -->
                 <div class="grid gap-6 lg:grid-cols-2">
                     <!-- Top 3 Courses -->
-                    <TopCoursesCard :courses="topCourses" />
+                    <TopCoursesCard :courses="props.topCourses" />
 
                     <!-- Department Distribution -->
                     <DepartmentDistributionCard
-                        :data="departments.data"
-                        :labels="departments.labels"
+                        :data="props.departments.data"
+                        :labels="props.departments.labels"
                     />
                 </div>
             </div>

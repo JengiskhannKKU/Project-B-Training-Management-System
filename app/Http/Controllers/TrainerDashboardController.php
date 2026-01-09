@@ -39,6 +39,19 @@ class TrainerDashboardController extends Controller
             ? (($totalTrainees - $lastMonthTrainees) / $lastMonthTrainees) * 100
             : 0;
 
+        // Generate sparkline data for trainees (last 12 months)
+        $traineeSparkline = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $sessionsUpToDate = TrainingSession::where('trainer_id', $trainerId)
+                ->where('created_at', '<=', $date->endOfMonth())
+                ->pluck('id');
+            $count = Enrollment::whereIn('session_id', $sessionsUpToDate)
+                ->distinct('user_id')
+                ->count('user_id');
+            $traineeSparkline[] = $count;
+        }
+
         // 2. Total Courses - count of distinct programs this trainer teaches
         $totalCourses = TrainingSession::where('trainer_id', $trainerId)
             ->distinct('program_id')
@@ -77,6 +90,7 @@ class TrainerDashboardController extends Controller
                     'value' => $totalTrainees,
                     'growth' => round($traineesGrowth, 1),
                     'trend' => $traineesGrowth >= 0 ? 'up' : 'down',
+                    'sparklineData' => $traineeSparkline,
                 ],
                 'courses' => [
                     'total' => $totalCourses,

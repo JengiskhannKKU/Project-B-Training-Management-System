@@ -11,123 +11,29 @@ import TopCategoriesCard from "@/Components/Admin/Dashboard/TopCategoriesCard.vu
 import TopCoursesCard from "@/Components/Dashboard/TopCoursesCard.vue";
 import TopTrainersCard from "@/Components/Admin/Dashboard/TopTrainersCard.vue";
 
-// Stats data with growth indicators
-const stats = {
-    trainers: {
-        value: 142,
-        growth: 12.5,
-        trend: "up",
-        sparklineData: [28, 40, 36, 52, 38, 60, 55, 65, 72, 85, 98, 142],
+// Receive data from backend
+const props = defineProps({
+    stats: {
+        type: Object,
+        required: true,
     },
-    trainees: {
-        value: 2847,
-        icon: GraduationCap,
-        growth: 8.2,
-        trend: "up",
+    registrationData: {
+        type: Object,
+        required: true,
     },
-    courses: {
-        total: 38,
-        pending: 3,
-        active: 35,
+    topCategories: {
+        type: Array,
+        required: true,
     },
-    completion: {
-        percentage: 87.5,
-        growth: 5.3,
-        trend: "up",
+    topCourses: {
+        type: Array,
+        required: true,
     },
-    satisfaction: {
-        rating: 4.8,
-        maxRating: 5.0,
-        totalReviews: 1234,
+    topTrainers: {
+        type: Array,
+        required: true,
     },
-    departments: {
-        data: [35, 25, 20, 12, 8],
-        labels: ["Engineering", "Sales", "Marketing", "HR", "Operations"],
-    },
-};
-
-// Registration trend data
-const registrationData = {
-    months: ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    series: [
-        {
-            name: "2023",
-            data: [120, 145, 160, 155, 180, 195],
-        },
-        {
-            name: "2024",
-            data: [180, 210, 245, 265, 290, 320],
-        },
-        {
-            name: "2025",
-            data: [240, 280, 310, 340, 380, 420],
-        },
-    ],
-};
-
-// Top categories data
-const topCategories = [
-    {
-        name: "Technical Skills",
-        percentage: 28,
-        count: 11,
-        color: "bg-blue-500",
-    },
-    {
-        name: "Leadership & Management",
-        percentage: 24,
-        count: 9,
-        color: "bg-purple-500",
-    },
-    {
-        name: "Compliance & Safety",
-        percentage: 18,
-        count: 7,
-        color: "bg-emerald-500",
-    },
-    {
-        name: "Sales & Marketing",
-        percentage: 16,
-        count: 6,
-        color: "bg-amber-500",
-    },
-    { name: "Soft Skills", percentage: 14, count: 5, color: "bg-pink-500" },
-];
-
-// Top courses data
-const topCourses = [
-    {
-        rank: 1,
-        name: "Advanced JavaScript Development",
-        category: "Technical Skills",
-        enrollments: 487,
-        badgeColor: "bg-amber-500",
-    },
-    {
-        rank: 2,
-        name: "Leadership Fundamentals",
-        category: "Leadership & Management",
-        enrollments: 421,
-        badgeColor: "bg-gray-400",
-    },
-    {
-        rank: 3,
-        name: "Data Analytics & Visualization",
-        category: "Technical Skills",
-        enrollments: 398,
-        badgeColor: "bg-orange-600",
-    },
-];
-
-// Top trainers data
-const topTrainers = [
-    { name: "Sarah Johnson", rating: 4.9, courses: 12, students: 245 },
-    { name: "Michael Chen", rating: 4.8, courses: 8, students: 189 },
-    { name: "Emily Rodriguez", rating: 4.8, courses: 10, students: 212 },
-    { name: "David Kim", rating: 4.7, courses: 6, students: 156 },
-    { name: "Jessica Taylor", rating: 4.7, courses: 9, students: 198 },
-    { name: "Robert Anderson", rating: 4.6, courses: 7, students: 167 },
-];
+});
 </script>
 
 <template>
@@ -153,11 +59,11 @@ const topTrainers = [
                     <!-- Total Trainers Card -->
                     <StatsCard
                         :title="$t('Total Trainers')"
-                        :value="stats.trainers.value"
-                        :growth="stats.trainers.growth"
+                        :value="props.stats.trainers.value"
+                        :growth="props.stats.trainers.growth"
                         hover-color="emerald"
                         sparkline-color="emerald"
-                        :sparkline-data="stats.trainers.sparklineData"
+                        :sparkline-data="props.stats.trainers.sparklineData"
                     >
                         <template #growth-icon>
                             <TrendingUp :size="12" />
@@ -167,8 +73,8 @@ const topTrainers = [
                     <!-- Total Trainees Card -->
                     <StatsCard
                         :title="$t('Total Trainees')"
-                        :value="stats.trainees.value.toLocaleString()"
-                        :growth="stats.trainees.growth"
+                        :value="props.stats.trainees.value.toLocaleString()"
+                        :growth="props.stats.trainees.growth"
                         :icon="Award"
                         icon-color="blue"
                         hover-color="blue"
@@ -181,11 +87,11 @@ const topTrainers = [
                     <!-- Courses Card -->
                     <StatsCard
                         :title="$t('Courses')"
-                        :value="stats.courses.total"
+                        :value="props.stats.courses.total"
                         :icon="BookOpen"
                         icon-color="purple"
                         hover-color="purple"
-                        :badge="`${stats.courses.pending} ${$t('Pending')}`"
+                        :badge="`${props.stats.courses.pending} ${$t('Pending')}`"
                     />
                 </div>
 
@@ -196,10 +102,10 @@ const topTrainers = [
                     <!-- Completion Rate Card -->
                     <StatsCard
                         :title="$t('Completion Rate')"
-                        :value="`${stats.completion.percentage}%`"
-                        :growth="stats.completion.growth"
+                        :value="`${props.stats.completion.percentage}%`"
+                        :growth="props.stats.completion.growth"
                         hover-color="emerald"
-                        :progress-bar="stats.completion.percentage"
+                        :progress-bar="props.stats.completion.percentage"
                     >
                         <template #growth-icon>
                             <TrendingUp :size="12" />
@@ -209,11 +115,11 @@ const topTrainers = [
                     <!-- Satisfaction Card -->
                     <StatsCard
                         :title="$t('Satisfaction')"
-                        :value="stats.satisfaction.rating"
+                        :value="props.stats.satisfaction.rating"
                         hover-color="amber"
-                        :stars="stats.satisfaction.rating"
-                        :max-stars="stats.satisfaction.maxRating"
-                        :subtitle="$t('Based on reviews', { count: stats.satisfaction.totalReviews.toLocaleString() })"
+                        :stars="props.stats.satisfaction.rating"
+                        :max-stars="props.stats.satisfaction.maxRating"
+                        :subtitle="$t('Based on reviews', { count: props.stats.satisfaction.totalReviews.toLocaleString() })"
                     >
                         <template #stars>
                             <Star
@@ -221,7 +127,7 @@ const topTrainers = [
                                 :key="i"
                                 :size="18"
                                 :class="[
-                                    i <= Math.floor(stats.satisfaction.rating)
+                                    i <= Math.floor(props.stats.satisfaction.rating)
                                         ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
                                         : 'fill-gray-200 text-gray-200',
                                     'md:h-5 md:w-5 lg:h-6 lg:w-6'
@@ -232,8 +138,8 @@ const topTrainers = [
 
                     <!-- Department Distribution Card -->
                     <DepartmentDistributionCard
-                        :data="stats.departments.data"
-                        :labels="stats.departments.labels"
+                        :data="props.stats.departments.data"
+                        :labels="props.stats.departments.labels"
                     />
                 </div>
 
@@ -241,21 +147,21 @@ const topTrainers = [
                 <div class="grid gap-6 lg:grid-cols-3">
                     <!-- Registration Trend -->
                     <RegistrationTrendCard
-                        :months="registrationData.months"
-                        :series="registrationData.series"
+                        :months="props.registrationData.months"
+                        :series="props.registrationData.series"
                     />
 
                     <!-- Categories Card -->
-                    <TopCategoriesCard :categories="topCategories" />
+                    <TopCategoriesCard :categories="props.topCategories" />
                 </div>
 
                 <!-- Bottom Section - Additional Insights -->
                 <div class="grid gap-6 lg:grid-cols-2">
                     <!-- Top Courses Card -->
-                    <TopCoursesCard :courses="topCourses" />
+                    <TopCoursesCard :courses="props.topCourses" />
 
                     <!-- Top Trainer Performance Card -->
-                    <TopTrainersCard :trainers="topTrainers" />
+                    <TopTrainersCard :trainers="props.topTrainers" />
                 </div>
             </div>
         </div>

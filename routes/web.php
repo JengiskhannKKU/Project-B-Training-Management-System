@@ -91,9 +91,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', function () {
-        return Inertia::render('Admin/AdminDashboard');
-    })->name('admin.dashboard');
+    Route::get('/admin/dashboard', [\App\Http\Controllers\AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     Route::get('/admin/users', function () {
         return Inertia::render('Admin/Users');
@@ -126,7 +124,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/my-courses/{id}', function ($id) {
         $program = \App\Models\Program::with('creator')->find($id);
 
-        if (! $program) {
+        if (!$program) {
             return Inertia::render('Trainer/Programs/Show', [
                 'program' => [
                     'id' => $id,
@@ -210,9 +208,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
-    Route::get('/trainer', function () {
-        return Inertia::render('Trainer/Dashboard');
-    })->name('trainer.dashboard');
+    Route::get('/trainer', [\App\Http\Controllers\TrainerDashboardController::class, 'index'])->name('trainer.dashboard');
 
     // Trainer Program Routes
     Route::get('/trainer/programs', function () {
