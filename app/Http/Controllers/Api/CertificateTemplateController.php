@@ -311,16 +311,26 @@ class CertificateTemplateController extends Controller
 
         if ($request->hasFile('background_image')) {
             $file = $request->file('background_image');
+            $imageService = app(ImageProcessingService::class);
+            $originalContent = $file->getContent();
+            $originalDimensions = $imageService->getImageDimensions($originalContent);
 
             // Auto-resize to standard dimensions (1920x1080)
-            $imageService = app(ImageProcessingService::class);
             $resized = $imageService->resizeToStandard(
-                $file->getContent(),
+                $originalContent,
                 $file->getMimeType()
             );
 
             $data['background_image'] = $resized['content'];
             $data['background_mime_type'] = $resized['mime_type']; // Always image/png after resize
+
+            if (!empty($data['layout_config'])) {
+                $data['layout_config'] = $this->scaleLayoutConfigForStandardCanvas(
+                    $data['layout_config'],
+                    $originalDimensions['width'],
+                    $originalDimensions['height']
+                );
+            }
         }
 
         $scope = $data['scope'] ?? $template?->scope;
@@ -334,6 +344,84 @@ class CertificateTemplateController extends Controller
         }
 
         return $data;
+    }
+
+    private function scaleLayoutConfigForStandardCanvas(array $layoutConfig, int $sourceWidth, int $sourceHeight): array
+    {
+        if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+            return $layoutConfig;
+        }
+
+        $targetWidth = ImageProcessingService::STANDARD_WIDTH;
+        $targetHeight = ImageProcessingService::STANDARD_HEIGHT;
+
+        $scaleWidth = $targetWidth / $sourceWidth;
+        $scaleHeight = $targetHeight / $sourceHeight;
+        $scale = min($scaleWidth, $scaleHeight);
+
+        $scaledWidth = $sourceWidth * $scale;
+        $scaledHeight = $sourceHeight * $scale;
+
+        $offsetX = (int) round(($targetWidth - $scaledWidth) / 2);
+        $offsetY = (int) round(($targetHeight - $scaledHeight) / 2);
+
+        $scaledConfig = $layoutConfig;
+        foreach ($layoutConfig as $key => $config) {
+            if ($key === 'canvas' || !is_array($config)) {
+                continue;
+            }
+
+            $scaledConfig[$key] = $config;
+            if (array_key_exists('x', $config)) {
+                $scaledConfig[$key]['x'] = $this->scaleCoordinate($config['x'], $scale, $offsetX);
+            }
+            if (array_key_exists('y', $config)) {
+                $scaledConfig[$key]['y'] = $this->scaleCoordinate($config['y'], $scale, $offsetY);
+            }
+
+            if ($key === 'qr') {
+                if (array_key_exists('width', $config)) {
+                    $scaledConfig[$key]['width'] = $this->scaleSize($config['width'], $scale);
+                }
+                if (array_key_exists('height', $config)) {
+                    $scaledConfig[$key]['height'] = $this->scaleSize($config['height'], $scale);
+                }
+                if (array_key_exists('size', $config)) {
+                    $scaledConfig[$key]['size'] = $this->scaleSize($config['size'], $scale);
+                }
+            }
+        }
+
+        $scaledConfig['canvas'] = [
+            'width' => $targetWidth,
+            'height' => $targetHeight,
+        ];
+
+        return $scaledConfig;
+    }
+
+    private function scaleCoordinate($value, float $scale, int $offset)
+    {
+        if (is_string($value) && str_contains($value, '%')) {
+            return $value;
+        }
+        if (!is_numeric($value)) {
+            return $value;
+        }
+
+        return (int) round(((float) $value * $scale) + $offset);
+    }
+
+    private function scaleSize($value, float $scale)
+    {
+        if (is_string($value) && str_contains($value, '%')) {
+            return $value;
+        }
+        if (!is_numeric($value)) {
+            return $value;
+        }
+
+        return (int) round((float) $value * $scale);
     }
 
     private function normalizeLayoutConfig($value): ?array
