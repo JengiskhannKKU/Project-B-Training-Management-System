@@ -45,6 +45,14 @@ const form = useForm({
     name: "", 
 });
 
+const steps = computed(() => [
+    { id: 0, name: trans('User Type') },
+    { id: 1, name: trans('Account') },
+    { id: 2, name: trans('Personal') }
+]);
+
+const maxStep = ref(0);
+
 // Auto-save logic
 const STORAGE_KEY = 'registration_form_state';
 
@@ -62,7 +70,10 @@ onMounted(() => {
                     }
                 });
                 if (parsed.userType) userType.value = parsed.userType;
-                if (parsed.step) step.value = parsed.step;
+                if (parsed.step) {
+                    step.value = parsed.step;
+                    maxStep.value = Math.max(parsed.step, parsed.maxStep || 0);
+                }
             }
         } catch (e) {
             console.error("Failed to load saved form", e);
@@ -73,15 +84,46 @@ onMounted(() => {
 watch(
     () => [form.data(), step.value, userType.value],
     ([formData, currentStep, currentUserType]) => {
+        if (currentStep > maxStep.value) {
+            maxStep.value = currentStep;
+        }
+        
         const state = {
             ...formData,
             step: currentStep,
-            userType: currentUserType
+            userType: currentUserType,
+            maxStep: maxStep.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     },
     { deep: true }
 );
+
+const jumpToStep = (targetStep) => {
+    // Allow navigation if:
+    // 1. Going back (target < current)
+    // 2. Going to a previously visited step (target <= maxStep)
+    // 3. User type is selected (for step 1)
+    
+    if (targetStep === step.value) return;
+
+    if (targetStep < step.value || targetStep <= maxStep.value) {
+        // Special check: Can't go to step 1 or 2 if User Type isn't selected
+        if (targetStep > 0 && !userType.value) {
+            return;
+        }
+        
+        // If jumping forward, valid previous steps?
+        // For simplicity, we trust maxStep implies we passed validation once.
+        // But if user changed data in Step 1 that invalidates it, and tries to jump to 2...
+        // Ideally we should validateStep(1) if jumping 1 -> 2.
+        // But if jumping 0 -> 2, we need to validate 1?
+        // Let's keep it simple: strict validation is on 'Next'. 
+        // Jumping via tabs relies on 'maxStep' history.
+        
+        step.value = targetStep;
+    }
+};
 
 const clearStorage = () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -210,16 +252,46 @@ const organizationLabel = computed(() => {
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                 {{ $t('Create your account') }}
             </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                <span v-if="step === 0">{{ $t('Select your user type to get started') }}</span>
-                <span v-else-if="step === 1">{{ $t('Account Information') }}</span>
-                <span v-else-if="step === 2">{{ $t('Personal Information') }}</span>
-            </p>
         </div>
 
         <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-lg"> <!-- Width increased for Step 2 -->
             <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
                 
+                <!-- Stepper -->
+                <nav aria-label="Progress" class="mb-8">
+                    <ol role="list" class="flex items-center justify-between relative">
+                        <div class="absolute left-0 top-[15px] w-full h-0.5 bg-gray-200 -z-0"></div>
+                        <li v-for="(s, index) in steps" :key="s.id" class="relative z-10">
+                             <button 
+                                type="button"
+                                @click="jumpToStep(s.id)"
+                                :disabled="(s.id > maxStep && s.id > step) || (s.id > 0 && !userType)"
+                                class="group flex flex-col items-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <span 
+                                    class="h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors duration-200 bg-white"
+                                    :class="[
+                                        step > s.id ? 'bg-[#3D9792] border-[#3D9792] text-white' : 
+                                        step === s.id ? 'border-[#3D9792] text-[#3D9792]' : 
+                                        'border-gray-300 text-gray-500 group-hover:border-gray-400'
+                                    ]"
+                                >
+                                    <svg v-if="step > s.id" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span v-else class="text-sm font-bold">{{ index + 1 }}</span>
+                                </span>
+                                <span 
+                                    class="mt-2 text-xs font-medium uppercase tracking-wide"
+                                    :class="step === s.id ? 'text-[#3D9792]' : 'text-gray-500'"
+                                >
+                                    {{ s.name }}
+                                </span>
+                            </button>
+                        </li>
+                    </ol>
+                </nav>
+
                 <ErrorBanner
                     :show="errorMessage !== null"
                     :message="errorMessage"
