@@ -94,7 +94,7 @@ const backLink = computed(() => {
 const backLinkText = computed(() => {
     const currentUrl = page.url;
     if (currentUrl.startsWith('/admin/') || userRole.value === 'admin') {
-        return 'Back to All Courses';
+        return 'Back to Program Requests';
     }
     return 'Back to My Courses';
 });

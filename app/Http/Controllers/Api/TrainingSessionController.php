@@ -197,6 +197,12 @@ class TrainingSessionController extends Controller
             ->map(function ($program) {
                 $sessions = $program->sessions;
 
+                // Find the AdminRequest linked to this program
+                $adminRequest = \App\Models\AdminRequest::where('target_type', 'program')
+                    ->where('target_id', $program->id)
+                    ->where('status', 'approved')
+                    ->first();
+
                 // Calculate aggregated data
                 $totalEnrolled = $sessions->sum('enrollments_count');
                 $dates = $sessions->pluck('start_date')->filter();
@@ -227,6 +233,7 @@ class TrainingSessionController extends Controller
 
                 return [
                     'id' => $program->id,
+                    'request_id' => $adminRequest?->id,
                     'code' => $program->code,
                     'name' => $program->name,
                     'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
@@ -286,6 +293,12 @@ class TrainingSessionController extends Controller
             ->map(function ($program) {
                 $sessions = $program->sessions;
 
+                // Find the AdminRequest linked to this program
+                $adminRequest = \App\Models\AdminRequest::where('target_type', 'program')
+                    ->where('target_id', $program->id)
+                    ->where('status', 'approved')
+                    ->first();
+
                 // Calculate aggregated data
                 $totalEnrolled = $sessions->sum('enrollments_count');
                 $dates = $sessions->pluck('start_date')->filter();
@@ -316,6 +329,7 @@ class TrainingSessionController extends Controller
 
                 return [
                     'id' => $program->id,
+                    'request_id' => $adminRequest?->id,
                     'code' => $program->code,
                     'name' => $program->name,
                     'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
