@@ -28,7 +28,6 @@
     "Menu": "เมนู",
 
     "Categories": "หมวดหมู่",
-    "Requests": "คำขอ",
     "Certificate Templates": "แม่แบบใบรับรอง",
     "Certificate Requests": "คำขอใบรับรอง",
     "All Courses": "หลักสูตรทั้งหมด",
@@ -134,10 +133,6 @@
     "No users found": "ไม่พบผู้ใช้",
     "Adjust criteria": "ลองปรับเปลี่ยนคำค้นหาหรือตัวกรองดู",
 
-    "Program Requests": "คำขอเปิดหลักสูตร",
-    "Manage requests description": "จัดการหลักสูตรที่เสนอโดยวิทยากร: อนุมัติหรือปฏิเสธพร้อมบันทึกข้อความ",
-    "Requests count description": "อนุมัติหรือปฏิเสธข้อเสนอจากวิทยากร",
-    "Search requests...": "ค้นหาคำขอ...",
     "Course Title": "ชื่อหลักสูตร",
     "Requester": "ผู้ขอ",
 
@@ -165,7 +160,6 @@
     "Admin Welcome": "ยินดีต้อนรับกลับ! นี่คือภาพรวมระบบจัดการการฝึกอบรมของคุณ",
     "Total Trainers": "วิทยากรทั้งหมด",
     "Completion Rate": "อัตราการสำเร็จหลักสูตร",
-    "Course Requests Report": "รายงานคำขอเปิดหลักสูตร",
     "Users Report": "รายงานรายชื่อผู้ใช้งาน",
     "Generated": "สร้างเมื่อ",
     "Manage and track all courses": "จัดการและติดตามหลักสูตรทั้งหมด",
@@ -174,7 +168,6 @@
     "Previous": "ก่อนหน้า",
     "Next": "ถัดไป",
     "No courses found": "ไม่พบหลักสูตร",
-    "No requests found": "ไม่พบคำขอ",
     "Program created successfully!": "สร้างหลักสูตรสำเร็จ!",
     "Failed to create program.": "ไม่สามารถสร้างหลักสูตรได้",
     "API token saved. Please resubmit your request.": "บันทึกโทเค็น API แล้ว โปรดส่งคำขอของคุณอีกครั้ง",

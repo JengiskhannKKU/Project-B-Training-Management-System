@@ -28,7 +28,6 @@
     "Menu": "Menu",
 
     "Categories": "Categories",
-    "Requests": "Requests",
     "Certificate Templates": "Certificate Templates",
     "Certificate Requests": "Certificate Requests",
     "All Courses": "All Courses",
@@ -135,10 +134,6 @@
     "No users found": "No users found",
     "Adjust criteria": "Try adjusting your search or filter criteria.",
 
-    "Program Requests": "Program Requests",
-    "Manage requests description": "Manage trainer-submitted programs: approve or reject with notes.",
-    "Requests count description": "Approve or reject trainer submissions",
-    "Search requests...": "Search requests...",
     "Course Title": "Course Title",
     "Requester": "Requester",
 
@@ -166,7 +161,6 @@
     "Admin Welcome": "Welcome back! Here's an overview of your training management system.",
     "Total Trainers": "Total Trainers",
     "Completion Rate": "Completion Rate",
-    "Course Requests Report": "Course Requests Report",
     "Users Report": "Users Report",
     "Generated": "Generated",
     "Manage and track all courses": "Manage and track all courses",
@@ -175,7 +169,6 @@
     "Previous": "Previous",
     "Next": "Next",
     "No courses found": "No courses found",
-    "No requests found": "No requests found",
     "Program created successfully!": "Program created successfully!",
     "Failed to create program.": "Failed to create program.",
     "API token saved. Please resubmit your request.": "API token saved. Please resubmit your request.",

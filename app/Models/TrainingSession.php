@@ -27,16 +27,11 @@ class TrainingSession extends Model
         'trainer_photo_url',
         'location',
         'status',
-        'approval_status',
-        'approved_by',
-        'approved_at',
-        'approval_note',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'approved_at' => 'datetime',
     ];
 
     public function program(): BelongsTo
@@ -47,11 +42,6 @@ class TrainingSession extends Model
     public function trainer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'trainer_id');
-    }
-
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function enrollments(): HasMany
