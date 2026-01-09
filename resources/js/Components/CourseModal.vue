@@ -626,11 +626,11 @@ const triggerFileInput = () => {
                 <div class="space-y-2 text-sm text-emerald-900">
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />
-                        <span>Registration is now open for students.</span>
+                        <span>Registration is now open for trainees.</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />
-                        <span>Students can now view and enroll in the program.</span>
+                        <span>Trainees can now view and enroll in the program.</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <CheckCircle2 :size="16" class="mt-0.5" />

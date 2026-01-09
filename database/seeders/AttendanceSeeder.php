@@ -23,7 +23,7 @@ class AttendanceSeeder extends Seeder
         // Check Attendance model structure or migration to see if it's per session or per day.
         // Migration: create_attendances_table.php
         // Schema::create('attendances', function (Blueprint $table) { ... $table->foreignId('session_id')... $table->date('date')? ... })
-        // Let's assume simplest case: One attendance record per student per session (like "Completed course" or "Present on final exam").
+        // Let's assume simplest case: One attendance record per trainee per session (like "Completed course" or "Present on final exam").
         // Or if it's daily, I should create multiple.
 
         // Looking at previous AttendanceSeeder, it had 'checked_at'.
@@ -32,7 +32,7 @@ class AttendanceSeeder extends Seeder
 
         // If it's daily, I'd need a loop. If it's "summary" attendance, just one.
         // Given 'checked_at', it looks like a specific check-in.
-        // I will create ONE attendance record per student for the session, assuming it's a "class" or "workshop" type single event, OR just one sample record.
+        // I will create ONE attendance record per trainee for the session, assuming it's a "class" or "workshop" type single event, OR just one sample record.
 
         foreach ($enrollments as $enrollment) {
             // Randomly present/absent

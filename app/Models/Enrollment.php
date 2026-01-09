@@ -30,12 +30,6 @@ class Enrollment extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Backward-compatible alias
-    public function student(): BelongsTo
-    {
-        return $this->user();
-    }
-
     public function session(): BelongsTo
     {
         return $this->belongsTo(TrainingSession::class, 'session_id');

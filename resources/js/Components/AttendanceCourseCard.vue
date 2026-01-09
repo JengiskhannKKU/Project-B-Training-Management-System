@@ -8,7 +8,7 @@ interface AdminCourseCardProps {
     image_url: string;
     rating?: number;
     level?: string;
-    students_count?: number;
+    trainees_count?: number;
     price?: string;
     date?: string;
     time?: string;
@@ -83,7 +83,7 @@ const getStarType = (index: number, rating: number) => {
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 min-w-0">
                         <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ students_count || 0 }} students</span>
+                        <span class="truncate">{{ trainees_count || 0 }} students</span>
                     </div>
                     <div class="flex items-center gap-2 min-w-0">
                         <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />

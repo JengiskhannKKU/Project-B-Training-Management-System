@@ -5,7 +5,7 @@ import { useToast } from 'vue-toastification';
 import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
-import StudentLayout from '@/Layouts/StudentLayout.vue';
+import TraineeLayout from '@/Layouts/TraineeLayout.vue';
 import ProfileSkeleton from '@/Pages/Profile/Partials/ProfileSkeleton.vue';
 import ConfirmationDialog from '@/Components/ConfirmationDialog.vue';
 import ImagePreviewModal from '@/Components/ImagePreviewModal.vue';
@@ -46,13 +46,13 @@ const apiUser = ref({
 });
 
 const roleName = computed(() => {
-    return apiUser.value?.role?.name || props.user.role || page.props.auth?.user?.role?.name || 'student';
+    return apiUser.value?.role?.name || props.user?.role || page.props.auth?.user?.role?.name || 'trainee';
 });
 
 const LayoutComponent = computed(() => {
-    if (roleName.value === 'admin') return AdminLayout;
-    if (roleName.value === 'student') return StudentLayout;
-    return TrainerLayout;
+    if (roleName.value === 'trainer') return TrainerLayout;
+    if (roleName.value === 'trainee') return TraineeLayout;
+    return AuthenticatedLayout;
 });
 
 // Admin mocked settings

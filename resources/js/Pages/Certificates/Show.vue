@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
-import StudentLayout from "@/Layouts/StudentLayout.vue";
+import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import { Award, Download, Eye, ArrowLeft } from "lucide-vue-next";
 
@@ -27,13 +27,13 @@ const roleName = computed(
     () =>
         page.props.auth?.user?.role?.name ||
         page.props.auth?.user?.role ||
-        "student"
+        "trainee"
 );
 
 const LayoutComponent = computed(() => {
     if (roleName.value === "admin") return AdminLayout;
     if (roleName.value === "trainer") return TrainerLayout;
-    return StudentLayout;
+    return TraineeLayout;
 });
 
 const formatDate = (value) => {

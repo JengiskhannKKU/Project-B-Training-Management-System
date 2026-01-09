@@ -13,12 +13,12 @@ class EnrollmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $studentMain = User::firstWhere('email', 'student@example.com');
-        $allStudents = User::whereHas('role', function ($q) {
-            $q->where('name', 'student'); })->get();
+        $traineeMain = User::firstWhere('email', 'trainee@example.com');
+        $allTrainees = User::whereHas('role', function ($q) {
+            $q->where('name', 'trainee'); })->get();
 
         // Safety check
-        if ($allStudents->isEmpty())
+        if ($allTrainees->isEmpty())
             return;
 
         // Get sessions by some characteristic or just all
@@ -31,12 +31,12 @@ class EnrollmentSeeder extends Seeder
 
         $enrollments = [];
 
-        // 1. Enroll Main Student in variety
-        if ($studentMain) {
+        // 1. Enroll Main Trainee in variety
+        if ($traineeMain) {
             // Enrolled in Active (Web Spring)
             if ($webSpring)
                 $enrollments[] = [
-                    'user_id' => $studentMain->id,
+                    'user_id' => $traineeMain->id,
                     'session_id' => $webSpring->id,
                     'status' => 'confirmed',
                     'enrolled_at' => Carbon::now()->subDays(5),
@@ -45,7 +45,7 @@ class EnrollmentSeeder extends Seeder
             // Completed (Data Science)
             if ($dsWinter)
                 $enrollments[] = [
-                    'user_id' => $studentMain->id,
+                    'user_id' => $traineeMain->id,
                     'session_id' => $dsWinter->id,
                     'status' => 'completed',
                     'enrolled_at' => Carbon::now()->subDays(40),
@@ -54,7 +54,7 @@ class EnrollmentSeeder extends Seeder
             // Pending (Cloud)
             if ($cloudMar)
                 $enrollments[] = [
-                    'user_id' => $studentMain->id,
+                    'user_id' => $traineeMain->id,
                     'session_id' => $cloudMar->id,
                     'status' => 'pending',
                     'enrolled_at' => Carbon::now()->subDays(1),
@@ -63,7 +63,7 @@ class EnrollmentSeeder extends Seeder
             // Completed Old (Web Winter)
             if ($webWinterOld)
                 $enrollments[] = [
-                    'user_id' => $studentMain->id,
+                    'user_id' => $traineeMain->id,
                     'session_id' => $webWinterOld->id,
                     'status' => 'completed',
                     'enrolled_at' => Carbon::now()->subDays(70),
@@ -71,9 +71,9 @@ class EnrollmentSeeder extends Seeder
                 ];
         }
 
-        // 2. Enroll other students randomly
-        foreach ($allStudents as $student) {
-            if ($student->id === $studentMain?->id)
+        // 2. Enroll other trainees randomly
+        foreach ($allTrainees as $trainee) {
+            if ($trainee->id === $traineeMain?->id)
                 continue;
 
             // Randomly enroll in sessions
@@ -91,7 +91,7 @@ class EnrollmentSeeder extends Seeder
                 }
 
                 $enrollments[] = [
-                    'user_id' => $student->id,
+                    'user_id' => $trainee->id,
                     'session_id' => $session->id,
                     'status' => $status,
                     'enrolled_at' => Carbon::now()->subDays(rand(2, 60)),

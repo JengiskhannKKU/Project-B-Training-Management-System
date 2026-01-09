@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { Head } from "@inertiajs/vue3";
 import axios from "axios";
 import { useNotification } from "@/composables/useNotification";
-import StudentLayout from "@/Layouts/StudentLayout.vue";
+import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import Skeleton from "@/Components/Skeleton.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
 import CourseCard from "@/Components/CourseCard.vue";
@@ -122,7 +122,7 @@ const exportToCSV = () => {
         program.name,
         program.category,
         program.level,
-        program.students_count,
+        program.trainees_count,
         program.price,
         program.date,
     ]);
@@ -162,7 +162,7 @@ const exportToPDF = () => {
             program.name ?? '',
             program.category ?? '',
             program.level ?? '',
-            program.students_count ?? 0,
+            program.trainees_count ?? 0,
             program.price ?? '',
             program.date ?? '',
         ]);
@@ -192,7 +192,7 @@ const exportToPDF = () => {
 <template>
     <Head title="All Courses" />
 
-    <StudentLayout>
+    <TraineeLayout>
         <div class="space-y-6">
             <div>
                 <h1 class="text-3xl font-semibold text-gray-900">All Courses</h1>
@@ -322,7 +322,7 @@ const exportToPDF = () => {
                         :image_url="program.image_url || ''"
                         :rating="program.rating ?? 4.6"
                         :level="program.level || 'beginner'"
-                        :students_count="program.students_count ?? 32"
+                        :trainees_count="program.trainees_count ?? 32"
                         :price="program.price ?? 'Free'"
                         :date="program.date ?? 'Jan 5-10, 2026'"
                         :time="program.time ?? '09:00 - 16:00'"
@@ -348,5 +348,5 @@ const exportToPDF = () => {
                 @exportPDF="exportToPDF"
             />
         </div>
-    </StudentLayout>
+    </TraineeLayout>
 </template>

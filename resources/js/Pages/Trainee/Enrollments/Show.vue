@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import StudentLayout from "@/Layouts/StudentLayout.vue";
+import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import {
     BookOpen,
@@ -184,7 +184,7 @@ onMounted(fetchEnrollmentDetails);
 <template>
     <Head title="Enrollment Details" />
 
-    <StudentLayout>
+    <TraineeLayout>
         <div class="mx-auto max-w-5xl space-y-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -496,5 +496,5 @@ onMounted(fetchEnrollmentDetails);
                 </div>
             </div>
         </div>
-    </StudentLayout>
+    </TraineeLayout>
 </template>

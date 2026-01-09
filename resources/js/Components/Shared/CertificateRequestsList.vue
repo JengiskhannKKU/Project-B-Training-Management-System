@@ -112,7 +112,7 @@ const formatDate = (value) => {
     });
 };
 
-const getStudentName = (request) => {
+const getTraineeName = (request) => {
     return request?.enrollment?.user?.name || "—";
 };
 
@@ -189,14 +189,14 @@ onMounted(fetchRequests);
                         for="search-filter"
                         class="block text-sm font-medium text-gray-700 mb-1"
                     >
-                        Search Student
+                        Search Trainee
                     </label>
                     <div class="relative">
                         <input
                             id="search-filter"
                             v-model="filters.search"
                             type="text"
-                            placeholder="Student name..."
+                            placeholder="Trainee name..."
                             class="w-full rounded-lg border-gray-300 pl-10 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
                             @keyup.enter="applyFilters"
                         />
@@ -231,7 +231,7 @@ onMounted(fetchRequests);
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trainee</th>
                             <th v-if="showTrainerColumn" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program/Session</th>
@@ -277,7 +277,7 @@ onMounted(fetchRequests);
                             <th
                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                             >
-                                Student
+                                Trainee
                             </th>
                             <th
                                 v-if="showTrainerColumn"
@@ -328,7 +328,7 @@ onMounted(fetchRequests);
                                 #{{ request.id }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ getStudentName(request) }}
+                                {{ getTraineeName(request) }}
                             </td>
                             <td
                                 v-if="showTrainerColumn"

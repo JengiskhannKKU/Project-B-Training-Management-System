@@ -103,7 +103,7 @@ const roleColor = computed(() => {
     const role = (page.props.auth?.user?.role?.name || page.props.auth?.user?.role || '').toLowerCase();
     if (role === 'admin') return 'text-red-600';
     if (role === 'trainer') return 'text-blue-600';
-    if (role === 'student') return 'text-green-600';
+    if (role === 'trainee') return 'text-green-600';
     return 'text-gray-600';
 });
 

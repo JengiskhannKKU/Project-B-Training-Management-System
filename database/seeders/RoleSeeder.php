@@ -13,7 +13,7 @@ class RoleSeeder extends Seeder
             [
                 ['id' => 1, 'name' => 'admin',   'label' => 'Administrator'],
                 ['id' => 2, 'name' => 'trainer', 'label' => 'Trainer'],
-                ['id' => 3, 'name' => 'student', 'label' => 'Student'],
+                ['id' => 3, 'name' => 'trainee', 'label' => 'Trainee'],
             ],
             ['id'],
             ['name', 'label']

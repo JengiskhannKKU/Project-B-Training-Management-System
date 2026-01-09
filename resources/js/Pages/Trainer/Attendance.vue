@@ -181,7 +181,7 @@ const exportToCSV = () => {
         course.name,
         course.category,
         course.level,
-        course.students_count,
+        course.trainees_count,
         course.date,
         course.time,
         course.location,
@@ -224,7 +224,7 @@ const exportToPDF = () => {
             course.name ?? '',
             course.category ?? '',
             course.level ?? '',
-            course.students_count ?? 0,
+            course.trainees_count ?? 0,
             course.date ?? '',
             course.time ?? '',
             course.location ?? '',
@@ -370,7 +370,7 @@ const selectedCourseName = computed(() => {
                                 { value: 'date', label: 'Date' },
                                 { value: 'name', label: 'Course Name' },
                                 { value: 'category', label: 'Category' },
-                                { value: 'students_count', label: 'Students' },
+                                { value: 'trainees_count', label: 'Students' },
                                 { value: 'rating', label: 'Rating' },
                                 { value: 'status', label: 'Status' },
                             ]"
@@ -462,7 +462,7 @@ const selectedCourseName = computed(() => {
                             :image_url="course.image_url"
                             :rating="course.rating"
                             :level="course.level"
-                            :students_count="course.students_count"
+                            :trainees_count="course.trainees_count"
                             :price="course.price"
                             :date="course.date"
                             :time="course.time"

@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
-import StudentLayout from "@/Layouts/StudentLayout.vue";
+import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import { Award, Download, Eye } from "lucide-vue-next";
 
@@ -50,7 +50,7 @@ const resolveSessionTitle = (certificate) => {
 <template>
     <Head title="My Certificates" />
 
-    <StudentLayout>
+    <TraineeLayout>
         <div class="mx-auto max-w-5xl space-y-6">
             <div>
                 <h1 class="text-2xl font-semibold text-gray-900">
@@ -167,5 +167,5 @@ const resolveSessionTitle = (certificate) => {
                 </div>
             </div>
         </div>
-    </StudentLayout>
+    </TraineeLayout>
 </template>

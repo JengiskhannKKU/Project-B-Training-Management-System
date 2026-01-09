@@ -18,7 +18,7 @@ class AdminUserController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'role' => ['nullable', 'string', Rule::in(['admin', 'trainer', 'student'])],
+            'role' => ['nullable', 'string', Rule::in(['admin', 'trainer', 'trainee'])],
             'status' => ['nullable', 'string', Rule::in(['active', 'inactive'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -50,7 +50,7 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'string', Rule::in(['admin', 'trainer', 'student'])],
+            'role' => ['required', 'string', Rule::in(['admin', 'trainer', 'trainee'])],
         ]);
 
         $role = Role::where('name', $data['role'])->firstOrFail();
@@ -83,7 +83,7 @@ class AdminUserController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
-            'role' => ['sometimes', 'required', 'string', Rule::in(['admin', 'trainer', 'student'])],
+            'role' => ['sometimes', 'required', 'string', Rule::in(['admin', 'trainer', 'trainee'])],
             'status' => ['sometimes', 'required', 'string', Rule::in(['active', 'inactive'])],
         ]);
 

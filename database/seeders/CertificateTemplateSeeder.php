@@ -30,8 +30,8 @@ class CertificateTemplateSeeder extends Seeder
                         ],
                         [
                             'type' => 'placeholder',
-                            'key' => 'student_name',
-                            'label' => 'Student Name',
+                            'key' => 'trainee_name',
+                            'label' => 'Trainee Name',
                             'x' => 50,
                             'y' => 45,
                             'fontSize' => 24

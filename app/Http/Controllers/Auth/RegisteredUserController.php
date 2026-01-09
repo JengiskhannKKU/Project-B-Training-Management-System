@@ -36,16 +36,16 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $studentRole = Role::firstOrCreate(
-            ['name' => 'student'],
-            ['label' => 'Student']
+        $traineeRole = Role::firstOrCreate(
+            ['name' => 'trainee'],
+            ['label' => 'Trainee']
         );
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role_id' => $studentRole->id,
+            'role_id' => $traineeRole->id,
             'status' => 'active',
             // Temporarily bypass email verification until mail is configured.
             'email_verified_at' => now(),
@@ -62,7 +62,7 @@ class RegisteredUserController extends Controller
         return match ($role) {
             'admin'   => redirect()->route('admin.dashboard'),
             'trainer' => redirect()->route('trainer.dashboard'),
-            default   => redirect()->route('student.programs.index'),
+            default   => redirect()->route('trainee.programs.index'),
         };
     }
 }

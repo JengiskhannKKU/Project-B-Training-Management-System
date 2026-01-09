@@ -40,8 +40,8 @@ class UserSeeder extends Seeder
                 'status' => 'inactive',
             ],
             [
-                'name' => 'Alice Student',
-                'email' => 'student@example.com',
+                'name' => 'Alice Trainee',
+                'email' => 'trainee@example.com',
                 'password' => Hash::make('password'),
                 'role_id' => 3,
                 'status' => 'active',

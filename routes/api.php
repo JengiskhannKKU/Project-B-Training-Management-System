@@ -42,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('certificates/{certificate}/download', [CertificateController::class, 'download']);
     Route::get('certificates/{certificate}/view', [CertificateController::class, 'view']);
 
-    // Students can view their own enrollment attendance
+    // Trainees can view their own enrollment attendance
     Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
 
     Route::apiResource('programs', ProgramController::class);

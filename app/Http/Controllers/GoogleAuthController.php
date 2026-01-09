@@ -39,14 +39,14 @@ class GoogleAuthController extends Controller
             $existingUser = User::where('email', $googleUser->getEmail())->first();
 
             if ($existingUser) {
-                // Get student role
-                $studentRole = Role::where('name', 'student')->first();
+                // Get trainee role
+                $traineeRole = Role::where('name', 'trainee')->first();
 
-                // Mark email as verified and assign student role if missing
+                // Mark email as verified and assign trainee role if missing
                 $existingUser->email_verified_at = now();
 
                 if (!$existingUser->role_id) {
-                    $existingUser->role_id = $studentRole->id ?? 3;
+                    $existingUser->role_id = $traineeRole->id ?? 3;
                 }
 
                 $existingUser->save();
@@ -57,15 +57,15 @@ class GoogleAuthController extends Controller
                 \Log::info('Existing user logged in: ' . $existingUser->email);
             } else {
                 // Otherwise, create a new user and log them in
-                // Get the student role (default role for Google sign-ups)
-                $studentRole = Role::where('name', 'student')->first();
+                // Get the trainee role (default role for Google sign-ups)
+                $traineeRole = Role::where('name', 'trainee')->first();
 
                 $newUser = User::create([
                     'name' => $googleUser->getName(),
                     'email' => $googleUser->getEmail(),
                     'password' => bcrypt(Str::random(16)),
                     'email_verified_at' => now(),
-                    'role_id' => $studentRole->id ?? 3
+                    'role_id' => $traineeRole->id ?? 3
                 ]);
 
                 Auth::login($newUser, true);
@@ -82,7 +82,7 @@ class GoogleAuthController extends Controller
             return match ($role) {
                 'admin'   => redirect()->route('admin.dashboard'),
                 'trainer' => redirect()->route('trainer.dashboard'),
-                default   => redirect()->route('student.programs.index'),
+                default   => redirect()->route('trainee.programs.index'),
             };
 
         } catch (Throwable $e) {
@@ -100,11 +100,11 @@ class GoogleAuthController extends Controller
             return redirect('/admin');
         } elseif ($user->isRole('trainer')) {
             return redirect('/trainer');
-        } elseif ($user->isRole('student')) {
-            return redirect('/student/programs');
+        } elseif ($user->isRole('trainee')) {
+            return redirect('/trainee/programs');
         }
 
-        // Fallback to student dashboard for Google login users
-        return redirect('/student/programs');
+        // Fallback to trainee dashboard for Google login users
+        return redirect('/trainee/programs');
     }
 }

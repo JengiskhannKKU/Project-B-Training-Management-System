@@ -12,12 +12,12 @@ $redirectToRoleDashboard = function () {
         return redirect()->route('login');
     }
 
-    $role = Auth::user()->role->name ?? 'student';
+    $role = Auth::user()->role->name ?? 'trainee';
 
     return redirect()->route(match ($role) {
         'admin' => 'admin.dashboard',
         'trainer' => 'trainer.programs.index',
-        default => 'student.programs.index',
+        default => 'trainee.programs.index',
     });
 };
 
@@ -44,10 +44,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/me/profile', [ProfileController::class, 'showMyProfile'])->name('me.profile');
     Route::put('/me/profile', [ProfileController::class, 'updateMyProfile'])->name('me.profile.update');
     Route::get('/me/enrollments', function () {
-        return Inertia::render('Student/Enrollments/Index');
+        return Inertia::render('Trainee/Enrollments/Index');
     })->name('me.enrollments');
     Route::get('/me/enrollments/{id}', function ($id) {
-        return Inertia::render('Student/Enrollments/Show', [
+        return Inertia::render('Trainee/Enrollments/Show', [
             'enrollmentId' => $id,
         ]);
     })->name('me.enrollments.show');
@@ -58,7 +58,7 @@ Route::middleware(['auth'])->group(function () {
             ->orderBy('issued_at', 'desc')
             ->get();
 
-        return Inertia::render('Student/Certificates/Index', [
+        return Inertia::render('Trainee/Certificates/Index', [
             'certificates' => $certificates
         ]);
     })->name('me.certificates');
@@ -309,27 +309,27 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     })->name('programs.certificates');
 });
 
-Route::middleware(['auth', 'role:student'])->group(function () {
-    Route::get('/student', function () {
-        return Inertia::render('Student/Dashboard');
-    })->name('student.dashboard');
+Route::middleware(['auth', 'role:trainee'])->group(function () {
+    Route::get('/trainee', function () {
+        return Inertia::render('Trainee/Dashboard');
+    })->name('trainee.dashboard');
 
-    // Student Program Catalog Routes
-    Route::get('/student/programs', function () {
-        return Inertia::render('Student/Programs/Index', [
+    // Trainee Program Catalog Routes
+    Route::get('/trainee/programs', function () {
+        return Inertia::render('Trainee/Programs/Index', [
             'programs' => []
         ]);
-    })->name('student.programs.index');
+    })->name('trainee.programs.index');
 
     Route::get('/programs', function () {
-        return Inertia::render('Student/Programs/Index', [
+        return Inertia::render('Trainee/Programs/Index', [
             'programs' => []
         ]);
     })->name('programs.index');
 });
 
 Route::get('/programs/{id}', function ($id) {
-    return Inertia::render('Student/Programs/Show', [
+    return Inertia::render('Trainee/Programs/Show', [
         'programId' => $id,
     ]);
 })->name('programs.show');

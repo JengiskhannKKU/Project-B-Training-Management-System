@@ -65,8 +65,8 @@ class TrainerDashboardController extends Controller
         // 5. Top 3 Courses by enrollment
         $topCourses = $this->getTopCourses($trainerId);
 
-        // 6. Student Engagement
-        $engagement = $this->getStudentEngagement($sessionIds);
+        // 6. Trainee Engagement
+        $engagement = $this->getTraineeEngagement($sessionIds);
 
         // 7. Department Distribution
         $departments = $this->getDepartmentDistribution($sessionIds);
@@ -161,7 +161,7 @@ class TrainerDashboardController extends Controller
         })->values()->toArray();
     }
 
-    private function getStudentEngagement($sessionIds)
+    private function getTraineeEngagement($sessionIds)
     {
         if ($sessionIds->isEmpty()) {
             return [

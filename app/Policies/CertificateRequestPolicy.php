@@ -56,7 +56,7 @@ class CertificateRequestPolicy
             return true;
         }
 
-        // Student can view their own request
+        // Trainee can view their own request
         if ($certificateRequest->requested_by === $user->id) {
             return true;
         }
@@ -69,7 +69,7 @@ class CertificateRequestPolicy
      */
     public function create(User $user): bool
     {
-        // Students can create certificate requests for their own enrollments
+        // Trainees can create certificate requests for their own enrollments
         // Trainers can create batch requests
         return true;
     }

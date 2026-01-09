@@ -185,7 +185,7 @@ const exportToCSV = () => {
         course.id,
         course.name,
         course.level,
-        course.students_count,
+        course.trainees_count,
         course.date,
         course.time,
         course.location,
@@ -226,7 +226,7 @@ const exportToPDF = () => {
             course.id ?? '',
             course.name ?? '',
             course.level ?? '',
-            course.students_count ?? 0,
+            course.trainees_count ?? 0,
             course.date ?? '',
             course.time ?? '',
             course.location ?? '',
@@ -393,7 +393,7 @@ const mapProgramFromRequest = (req: any) => {
         image_url: payload.image_url || '',
         rating: payload.rating || null,
         level: payload.level || '',
-        students_count: payload.students_count || 0,
+        trainees_count: payload.trainees_count || 0,
         price: payload.price || 'Free',
         date: payload.date || payload.registration_start || '',
         time: payload.time || '',
@@ -421,7 +421,7 @@ const fetchPrograms = async () => {
             image_url: program.image_url || '',
             rating: program.rating || 0,
             level: program.level || 'beginner',
-            students_count: program.students_count || program.enrollments_count || 0,
+            trainees_count: program.trainees_count || program.enrollments_count || 0,
             price: program.price || 'Free',
             date: program.start_date || program.created_at || '',
             time: program.start_time || '',
@@ -582,7 +582,7 @@ onMounted(() => {
                             :sortOptions="[
                                 { value: 'created_at', label: 'Date' },
                                 { value: 'name', label: 'Course Name' },
-                                { value: 'students_count', label: 'Students' },
+                                { value: 'trainees_count', label: 'Students' },
                                 { value: 'rating', label: 'Rating' },
                                 { value: 'status', label: 'Status' },
                             ]"
@@ -634,7 +634,7 @@ onMounted(() => {
                             :image_url="course.image_url"
                             :rating="course.rating"
                             :level="course.level"
-                            :students_count="course.students_count"
+                            :trainees_count="course.trainees_count"
                             :price="course.price"
                             :date="course.date"
                             :time="course.time"

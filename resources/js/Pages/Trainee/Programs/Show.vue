@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "vue-toastification";
-import StudentLayout from "@/Layouts/StudentLayout.vue";
+import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
 import ErrorBanner from "@/Components/ErrorBanner.vue";
 import {
@@ -237,7 +237,7 @@ onMounted(() => {
 <template>
     <Head :title="programTitle" />
 
-    <StudentLayout>
+    <TraineeLayout>
         <div class="mx-auto max-w-6xl space-y-6">
             <Link
                 :href="backLink"
@@ -605,5 +605,5 @@ onMounted(() => {
             </button>
         </div>
     </div>
-    </StudentLayout>
+    </TraineeLayout>
 </template>

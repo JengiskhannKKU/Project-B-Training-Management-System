@@ -17,7 +17,7 @@ class AuthLoginSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
 
-        $roles = Role::whereIn('name', ['admin', 'trainer', 'student'])->get()->keyBy('name');
+        $roles = Role::whereIn('name', ['admin', 'trainer', 'trainee'])->get()->keyBy('name');
 
         $commonPassword = Hash::make('password');
         $now = now();
@@ -42,10 +42,10 @@ class AuthLoginSeeder extends Seeder
                 'status' => 'active',
             ],
             [
-                'name' => 'Student User',
-                'email' => 'student@example.com',
+                'name' => 'Trainee User',
+                'email' => 'trainee@example.com',
                 'password' => $commonPassword,
-                'role_id' => $roles['student']->id ?? 3,
+                'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
             ],
@@ -131,7 +131,7 @@ class AuthLoginSeeder extends Seeder
                 'name' => 'Alice Wonder',
                 'email' => 'alice@example.com',
                 'password' => $commonPassword,
-                'role_id' => $roles['student']->id ?? 3,
+                'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
             ],
@@ -139,7 +139,7 @@ class AuthLoginSeeder extends Seeder
                 'name' => 'Bob Builder',
                 'email' => 'bob@example.com',
                 'password' => $commonPassword,
-                'role_id' => $roles['student']->id ?? 3,
+                'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
             ],

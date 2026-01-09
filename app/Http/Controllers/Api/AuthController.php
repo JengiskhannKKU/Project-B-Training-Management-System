@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * Register a new user as student and issue an API token.
+     * Register a new user as trainee and issue an API token.
      */
     public function register(Request $request): JsonResponse
     {
@@ -23,16 +23,16 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $studentRole = Role::firstOrCreate(
-            ['name' => 'student'],
-            ['label' => 'Student']
+        $traineeRole = Role::firstOrCreate(
+            ['name' => 'trainee'],
+            ['label' => 'Trainee']
         );
 
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role_id' => $studentRole->id,
+            'role_id' => $traineeRole->id,
             'status' => 'active',
             // Skip email verification for now.
             'email_verified_at' => now(),

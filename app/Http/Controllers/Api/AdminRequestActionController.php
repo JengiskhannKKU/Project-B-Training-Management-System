@@ -298,12 +298,12 @@ class AdminRequestActionController extends Controller
 
         $user = User::where('email', $email)->first();
         if (!$user) {
-            $studentRoleId = Role::where('name', 'student')->value('id');
+            $traineeRoleId = Role::where('name', 'trainee')->value('id');
             $user = User::create([
                 'name' => $fullName,
                 'email' => $email,
                 'password' => bcrypt(Str::random(12)),
-                'role_id' => $studentRoleId,
+                'role_id' => $traineeRoleId,
             ]);
         }
 

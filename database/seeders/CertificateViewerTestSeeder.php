@@ -16,17 +16,17 @@ class CertificateViewerTestSeeder extends Seeder
     public function run(): void
     {
         // Get or create roles
-        $studentRole = Role::firstOrCreate(['name' => 'student']);
+        $traineeRole = Role::firstOrCreate(['name' => 'trainee']);
         $trainerRole = Role::firstOrCreate(['name' => 'trainer']);
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
 
         // Create test users
-        $student = User::firstOrCreate(
-            ['email' => 'student@example.com'],
+        $trainee = User::firstOrCreate(
+            ['email' => 'trainee@example.com'],
             [
-                'name' => 'Student User',
+                'name' => 'Trainee User',
                 'password' => bcrypt('password'),
-                'role_id' => $studentRole->id,
+                'role_id' => $traineeRole->id,
             ]
         );
 
@@ -79,10 +79,10 @@ class CertificateViewerTestSeeder extends Seeder
             ]
         );
 
-        // Create enrollment for student
+        // Create enrollment for trainee
         $enrollment = Enrollment::firstOrCreate(
             [
-                'user_id' => $student->id,
+                'user_id' => $trainee->id,
                 'session_id' => $session->id,
             ],
             [
@@ -92,10 +92,10 @@ class CertificateViewerTestSeeder extends Seeder
             ]
         );
 
-        // Create certificates for the student
+        // Create certificates for the trainee
         Certificate::firstOrCreate(
             [
-                'user_id' => $student->id,
+                'user_id' => $trainee->id,
                 'enrollment_id' => $enrollment->id,
             ],
             [
@@ -109,7 +109,7 @@ class CertificateViewerTestSeeder extends Seeder
         );
 
         $this->command->info('Certificate test data created successfully!');
-        $this->command->info('Student: student@example.com / password');
+        $this->command->info('Trainee: trainee@example.com / password');
         $this->command->info('Trainer: trainer@example.com / password');
         $this->command->info('Admin: admin@example.com / password');
     }

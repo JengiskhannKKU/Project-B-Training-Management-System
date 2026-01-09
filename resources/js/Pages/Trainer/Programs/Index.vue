@@ -34,7 +34,7 @@ defineProps<{
         image_url: string | null;
         rating?: number;
         level?: string;
-        students_count?: number;
+        trainees_count?: number;
         price?: string;
         date?: string;
         time?: string;
@@ -190,7 +190,7 @@ const exportToCSV = () => {
         course.id,
         course.name,
         course.level,
-        course.students_count,
+        course.trainees_count,
         course.date,
         course.time,
         course.location,
@@ -231,7 +231,7 @@ const exportToPDF = () => {
             course.id ?? '',
             course.name ?? '',
             course.level ?? '',
-            course.students_count ?? 0,
+            course.trainees_count ?? 0,
             course.date ?? '',
             course.time ?? '',
             course.location ?? '',
@@ -355,7 +355,7 @@ const mapProgramFromRequest = (req: any) => {
         image_url: payload.image_url || '',
         rating: payload.rating || null,
         level: payload.level || '',
-        students_count: payload.students_count || 0,
+        trainees_count: payload.trainees_count || 0,
         price: payload.price || 'Free',
         date: payload.date || payload.registration_start || '',
         time: payload.time || '',
@@ -411,7 +411,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400',
         rating: 4.7,
         level: 'Beginner',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -425,7 +425,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400',
         rating: 4.7,
         level: 'Advanced',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -439,7 +439,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400',
         rating: 4.7,
         level: 'Intermediate',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -453,7 +453,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400',
         rating: 4.7,
         level: 'Intermediate',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -467,7 +467,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400',
         rating: 4.7,
         level: 'Beginner',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -481,7 +481,7 @@ const mockPrograms = [
         image_url: 'https://images.unsplash.com/photo-1580894894513-541e068a3e2b?w=400',
         rating: 4.7,
         level: 'Beginner',
-        students_count: 32,
+        trainees_count: 32,
         price: 'Free',
         date: 'Oct 22,2024',
         time: '09:00 - 16:00',
@@ -604,7 +604,7 @@ const mockPrograms = [
                             :sortOptions="[
                                 { value: 'created_at', label: 'Date' },
                                 { value: 'name', label: 'Course Name' },
-                                { value: 'students_count', label: 'Students' },
+                                { value: 'trainees_count', label: 'Students' },
                                 { value: 'rating', label: 'Rating' },
                                 { value: 'status', label: 'Status' },
                             ]"
@@ -684,7 +684,7 @@ const mockPrograms = [
                             :image_url="course.image_url"
                             :rating="course.rating"
                             :level="course.level"
-                            :students_count="course.students_count"
+                            :trainees_count="course.trainees_count"
                             :price="course.price"
                             :date="course.date"
                             :time="course.time"

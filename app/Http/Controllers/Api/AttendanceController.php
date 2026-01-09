@@ -148,7 +148,7 @@ class AttendanceController extends Controller
     {
         $user = auth()->user();
 
-        // Students can only view their own enrollment attendance
+        // Trainees can only view their own enrollment attendance
         // Trainers and admins can view any enrollment attendance
         if ($user->role_id === 3 && $enrollment->user_id !== $user->id) {
             return $this->forbiddenResponse('You can only view your own attendance records');

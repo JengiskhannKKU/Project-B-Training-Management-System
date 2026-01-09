@@ -239,7 +239,7 @@ class TrainingSessionController extends Controller
                     'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
                     'rating' => 4.5, // Placeholder - can be calculated from feedback if available
                     'level' => ucfirst($program->level ?? 'Beginner'),
-                    'students_count' => $totalEnrolled,
+                    'trainees_count' => $totalEnrolled,
                     'price' => 'Free', // Placeholder - add to Program model if needed
                     'date' => $dateRange,
                     'time' => $timeRange,
@@ -335,7 +335,7 @@ class TrainingSessionController extends Controller
                     'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
                     'rating' => 4.5, // Placeholder - can be calculated from feedback if available
                     'level' => ucfirst($program->level ?? 'Beginner'),
-                    'students_count' => $totalEnrolled,
+                    'trainees_count' => $totalEnrolled,
                     'price' => 'Free', // Placeholder - add to Program model if needed
                     'date' => $dateRange,
                     'time' => $timeRange,

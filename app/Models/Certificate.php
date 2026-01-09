@@ -56,12 +56,6 @@ class Certificate extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Backward-compatible alias
-    public function student(): BelongsTo
-    {
-        return $this->user();
-    }
-
     public function program(): BelongsTo
     {
         return $this->belongsTo(Program::class);
