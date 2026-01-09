@@ -547,9 +547,11 @@ const organizationLabel = computed(() => {
                                 <InputError :message="localErrors.birthdate" class="mt-2" />
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Internal Specific Fields -->
-                        <div v-if="step === 3 && userType === 'internal'" class="space-y-4">
+                    <!-- Step 3: Education / Work Info -->
+                    <!-- Internal Specific Fields -->
+                    <div v-if="step === 3 && userType === 'internal'" class="space-y-4">
                             <h3 class="font-medium text-gray-900">{{ $t('University Information') }}</h3>
                             
                              <div>
@@ -614,7 +616,6 @@ const organizationLabel = computed(() => {
                                 <InputError :message="localErrors.organization_name" class="mt-2" />
                             </div>
                         </div>
-                    </div>
 
                     <!-- Navigation Buttons -->
                     <div class="flex items-center justify-between pt-4">
