@@ -46,9 +46,9 @@ const form = useForm({
 });
 
 const steps = computed(() => [
-    { id: 0, name: trans('User Type') },
-    { id: 1, name: trans('Account') },
-    { id: 2, name: trans('Personal') }
+    { id: 0, name: trans('User Type'), isComplete: !!userType.value },
+    { id: 1, name: trans('Account'), isComplete: checkAccountValidity() },
+    { id: 2, name: trans('Personal'), isComplete: checkPersonalValidity() }
 ]);
 
 const maxStep = ref(0);
@@ -101,26 +101,12 @@ watch(
 
 const jumpToStep = (targetStep) => {
     // Allow navigation if:
-    // 1. Going back (target < current)
-    // 2. Going to a previously visited step (target <= maxStep)
-    // 3. User type is selected (for step 1)
+    // 1. User type is selected (Step 0 is complete)
+    // 2. OR targeting Step 0
     
     if (targetStep === step.value) return;
 
-    if (targetStep < step.value || targetStep <= maxStep.value) {
-        // Special check: Can't go to step 1 or 2 if User Type isn't selected
-        if (targetStep > 0 && !userType.value) {
-            return;
-        }
-        
-        // If jumping forward, valid previous steps?
-        // For simplicity, we trust maxStep implies we passed validation once.
-        // But if user changed data in Step 1 that invalidates it, and tries to jump to 2...
-        // Ideally we should validateStep(1) if jumping 1 -> 2.
-        // But if jumping 0 -> 2, we need to validate 1?
-        // Let's keep it simple: strict validation is on 'Next'. 
-        // Jumping via tabs relies on 'maxStep' history.
-        
+    if (targetStep === 0 || userType.value) {
         step.value = targetStep;
     }
 };
@@ -129,16 +115,41 @@ const clearStorage = () => {
     localStorage.removeItem(STORAGE_KEY);
 };
 
-// Validation
+// Validation Logic (Check Only)
 const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
 const validatePassword = (password) => {
-    // Simple check: at least 8 chars
     return password.length >= 8;
 };
 
+const checkAccountValidity = () => {
+    if (!form.email || !validateEmail(form.email)) return false;
+    if (!form.password || !validatePassword(form.password)) return false;
+    if (form.password !== form.password_confirmation) return false;
+    return true;
+};
+
+const checkPersonalValidity = () => {
+    const requiredFields = [
+        'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
+        'last_name_en', 'phone', 'birthdate', 'gender'
+    ];
+    
+    if (userType.value === 'internal') {
+        requiredFields.push('faculty', 'major', 'student_id', 'degree_level');
+    } else {
+        requiredFields.push('category', 'organization_name');
+    }
+
+    for (const field of requiredFields) {
+        if (!form[field]) return false;
+    }
+    return true;
+};
+
+// Validation Logic (With Errors)
 const validateStep = (currentStep) => {
     localErrors.value = {};
     let isValid = true;
@@ -185,6 +196,7 @@ const nextStep = () => {
             step.value = 1;
         }
     } else if (step.value === 1) {
+        // Optional: Validate before auto-moving, or just move
         if (validateStep(1)) {
             step.value = 2;
         }
@@ -201,7 +213,21 @@ const selectUserType = (type) => {
 };
 
 const submit = () => {
-    if (!validateStep(2)) return;
+    // Validate ALL steps before submitting
+    const isAccountValid = validateStep(1);
+    const isPersonalValid = validateStep(2);
+
+    if (!isAccountValid) {
+        step.value = 1;
+        errorMessage.value = trans("Please check the Account Information tab for errors.");
+        return;
+    }
+
+    if (!isPersonalValid) {
+        step.value = 2;
+        errorMessage.value = trans("Please check the Personal Information tab for errors.");
+        return;
+    }
 
     errorMessage.value = null;
     
@@ -265,21 +291,21 @@ const organizationLabel = computed(() => {
                              <button 
                                 type="button"
                                 @click="jumpToStep(s.id)"
-                                :disabled="(s.id > maxStep && s.id > step) || (s.id > 0 && !userType)"
+                                :disabled="s.id > 0 && !userType"
                                 class="group flex flex-col items-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <span 
                                     class="h-8 w-8 rounded-full flex items-center justify-center border-2 transition-colors duration-200 bg-white"
                                     :class="[
-                                        step > s.id ? 'bg-[#3D9792] border-[#3D9792] text-white' : 
-                                        step === s.id ? 'border-[#3D9792] text-[#3D9792]' : 
+                                        step === s.id ? 'border-[#3D9792] ring-2 ring-[#3D9792] ring-offset-2' : 
+                                        s.isComplete ? 'bg-[#3D9792] border-[#3D9792] text-white' : 
                                         'border-gray-300 text-gray-500 group-hover:border-gray-400'
                                     ]"
                                 >
-                                    <svg v-if="step > s.id" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg v-if="s.isComplete" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                                     </svg>
-                                    <span v-else class="text-sm font-bold">{{ index + 1 }}</span>
+                                    <span v-else class="text-sm font-bold" :class="{ 'text-[#3D9792]': step === s.id }">{{ index + 1 }}</span>
                                 </span>
                                 <span 
                                     class="mt-2 text-xs font-medium uppercase tracking-wide"
