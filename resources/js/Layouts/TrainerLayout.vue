@@ -107,7 +107,7 @@ onMounted(() => {
         >
             <div class="h-full px-6 pb-4 overflow-y-auto bg-white flex flex-col">
                 <div class="flex-1">
-                    <Link href="/trainer/sessions" class="flex pt-4 pb-14">
+                    <Link href="/trainer/programs" class="flex pt-4 pb-14">
                         <img
                             src="/images/project_logo.png"
                             class="h-12 w-auto object-contain max-w-full"

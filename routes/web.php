@@ -16,7 +16,7 @@ $redirectToRoleDashboard = function () {
 
     return redirect()->route(match ($role) {
         'admin' => 'admin.dashboard',
-        'trainer' => 'trainer.sessions.index',
+        'trainer' => 'trainer.programs.index',
         default => 'student.programs.index',
     });
 };
@@ -211,7 +211,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     Route::get('/trainer', function () {
-        return redirect()->route('trainer.sessions.index');
+        return redirect()->route('trainer.programs.index');
     })->name('trainer.dashboard');
 
     // Trainer Program Routes
