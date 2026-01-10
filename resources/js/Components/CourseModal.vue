@@ -253,8 +253,17 @@ const triggerFileInput = () => fileInputRef.value?.click();
                     <div class="lg:col-span-2 space-y-6">
                         <!-- Title -->
                         <div class="space-y-2">
-                            <InputLabel value="Course Title" required />
-                            <TextInput v-model="form.title" type="text" class="w-full" placeholder="e.g. Mastering Vue.js Architecture" />
+                            <div class="flex justify-between items-center">
+                                <InputLabel value="Course Title" required />
+                                <span class="text-xs text-gray-400">{{ form.title.length }}/50 chars</span>
+                            </div>
+                            <TextInput 
+                                v-model="form.title" 
+                                type="text" 
+                                class="w-full" 
+                                placeholder="e.g. Mastering Vue.js Architecture" 
+                                maxlength="50"
+                            />
                             <InputError :message="form.errors.title" />
                         </div>
 
@@ -262,13 +271,14 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
                                 <InputLabel value="Short Description" />
-                                <span class="text-xs text-gray-400">{{ form.description.length }} chars</span>
+                                <span class="text-xs text-gray-400">{{ form.description.length }}/100 chars</span>
                             </div>
                             <textarea 
                                 v-model="form.description" 
                                 rows="3" 
                                 class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                 placeholder="A brief summary of what students will learn..."
+                                maxlength="100"
                             ></textarea>
                             <InputError :message="form.errors.description" />
                         </div>
@@ -330,47 +340,63 @@ const triggerFileInput = () => fileInputRef.value?.click();
                     <div class="grid grid-cols-1 gap-6">
                         <!-- Learning Outcomes -->
                         <div class="space-y-2">
-                            <InputLabel value="Learning Outcomes" />
+                            <div class="flex justify-between items-center">
+                                <InputLabel value="Learning Outcomes" />
+                                <span class="text-xs text-gray-400">{{ form.learning_outcomes.length }}/500 chars</span>
+                            </div>
                             <textarea 
                                 v-model="form.learning_outcomes" 
                                 rows="4" 
                                 class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                 placeholder="• Understand the core concepts..."
+                                maxlength="500"
                             ></textarea>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Target Audience -->
                             <div class="space-y-2">
-                                <InputLabel value="Target Audience" />
+                                <div class="flex justify-between items-center">
+                                    <InputLabel value="Target Audience" />
+                                    <span class="text-xs text-gray-400">{{ form.target_audience.length }}/500 chars</span>
+                                </div>
                                 <textarea 
                                     v-model="form.target_audience" 
                                     rows="3" 
                                     class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                     placeholder="Who is this course designed for?"
+                                    maxlength="500"
                                 ></textarea>
                             </div>
 
                             <!-- Prerequisites -->
                             <div class="space-y-2">
-                                <InputLabel value="Prerequisites" />
+                                <div class="flex justify-between items-center">
+                                    <InputLabel value="Prerequisites" />
+                                    <span class="text-xs text-gray-400">{{ form.prerequisites.length }}/500 chars</span>
+                                </div>
                                 <textarea 
                                     v-model="form.prerequisites" 
                                     rows="3" 
                                     class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                     placeholder="Required skills or equipment..."
+                                    maxlength="500"
                                 ></textarea>
                             </div>
                         </div>
 
                         <!-- Additional Information -->
                         <div class="space-y-2">
-                            <InputLabel value="Additional Information" />
+                            <div class="flex justify-between items-center">
+                                <InputLabel value="Additional Information" />
+                                <span class="text-xs text-gray-400">{{ form.additional_info.length }}/500 chars</span>
+                            </div>
                             <textarea 
                                 v-model="form.additional_info" 
                                 rows="3" 
                                 class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                 placeholder="Any other details course creators want to include..."
+                                maxlength="500"
                             ></textarea>
                         </div>
                     </div>
