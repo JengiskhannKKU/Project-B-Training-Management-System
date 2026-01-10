@@ -14,6 +14,13 @@ const step = ref(0); // 0: Selection, 1: Account, 2: Personal
 const userType = ref(null); // 'internal' | 'external'
 const errorMessage = ref(null);
 const localErrors = ref({});
+const otherJobPosition = ref("");
+const otherPersonnelType = ref("");
+const otherCategory = ref("");
+const otherPrefix = ref("");
+const otherDegreeLevel = ref("");
+const otherEmploymentStatus = ref("");
+const otherGender = ref("");
 
 const form = useForm({
     // Account
@@ -199,10 +206,12 @@ const validateStep = (currentStep) => {
         if (userType.value === 'internal') {
             if (form.sub_category === 'Student') {
                 requiredFields.push('faculty', 'major', 'degree_level', 'year_of_study');
-            } else {
+            }
+            else {
                 requiredFields.push('organization', 'job_position', 'employment_status', 'personnel_type');
             }
-        } else {
+        }
+        else {
             requiredFields.push('category', 'organization_name');
         }
 
@@ -210,6 +219,23 @@ const validateStep = (currentStep) => {
             if (!form[field]) {
                 localErrors.value[field] = trans("This field is required.");
                 isValid = false;
+            } else if (form[field] === 'Other') {
+                 if (field === 'job_position' && !otherJobPosition.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 } else if (field === 'personnel_type' && !otherPersonnelType.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 } else if (field === 'category' && !otherCategory.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 } else if (field === 'degree_level' && !otherDegreeLevel.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 } else if (field === 'employment_status' && !otherEmploymentStatus.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 }
             }
         });
     } else if (currentStep === 3) {
@@ -221,6 +247,14 @@ const validateStep = (currentStep) => {
             if (!form[field]) {
                 localErrors.value[field] = trans("This field is required.");
                 isValid = false;
+            } else if (form[field] === 'Other') {
+                 if (field === 'prefix' && !otherPrefix.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 } else if (field === 'gender' && !otherGender.value) {
+                     localErrors.value[field] = trans("Please specify.");
+                     isValid = false;
+                 }
             }
         });
     }
@@ -290,6 +324,13 @@ const submit = () => {
     form.transform((data) => ({
         ...data,
         name: `${data.first_name} ${data.last_name}`,
+        job_position: data.job_position === 'Other' ? otherJobPosition.value : data.job_position,
+        personnel_type: data.personnel_type === 'Other' ? otherPersonnelType.value : data.personnel_type,
+        category: data.category === 'Other' ? otherCategory.value : data.category,
+        prefix: data.prefix === 'Other' ? otherPrefix.value : data.prefix,
+        degree_level: data.degree_level === 'Other' ? otherDegreeLevel.value : data.degree_level,
+        employment_status: data.employment_status === 'Other' ? otherEmploymentStatus.value : data.employment_status,
+        gender: data.gender === 'Other' ? otherGender.value : data.gender,
     })).post(route("register"), {
         onFinish: () => {
             form.reset("password", "password_confirmation");
@@ -299,7 +340,39 @@ const submit = () => {
         },
         onError: (errors) => {
             if (Object.keys(errors).length > 0) {
-                errorMessage.value = trans("Please check the form for errors.");
+                // Map fields to steps
+                const getStepForField = (field) => {
+                    const step1Fields = ['email', 'password', 'password_confirmation'];
+                    const step2Fields = [
+                        'sub_category', 'faculty', 'major', 'student_id', 'degree_level', 'year_of_study',
+                        'personnel_id', 'organization', 'department', 'job_position', 'employment_status', 'personnel_type',
+                        'category', 'organization_name'
+                    ];
+                    const step3Fields = ['prefix', 'first_name', 'last_name', 'phone', 'birthdate', 'gender'];
+
+                    if (step1Fields.includes(field)) return 1;
+                    if (step2Fields.includes(field)) return 2;
+                    if (step3Fields.includes(field)) return 3;
+                    return 3; // Default
+                };
+
+                let lowestStep = 3;
+                let errorFields = [];
+
+                for (const field of Object.keys(errors)) {
+                    const s = getStepForField(field);
+                    if (s < lowestStep) lowestStep = s;
+                    errorFields.push(field);
+                }
+                
+                // Jump to the first step with an error
+                if (lowestStep !== step.value) {
+                    step.value = lowestStep;
+                }
+
+                errorMessage.value = trans("There are errors in the following fields: :fields", {
+                    fields: errorFields.map(f => trans(f)).join(', ')
+                });
             }
         },
     });
@@ -311,7 +384,7 @@ const organizationLabel = computed(() => {
         case 'Student': return 'School Name';
         case 'Personnel': return 'Department';
         case 'Outsider': return 'Organization';
-        case 'Other': return 'Please Specify';
+        case 'Other': return 'Additional Description';
         default: return 'Organization / School / Department';
     }
 });
@@ -522,7 +595,16 @@ const organizationLabel = computed(() => {
                                         <option value="Bachelor">{{ $t('Bachelor') }}</option>
                                         <option value="Master">{{ $t('Master') }}</option>
                                         <option value="Doctoral">{{ $t('Doctoral') }}</option>
+                                        <option value="Other">{{ $t('Other') }}</option>
                                     </select>
+                                    <TextInput
+                                        v-if="form.degree_level === 'Other'"
+                                        id="other_degree_level"
+                                        type="text"
+                                        class="mt-2 block w-full"
+                                        v-model="otherDegreeLevel"
+                                        :placeholder="$t('Please specify')"
+                                    />
                                     <InputError :message="localErrors.degree_level" class="mt-2" />
                                 </div>
                             </div>
@@ -561,6 +643,14 @@ const organizationLabel = computed(() => {
                                         <option value="System Administrator">{{ $t('System Administrator') }}</option>
                                         <option value="Other">{{ $t('Other') }}</option>
                                     </select>
+                                    <TextInput
+                                        v-if="form.job_position === 'Other'"
+                                        id="other_job_position"
+                                        type="text"
+                                        class="mt-2 block w-full"
+                                        v-model="otherJobPosition"
+                                        :placeholder="$t('Please specify')"
+                                    />
                                     <InputError :message="localErrors.job_position" class="mt-2" />
                                 </div>
 
@@ -575,7 +665,16 @@ const organizationLabel = computed(() => {
                                         <option value="Full-time">{{ $t('Full-time') }}</option>
                                         <option value="Part-time">{{ $t('Part-time') }}</option>
                                         <option value="Contract">{{ $t('Contract') }}</option>
+                                        <option value="Other">{{ $t('Other') }}</option>
                                     </select>
+                                    <TextInput
+                                        v-if="form.employment_status === 'Other'"
+                                        id="other_employment_status"
+                                        type="text"
+                                        class="mt-2 block w-full"
+                                        v-model="otherEmploymentStatus"
+                                        :placeholder="$t('Please specify')"
+                                    />
                                     <InputError :message="localErrors.employment_status" class="mt-2" />
                                 </div>
 
@@ -592,6 +691,14 @@ const organizationLabel = computed(() => {
                                         <option value="Temporary Employee">{{ $t('Temporary Employee') }}</option>
                                         <option value="Other">{{ $t('Other') }}</option>
                                     </select>
+                                    <TextInput
+                                        v-if="form.personnel_type === 'Other'"
+                                        id="other_personnel_type"
+                                        type="text"
+                                        class="mt-2 block w-full"
+                                        v-model="otherPersonnelType"
+                                        :placeholder="$t('Please specify')"
+                                    />
                                     <InputError :message="localErrors.personnel_type" class="mt-2" />
                                 </div>
                             </div>
@@ -614,6 +721,14 @@ const organizationLabel = computed(() => {
                                     <option value="Outsider">{{ $t('Outsider') }}</option>
                                     <option value="Other">{{ $t('Other') }}</option>
                                 </select>
+                                <TextInput
+                                    v-if="form.category === 'Other'"
+                                    id="other_category"
+                                    type="text"
+                                    class="mt-2 block w-full"
+                                    v-model="otherCategory"
+                                    :placeholder="$t('Please specify')"
+                                />
                                 <InputError :message="localErrors.category" class="mt-2" />
                             </div>
 
@@ -647,6 +762,14 @@ const organizationLabel = computed(() => {
                                     <option value="Prof.">{{ $t('Prof.') }}</option>
                                     <option value="Other">{{ $t('Other') }}</option>
                                 </select>
+                                <TextInput
+                                    v-if="form.prefix === 'Other'"
+                                    id="other_prefix"
+                                    type="text"
+                                    class="mt-2 block w-full"
+                                    v-model="otherPrefix"
+                                    :placeholder="$t('Please specify')"
+                                />
                                 <InputError :message="localErrors.prefix" class="mt-2" />
                             </div>
                             
@@ -663,7 +786,16 @@ const organizationLabel = computed(() => {
                                     <option value="Female">{{ $t('Female') }}</option>
                                     <option value="LGBTQ+">{{ $t('LGBTQ+') }}</option>
                                     <option value="Prefer not to say">{{ $t('Prefer not to say') }}</option>
+                                    <option value="Other">{{ $t('Other') }}</option>
                                 </select>
+                                <TextInput
+                                    v-if="form.gender === 'Other'"
+                                    id="other_gender"
+                                    type="text"
+                                    class="mt-2 block w-full"
+                                    v-model="otherGender"
+                                    :placeholder="$t('Please specify')"
+                                />
                                 <InputError :message="localErrors.gender" class="mt-2" />
                             </div>
                         </div>
