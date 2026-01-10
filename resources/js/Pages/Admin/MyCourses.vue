@@ -410,33 +410,37 @@ const fetchPrograms = async () => {
         const list = data?.data || data || [];
 
         // Transform and map API data to match CourseCard props
-        const mappedList = list.map((course: any) => ({
-            id: course.id,
-            name: course.title, // Map title to name for CourseCard
-            image_url: course.thumbnail_path || '',
-            rating: 0,
-            level: course.level || 'beginner',
-            trainees_count: 0,
-            price: 'Free',
-            date: course.created_at || '',
-            time: '',
-            location: 'Online',
-            department: course.category || 'General',
-            status: course.status || 'draft',
-            created_by_id: course.owner_id,
-            created_at: course.created_at,
-            // Raw fields for editing
-            title: course.title,
-            description: course.description,
-            category: course.category,
-            learning_outcomes: course.learning_outcomes,
-            target_audience: course.target_audience,
-            prerequisites: course.prerequisites,
-            additional_info: course.additional_info,
-            min_participants: course.min_participants,
-            max_participants: course.max_participants,
-            thumbnail_path: course.thumbnail_path,
-        }));
+        const mappedList = list.map((course: any) => {
+            const hasSessions = course.sessions_count > 0;
+            return {
+                id: course.id,
+                name: course.title, // Map title to name for CourseCard
+                image_url: course.thumbnail_path || '',
+                rating: 0,
+                level: course.level || 'beginner',
+                trainees_count: 0,
+                price: 'Free',
+                date: course.created_at || '',
+                time: '',
+                location: 'Online',
+                department: course.category || 'General',
+                status: hasSessions ? (course.status || 'published') : 'incomplete',
+                created_by_id: course.owner_id,
+                created_at: course.created_at,
+                sessions_count: course.sessions_count,
+                // Raw fields for editing
+                title: course.title,
+                description: course.description,
+                category: course.category,
+                learning_outcomes: course.learning_outcomes,
+                target_audience: course.target_audience,
+                prerequisites: course.prerequisites,
+                additional_info: course.additional_info,
+                min_participants: course.min_participants,
+                max_participants: course.max_participants,
+                thumbnail_path: course.thumbnail_path,
+            };
+        });
 
         // Sort programs by ID or created_at in descending order (newest first)
         const sortedList = mappedList.sort((a: any, b: any) => {

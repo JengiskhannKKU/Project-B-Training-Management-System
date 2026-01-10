@@ -14,7 +14,7 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::query();
+        $query = Course::query()->withCount('sessions');
 
         // Optional filtering can be added here
         if ($request->has('category')) {

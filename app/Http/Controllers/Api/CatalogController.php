@@ -15,6 +15,7 @@ class CatalogController extends Controller
     public function courses(): JsonResponse
     {
         $courses = Course::query()
+            ->has('sessions')
             ->where('status', 'published')
             ->latest()
             ->get();
