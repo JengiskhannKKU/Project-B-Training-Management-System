@@ -322,12 +322,12 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
         await axios.get('/sanctum/csrf-cookie');
 
         if (editingCourse.value?.id) {
-            // Update existing program
-            await axios.put(`/api/programs/${editingCourse.value.id}`, payload);
+            // Update existing program (admin direct update)
+            await axios.put(`/api/admin/programs/${editingCourse.value.id}`, payload);
             toast.success('Program updated successfully!');
         } else {
-            // Create new program
-            await axios.post('/api/programs', payload);
+            // Create new program (admin direct creation)
+            await axios.post('/api/admin/programs', payload);
             toast.success('Program created successfully!');
         }
 

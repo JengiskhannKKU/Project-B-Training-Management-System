@@ -127,7 +127,7 @@ const validateForm = () => {
         errors.value.category = 'Please select a category';
     }
 
-    if (isEditMode.value && (!form.duration_hours || form.duration_hours < 1)) {
+    if (!form.duration_hours || form.duration_hours < 1) {
         errors.value.duration_hours = 'Duration must be at least 1 hour';
     }
 
@@ -157,23 +157,23 @@ const saveDraft = () => {
 const confirmRequest = () => {
     showConfirmDialog.value = false;
     const formPayload = typeof form.data === 'function' ? form.data() : { ...form };
-    const { duration_hours, status, ...payloadBase } = formPayload;
 
     // Add image_url to payload if uploaded
     const payload: Record<string, unknown> = {
-        ...payloadBase,
         // Map frontend 'title' to backend 'name'
         name: form.title,
         // Ensure description is present (map full_description)
         description: form.full_description,
+        short_description: form.short_description,
+        full_description: form.full_description,
+        category: form.category,
+        level: form.level,
         image_url: imageUrl.value || null,
-        // Include new fields
+        // Include required fields for both create and edit
         code: form.code,
+        duration_hours: form.duration_hours,
+        status: form.status,
     };
-    if (isEditMode.value) {
-        payload.duration_hours = duration_hours;
-        payload.status = status;
-    }
 
     // If consumer wants to skip preview overlays, emit directly
     if (!props.enablePreviewDialogs) {
@@ -330,7 +330,19 @@ const triggerFileInput = () => {
                     <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
                 </div>
 
-
+                <!-- Program Code -->
+                <div>
+                    <label for="code" class="block text-sm font-medium text-gray-700">
+                        Program Code <span class="text-red-500">*</span>
+                    </label>
+                    <input id="code" v-model="form.code" type="text"
+                        placeholder="e.g., UX-ADV-2024" :class="[
+                            'mt-1 block w-full rounded-md shadow-sm focus:ring-teal-500',
+                            errors.code ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-teal-500'
+                        ]" />
+                    <p v-if="errors.code" class="mt-1 text-sm text-red-600">{{ errors.code }}</p>
+                    <p class="mt-1 text-xs text-gray-500">Auto-generated from title, but you can customize it</p>
+                </div>
 
                 <!-- Short Description -->
                 <div>
@@ -449,7 +461,7 @@ const triggerFileInput = () => {
 
 
                 <!-- Duration and Status -->
-                <div v-if="isEditMode" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="duration_hours" class="block text-sm font-medium text-gray-700">
                             Duration (Hours) <span class="text-red-500">*</span>
