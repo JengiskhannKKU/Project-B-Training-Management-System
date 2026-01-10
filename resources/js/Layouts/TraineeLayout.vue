@@ -23,7 +23,7 @@ const currentPath = computed(() => page.url);
 
 const navigationItems = computed(() => [
     {
-        name: $t("Courses"),
+        name: $t("All Courses"),
         path: "/programs",
         icon: BookOpen,
     },

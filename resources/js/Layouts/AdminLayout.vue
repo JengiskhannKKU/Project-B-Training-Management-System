@@ -44,12 +44,12 @@ const navigationItems = [
         icon: BookOpen,
     },
     {
-        name: "Sessions",
+        name: "All Sessions",
         path: "/admin/sessions",
         icon: Calendar,
     },
     {
-        name: "Attendance",
+        name: "All Attendance",
         path: "/admin/attendance",
         icon: BookCheck,
     },
