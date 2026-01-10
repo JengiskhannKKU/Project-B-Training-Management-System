@@ -2,10 +2,9 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import CourseCard from '@/Components/CourseCard.vue';
-import CourseModal from '@/Components/CourseModal.vue';
 import Skeleton from '@/Components/Skeleton.vue';
 import {
     Search,
@@ -43,6 +42,7 @@ defineProps<{
 }>();
 
 const toast = useToast();
+const page = usePage();
 
 const searchQuery = ref('');
 const selectedDepartment = ref([]);
@@ -50,7 +50,6 @@ const selectedStatus = ref([]);
 const sortColumn = ref('created_at');
 const sortDirection = ref('desc');
 const showExportModal = ref(false);
-const showCreateModal = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = ref(9); // 9 cards per page for grid layout
 const isSubmittingProgram = ref(false);
@@ -276,39 +275,6 @@ const resetSort = () => {
     sortDirection.value = 'asc';
 };
 
-const handleModalClose = () => {
-    showCreateModal.value = false;
-};
-
-const handleModalSuccess = () => {
-    // placeholder for compatibility
-};
-
-const handleCreateProgram = async (payload: Record<string, unknown> | undefined) => {
-    if (!payload) return;
-    isSubmittingProgram.value = true;
-    try {
-        await axios.get('/sanctum/csrf-cookie');
-        await axios.post('/api/trainer/program-requests', {
-            action: 'create',
-            payload,
-        });
-        toast.success('Program request sent to admin for approval.');
-        showCreateModal.value = false;
-        await fetchPrograms();
-    } catch (error: any) {
-        const message =
-            error?.response?.data?.message ||
-            error?.message ||
-            'Unable to submit program request.';
-        toast.error(message);
-        if ([401, 403, 419].includes(error?.response?.status)) {
-            showApiLogin.value = true;
-        }
-    } finally {
-        isSubmittingProgram.value = false;
-    }
-};
 
 const setBearerToken = (token: string) => {
     localStorage.setItem('api_token', token);
@@ -341,50 +307,39 @@ const handleApiLogin = async () => {
     }
 };
 
-const mapProgramFromRequest = (req: any) => {
-    const payload = req.payload || {};
-    const resolvedProgramId =
-        req.status === 'approved' && req.target_id ? req.target_id : req.id;
-    return {
-        // Use program ID when approved; fall back to request ID for pending/rejected
-        id: resolvedProgramId,
-        request_id: req.id,
-        // Keep target_id for reference to actual program in programs table
-        program_id: req.target_id,
-        name: payload.title || payload.name || `Program ${req.id}`,
-        image_url: payload.image_url || '',
-        rating: payload.rating || null,
-        level: payload.level || '',
-        trainees_count: payload.trainees_count || 0,
-        price: payload.price || 'Free',
-        date: payload.date || payload.registration_start || '',
-        time: payload.time || '',
-        location: payload.location || '',
-        department: payload.category || 'General',
-        status: req.status || 'pending'
-    };
-};
-
 const ensureCsrf = () => axios.get('/sanctum/csrf-cookie');
 
 const fetchPrograms = async () => {
     isLoadingPrograms.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get('/api/trainer/requests');
+        const { data } = await axios.get('/api/programs');
         const list = data?.data || data || [];
-        const mappedPrograms = list
-            .filter((r: any) => r.target_type === 'program')
-            .map(mapProgramFromRequest);
 
-        // Sort programs by ID or created_at in descending order (newest first)
-        programs.value = mappedPrograms.sort((a: any, b: any) => {
-            // Try to sort by created_at if available, otherwise by id
-            if (a.created_at && b.created_at) {
-                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-            }
-            return (b.id || 0) - (a.id || 0);
-        });
+        // Filter to show only programs created by this trainer
+        programs.value = list
+            .filter((program: any) => program.created_by === page.props.auth?.user?.id)
+            .map((program: any) => ({
+                id: program.id,
+                name: program.name,
+                image_url: program.image_url || '',
+                rating: program.rating || null,
+                level: program.level || '',
+                trainees_count: program.trainees_count || 0,
+                price: program.price || 'Free',
+                date: program.date || program.registration_start || '',
+                time: program.time || '',
+                location: program.location || '',
+                department: program.category || 'General',
+                status: program.status || 'active',
+                created_at: program.created_at
+            }))
+            .sort((a: any, b: any) => {
+                if (a.created_at && b.created_at) {
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                }
+                return (b.id || 0) - (a.id || 0);
+            });
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
@@ -677,9 +632,9 @@ const mockPrograms = [
                     >
                         <CourseCard
                             v-for="course in paginatedCourses"
-                            :key="course.request_id || course.id"
+                            :key="course.id"
                             :id="course.id"
-                            :href="`/trainer/programs/${course.request_id}`"
+                            :href="`/trainer/programs/${course.id}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"
@@ -694,15 +649,17 @@ const mockPrograms = [
 
                     <!-- Empty State -->
                     <div
-                        v-if="filteredCourses.length === 0"
+                        v-if="filteredCourses.length === 0 && !isLoadingPrograms"
                         class="text-center py-12"
                     >
                         <Archive class="mx-auto h-12 w-12 text-gray-400" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900">
-                            No courses found
+                            {{ searchQuery || selectedDepartment.length || selectedStatus.length ? 'No courses found' : 'No courses yet' }}
                         </h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Try adjusting your search or filter criteria.
+                            {{ searchQuery || selectedDepartment.length || selectedStatus.length
+                                ? 'Try adjusting your search or filter criteria.'
+                                : 'Only administrators can create new courses and sessions. Contact your admin to create courses.' }}
                         </p>
                     </div>
 
@@ -798,15 +755,8 @@ const mockPrograms = [
             />
             
             <!-- Filter Dropdown replaced Modal -->
-            
-            <!-- Sort Dropdown replaced Modal -->
 
-            <CourseModal
-                :show="showCreateModal"
-                :enable-preview-dialogs="false"
-                @close="handleModalClose"
-                @success="handleCreateProgram"
-            />
+            <!-- Sort Dropdown replaced Modal -->
         </div>
     </TrainerLayout>
 </template>

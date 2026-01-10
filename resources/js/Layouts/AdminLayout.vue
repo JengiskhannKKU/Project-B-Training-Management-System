@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -10,13 +10,10 @@ import {
     MessageSquare,
     Settings,
     LogOut,
-    FileCheck,
     Award,
     Calendar,
 } from "lucide-vue-next";
-import axios from "axios";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
-import NotificationBadge from "@/Components/NotificationBadge.vue";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import Snackbar from "@/Components/Snackbar.vue";
 import { useSnackbar } from "@/composables/useSnackbar";
@@ -24,7 +21,6 @@ import { useSnackbar } from "@/composables/useSnackbar";
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
 const showingProfileDropdown = ref(false);
-const pendingRequestCount = ref(0);
 const page = usePage();
 const snackbar = useSnackbar();
 
@@ -51,11 +47,6 @@ const navigationItems = [
         name: "Categories",
         path: "/admin/categories",
         icon: Tags,
-    },
-    {
-        name: "Requests",
-        path: "/admin/requests",
-        icon: FileCheck,
     },
     {
         name: "Certificate Templates",
@@ -107,17 +98,6 @@ const roleColor = computed(() => {
     return 'text-gray-600';
 });
 
-const fetchPendingRequestCount = async () => {
-    try {
-        const response = await axios.get('/api/admin/requests/pending-count');
-        if (response.data?.data?.count !== undefined) {
-            pendingRequestCount.value = response.data.data.count;
-        }
-    } catch (error) {
-        console.error('Error fetching pending request count:', error);
-        // Silently fail - this is just a badge count
-    }
-};
 
 const handleMarkAsRead = (notificationId) => {
     const notification = notifications.value.find(n => n.id === notificationId);
@@ -138,17 +118,6 @@ const handleClearAllNotifications = () => {
 };
 
 onMounted(() => {
-    fetchPendingRequestCount();
-    // Refresh count every 30 seconds
-    const intervalId = setInterval(fetchPendingRequestCount, 30000);
-
-    // Listen for manual refresh events from the Requests page
-    window.addEventListener('refresh-pending-count', fetchPendingRequestCount);
-
-    onUnmounted(() => {
-        clearInterval(intervalId);
-        window.removeEventListener('refresh-pending-count', fetchPendingRequestCount);
-    });
 });
 
 </script>
@@ -190,13 +159,6 @@ onMounted(() => {
                                     ]"
                                 />
                                 <span class="ml-3 flex-1">{{ $t(item.name) }}</span>
-                                <NotificationBadge
-                                    v-if="item.name === 'Requests' && pendingRequestCount > 0"
-                                    :count="pendingRequestCount"
-                                    color="danger"
-                                    size="sm"
-                                    class="ml-2"
-                                />
                             </Link>
                         </li>
                     </ul>

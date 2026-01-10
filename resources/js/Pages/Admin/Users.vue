@@ -349,12 +349,31 @@ const toggleStatusDropdown = (userId, event) => {
 };
 
 // Change user status
-const changeUserStatus = (userId, newStatus) => {
+const changeUserStatus = async (userId, newStatus) => {
     const user = users.value.find((u) => u.id === userId);
-    if (user) {
+    if (!user) return;
+
+    try {
+        const statusMapping = {
+            'Active': 'active',
+            'Inactive': 'inactive'
+        };
+
+        // Call API to update user status
+        await axios.put(`/api/admin/users/${userId}`, {
+            status: statusMapping[newStatus] || newStatus.toLowerCase()
+        });
+
+        // Update local state after successful API call
         user.status = newStatus;
+        toast.success(`User status updated to ${newStatus}`);
+    } catch (error) {
+        console.error('Error updating user status:', error);
+        const errorMessage = error?.response?.data?.message || 'Failed to update user status';
+        toast.error(errorMessage);
+    } finally {
+        openStatusDropdown.value = null;
     }
-    openStatusDropdown.value = null;
 };
 
 // Open edit modal
@@ -398,8 +417,33 @@ const closeEditModal = () => {
 };
 
 // Save edited user
-const saveUser = () => {
-    if (editingUser.value) {
+const saveUser = async () => {
+    if (!editingUser.value) return;
+
+    try {
+        // Convert role to lowercase for API (Admin -> admin, Trainer -> trainer, Trainee -> trainee)
+        const roleMapping = {
+            'Admin': 'admin',
+            'Trainer': 'trainer',
+            'Trainee': 'trainee'
+        };
+
+        const statusMapping = {
+            'Active': 'active',
+            'Inactive': 'inactive'
+        };
+
+        const payload = {
+            name: editForm.value.name,
+            email: editForm.value.email,
+            role: roleMapping[editForm.value.role] || editForm.value.role.toLowerCase(),
+            status: statusMapping[editForm.value.status] || editForm.value.status.toLowerCase(),
+        };
+
+        // Call API to update user
+        await axios.put(`/api/admin/users/${editingUser.value.id}`, payload);
+
+        // Update local state after successful API call
         const user = users.value.find((u) => u.id === editingUser.value.id);
         if (user) {
             user.name = editForm.value.name;
@@ -409,8 +453,14 @@ const saveUser = () => {
             user.status = editForm.value.status;
             user.department = editForm.value.department;
         }
+
+        toast.success('User updated successfully');
+        closeEditModal();
+    } catch (error) {
+        console.error('Error updating user:', error);
+        const errorMessage = error?.response?.data?.message || 'Failed to update user';
+        toast.error(errorMessage);
     }
-    closeEditModal();
 };
 
 // Watch for editUserId prop to open modal when navigating directly to edit URL

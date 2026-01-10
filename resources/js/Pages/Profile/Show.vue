@@ -52,7 +52,7 @@ const roleName = computed(() => {
 const LayoutComponent = computed(() => {
     if (roleName.value === 'trainer') return TrainerLayout;
     if (roleName.value === 'trainee') return TraineeLayout;
-    return AuthenticatedLayout;
+    return AdminLayout;
 });
 
 // Admin mocked settings

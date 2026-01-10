@@ -76,13 +76,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:trainer,admin')->group(function () {
         Route::prefix('trainer')->group(function () {
-            Route::get('requests', [TrainerRequestController::class, 'index']);
-            Route::post('program-requests', [TrainerRequestController::class, 'program']);
-            Route::post('session-requests', [TrainerRequestController::class, 'session']);
-            Route::post('trainee-requests', [TrainerRequestController::class, 'trainee']);
-
-
-
             Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             Route::get('sessions', [TrainingSessionController::class, 'trainerSessions']);
             Route::apiResource('certificate-templates', CertificateTemplateController::class)
@@ -102,20 +95,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
         Route::get('users/{user}/avatar', [MeController::class, 'showUserAvatar']);
 
-        Route::get('admin/requests', [AdminRequestActionController::class, 'index']);
-        Route::get('admin/requests/pending-count', [AdminRequestActionController::class, 'getPendingCount']);
-        Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
-        Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
-
-
         Route::get('admin/certificates', [CertificateController::class, 'adminIndex']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
         Route::apiResource('admin/certificate-templates', CertificateTemplateController::class)
             ->except(['create', 'edit']);
 
         Route::get('admin/sessions', [TrainingSessionController::class, 'adminSessions']);
-        Route::post('admin/program-requests', [TrainerRequestController::class, 'program']);
-        Route::post('admin/session-requests', [TrainerRequestController::class, 'session']);
 
         // Image upload for programs
         Route::post('admin/upload/image', [FileUploadController::class, 'image']);
