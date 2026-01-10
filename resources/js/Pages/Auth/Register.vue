@@ -20,13 +20,11 @@ const form = useForm({
     email: "",
     password: "",
     password_confirmation: "",
-    
+
     // Personal (Common)
     prefix: "",
-    first_name_th: "",
-    last_name_th: "",
-    first_name_en: "",
-    last_name_en: "",
+    first_name: "",
+    last_name: "",
     phone: "",
     birthdate: "",
     gender: "",
@@ -148,8 +146,7 @@ const checkAccountValidity = () => {
 
 const checkPersonalValidity = () => {
     const requiredFields = [
-        'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
-        'last_name_en', 'phone', 'birthdate', 'gender'
+        'prefix', 'first_name', 'last_name', 'phone', 'birthdate', 'gender'
     ];
 
     for (const field of requiredFields) {
@@ -217,8 +214,7 @@ const validateStep = (currentStep) => {
         });
     } else if (currentStep === 3) {
         const requiredFields = [
-            'prefix', 'first_name_th', 'last_name_th', 'first_name_en', 
-            'last_name_en', 'phone', 'birthdate', 'gender'
+            'prefix', 'first_name', 'last_name', 'phone', 'birthdate', 'gender'
         ];
 
         requiredFields.forEach(field => {
@@ -293,7 +289,7 @@ const submit = () => {
     // Populate legacy name field
     form.transform((data) => ({
         ...data,
-        name: `${data.first_name_en} ${data.last_name_en}`,
+        name: `${data.first_name} ${data.last_name}`,
     })).post(route("register"), {
         onFinish: () => {
             form.reset("password", "password_confirmation");
@@ -674,27 +670,14 @@ const organizationLabel = computed(() => {
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <InputLabel for="first_name_th" :value="$t('First Name (TH)')" />
-                                <TextInput id="first_name_th" type="text" class="mt-1 block w-full" v-model="form.first_name_th" />
-                                <InputError :message="localErrors.first_name_th" class="mt-2" />
+                                <InputLabel for="first_name" :value="$t('First Name')" />
+                                <TextInput id="first_name" type="text" class="mt-1 block w-full" v-model="form.first_name" :placeholder="$t('Enter first name')" />
+                                <InputError :message="localErrors.first_name" class="mt-2" />
                             </div>
                             <div>
-                                <InputLabel for="last_name_th" :value="$t('Last Name (TH)')" />
-                                <TextInput id="last_name_th" type="text" class="mt-1 block w-full" v-model="form.last_name_th" />
-                                <InputError :message="localErrors.last_name_th" class="mt-2" />
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <InputLabel for="first_name_en" :value="$t('First Name (EN)')" />
-                                <TextInput id="first_name_en" type="text" class="mt-1 block w-full" v-model="form.first_name_en" />
-                                <InputError :message="localErrors.first_name_en" class="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel for="last_name_en" :value="$t('Last Name (EN)')" />
-                                <TextInput id="last_name_en" type="text" class="mt-1 block w-full" v-model="form.last_name_en" />
-                                <InputError :message="localErrors.last_name_en" class="mt-2" />
+                                <InputLabel for="last_name" :value="$t('Last Name')" />
+                                <TextInput id="last_name" type="text" class="mt-1 block w-full" v-model="form.last_name" :placeholder="$t('Enter last name')" />
+                                <InputError :message="localErrors.last_name" class="mt-2" />
                             </div>
                         </div>
 
