@@ -8,6 +8,8 @@ import TrainerLayout from '@/Layouts/TrainerLayout.vue';
 import TraineeLayout from '@/Layouts/TraineeLayout.vue';
 import ProfileSkeleton from '@/Pages/Profile/Partials/ProfileSkeleton.vue';
 import ConfirmationDialog from '@/Components/ConfirmationDialog.vue';
+import ImageCropperModal from '@/Components/ImageCropperModal.vue';
+import ImagePreviewModal from '@/Components/ImagePreviewModal.vue';
 import {
     User,
     Shield,
@@ -27,7 +29,10 @@ import {
     Hash,
     Award,
     CheckCircle2,
-    Clock
+    Clock,
+    Eye,
+    Upload,
+    Trash2
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -39,7 +44,7 @@ const props = defineProps({
 
 const isLoading = ref(false);
 const isEditing = ref(false);
-const activeTab = ref('profile'); // profile, security, notifications, (admin: general, courses)
+const activeTab = ref('profile');
 
 // User Data
 const apiUser = ref({
@@ -61,6 +66,11 @@ const avatarVersion = ref(Date.now());
 const showAvatarMenu = ref(false);
 const isUploadingAvatar = ref(false);
 
+// Cropper & Preview State
+const showCropper = ref(false);
+const cropperFile = ref(null);
+const showPreview = ref(false);
+
 const avatarUrl = computed(() => {
     if (avatarPreview.value) return avatarPreview.value;
     if (apiUser.value.avatar_present) return `/api/me/avatar?t=${avatarVersion.value}`;
@@ -74,7 +84,6 @@ const form = useForm({
     date_of_birth: '',
     gender: '',
     bio: '',
-    // Dynamic Fields
     prefix: '',
     first_name: '',
     last_name: '',
@@ -121,7 +130,6 @@ const loadProfile = async () => {
         form.gender = p.gender || '';
         form.bio = p.bio || '';
         
-        // Populate new fields
         form.prefix = p.prefix || '';
         form.first_name = p.first_name || '';
         form.last_name = p.last_name || '';
@@ -170,33 +178,86 @@ const updatePassword = () => {
     });
 };
 
-const handleAvatarChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Preview
-    const reader = new FileReader();
-    reader.onload = (e) => avatarPreview.value = e.target.result;
-    reader.readAsDataURL(file);
+// Avatar Logic
+const triggerFileUpload = () => {
+    document.getElementById('avatar-upload-input')?.click();
+    showAvatarMenu.value = false;
+};
 
-    // Upload
+const onFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        cropperFile.value = file;
+        showCropper.value = true;
+    }
+    // Reset input so same file can be selected again if needed
+    e.target.value = '';
+};
+
+const uploadCroppedAvatar = async (blob) => {
+    showCropper.value = false;
+    isUploadingAvatar.value = true;
+    
+    // Preview immediately
+    avatarPreview.value = URL.createObjectURL(blob);
+
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', blob, 'avatar.jpg');
+
     try {
         await axios.post('/api/me/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         toast.success('Avatar updated');
         avatarVersion.value = Date.now();
+        await loadProfile();
     } catch (e) {
         toast.error('Upload failed');
+        avatarPreview.value = null; // Revert on fail
+    } finally {
+        isUploadingAvatar.value = false;
+    }
+};
+
+const deleteAvatar = async () => {
+    showAvatarMenu.value = false;
+    if (!confirm('Are you sure you want to delete your avatar?')) return;
+    
+    try {
+        await axios.delete('/api/me/avatar');
+        avatarVersion.value = Date.now();
+        avatarPreview.value = null;
+        await loadProfile();
+        toast.success('Avatar deleted');
+    } catch (e) {
+        toast.error('Failed to delete avatar');
+    }
+};
+
+const toggleAvatarMenu = () => {
+    showAvatarMenu.value = !showAvatarMenu.value;
+};
+
+// Close avatar menu when clicking outside
+const closeAvatarMenuOnClickOutside = (event) => {
+    const avatarMenu = document.getElementById('avatar-menu');
+    const editButton = document.getElementById('edit-avatar-button');
+    if (avatarMenu && !avatarMenu.contains(event.target) && !editButton.contains(event.target)) {
+        showAvatarMenu.value = false;
     }
 };
 
 // Formatting
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '-';
 
-onMounted(loadProfile);
+onMounted(() => {
+    loadProfile();
+    document.addEventListener('click', closeAvatarMenuOnClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeAvatarMenuOnClickOutside);
+});
 </script>
 
 <template>
@@ -216,17 +277,45 @@ onMounted(loadProfile);
                     <!-- Left Column: Character Card -->
                     <div class="w-full lg:w-1/3 flex flex-col gap-6">
                         <!-- Main Card -->
-                        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                            <div class="pt-8 pb-6 px-6 flex flex-col items-center text-center">
+                        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-visible">
+                            <div class="pt-8 pb-6 px-6 flex flex-col items-center text-center relative">
                                 <!-- Avatar Frame -->
                                 <div class="relative group">
                                     <div class="w-32 h-32 rounded-full p-1 bg-white shadow-lg ring-4 ring-teal-500/20">
-                                        <img :src="avatarUrl" class="w-full h-full rounded-full object-cover" />
+                                        <img 
+                                            :src="avatarUrl" 
+                                            class="w-full h-full rounded-full object-cover" 
+                                        />
                                     </div>
-                                    <label class="absolute bottom-0 right-0 p-2 bg-teal-600 text-white rounded-full cursor-pointer shadow-md hover:bg-teal-700 transition-colors">
-                                        <Camera class="w-4 h-4" />
-                                        <input type="file" class="hidden" accept="image/*" @change="handleAvatarChange">
-                                    </label>
+                                    
+                                    <!-- Edit Button -->
+                                    <button 
+                                        id="edit-avatar-button"
+                                        @click="toggleAvatarMenu"
+                                        class="absolute bottom-0 right-0 p-2 bg-teal-600 text-white rounded-full cursor-pointer shadow-md hover:bg-teal-700 transition-colors z-20"
+                                    >
+                                        <Edit2 class="w-4 h-4" />
+                                    </button>
+
+                                    <!-- Dropdown Menu -->
+                                    <div 
+                                        v-if="showAvatarMenu" 
+                                        id="avatar-menu"
+                                        class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-30 overflow-hidden text-left"
+                                    >
+                                        <button @click="showPreview = true; showAvatarMenu = false" class="w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center transition-colors">
+                                            <Eye class="w-4 h-4 mr-3 text-teal-600" /> View Avatar
+                                        </button>
+                                        <button @click="triggerFileUpload" class="w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center transition-colors">
+                                            <Upload class="w-4 h-4 mr-3 text-teal-600" /> Upload New
+                                        </button>
+                                        <div v-if="apiUser.avatar_present" class="h-px bg-gray-100 my-1"></div>
+                                        <button v-if="apiUser.avatar_present" @click="deleteAvatar" class="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors">
+                                            <Trash2 class="w-4 h-4 mr-3" /> Delete
+                                        </button>
+                                    </div>
+                                    
+                                    <input id="avatar-upload-input" type="file" class="hidden" accept="image/*" @change="onFileSelect">
                                 </div>
 
                                 <h2 class="mt-4 text-2xl font-bold text-gray-900">
@@ -236,17 +325,6 @@ onMounted(loadProfile);
                                     <Shield class="w-3 h-3 mr-1.5" />
                                     {{ roleName.toUpperCase() }}
                                 </p>
-
-                                <!-- XP Bar Visual -->
-                                <div class="w-full mt-6 px-4">
-                                    <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
-                                        <span>LEVEL 1</span>
-                                        <span>100% COMPLETE</span>
-                                    </div>
-                                    <div class="w-full bg-gray-100 rounded-full h-2">
-                                        <div class="bg-gradient-to-r from-teal-400 to-teal-600 h-2 rounded-full" style="width: 100%"></div>
-                                    </div>
-                                </div>
 
                                 <!-- Quick Stats -->
                                 <div class="grid grid-cols-2 w-full gap-4 mt-6 pt-6 border-t border-gray-100">
@@ -517,6 +595,21 @@ onMounted(loadProfile);
                 </div>
             </div>
         </div>
+
+        <!-- Modals -->
+        <ImageCropperModal 
+            :show="showCropper" 
+            :imageFile="cropperFile"
+            @close="showCropper = false"
+            @confirm="uploadCroppedAvatar"
+        />
+
+        <ImagePreviewModal
+            :show="showPreview"
+            :imageUrl="avatarUrl"
+            @close="showPreview = false"
+        />
+
     </component>
 </template>
 
@@ -532,27 +625,5 @@ onMounted(loadProfile);
 }
 .form-input {
     @apply w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-teal-500 focus:border-teal-500 text-sm transition-all;
-}
-</style>
-
-<style scoped>
-.form-label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
-}
-
-.form-input {
-    @apply block w-full rounded-xl border-gray-200 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d] sm:text-sm py-2.5 transition-shadow duration-200;
-}
-
-.btn-primary {
-    @apply inline-flex items-center px-4 py-2 bg-[#2f837d] hover:bg-[#266a66] text-white text-sm font-medium rounded-xl shadow-sm transition-all focus:ring-4 focus:ring-[#2f837d]/20 disabled:opacity-75 disabled:cursor-not-allowed;
-}
-
-.toggle-switch {
-    @apply relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#2f837d] focus:ring-offset-2;
-}
-
-.toggle-knob {
-    @apply pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out;
 }
 </style>
