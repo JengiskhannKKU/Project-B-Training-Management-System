@@ -38,11 +38,29 @@ class MeController extends Controller
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[0-9]+$/'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'date_of_birth' => ['nullable', 'date'],
             'gender' => ['nullable', 'string', 'max:50'],
+            'prefix' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            // Student
+            'sub_category' => ['nullable', 'string', 'max:255'],
+            'faculty' => ['nullable', 'string', 'max:255'],
+            'major' => ['nullable', 'string', 'max:255'],
+            'student_id' => ['nullable', 'string', 'max:255'],
+            'degree_level' => ['nullable', 'string', 'max:255'],
+            'year_of_study' => ['nullable', 'string', 'max:255'],
+            // Personnel
+            'personnel_id' => ['nullable', 'string', 'max:255'],
             'organization' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
+            'job_position' => ['nullable', 'string', 'max:255'],
+            'employment_status' => ['nullable', 'string', 'max:255'],
+            'personnel_type' => ['nullable', 'string', 'max:255'],
+            // External
+            'category' => ['nullable', 'string', 'max:255'],
+            
             'bio' => ['nullable', 'string'],
         ]);
 

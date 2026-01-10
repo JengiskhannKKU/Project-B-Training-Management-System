@@ -38,11 +38,29 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'role' => $user->role?->name,
                 'profile' => $user->profile ? [
+                    'prefix' => $user->profile->prefix,
+                    'first_name' => $user->profile->first_name,
+                    'last_name' => $user->profile->last_name,
                     'phone' => $user->profile->phone,
                     'date_of_birth' => $user->profile->date_of_birth?->format('Y-m-d'),
                     'gender' => $user->profile->gender,
+                    // Student
+                    'sub_category' => $user->profile->sub_category,
+                    'faculty' => $user->profile->faculty,
+                    'major' => $user->profile->major,
+                    'student_id' => $user->profile->student_id,
+                    'degree_level' => $user->profile->degree_level,
+                    'year_of_study' => $user->profile->year_of_study,
+                    // Personnel
+                    'personnel_id' => $user->profile->personnel_id,
                     'organization' => $user->profile->organization,
                     'department' => $user->profile->department,
+                    'job_position' => $user->profile->job_position,
+                    'employment_status' => $user->profile->employment_status,
+                    'personnel_type' => $user->profile->personnel_type,
+                    // External
+                    'category' => $user->profile->category,
+                    
                     'bio' => $user->profile->bio,
                     'has_avatar' => (bool) $user->profile->avatar_image,
                 ] : null,
