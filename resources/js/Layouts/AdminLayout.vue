@@ -39,21 +39,6 @@ const navigationItems = [
         icon: LayoutDashboard,
     },
     {
-        name: "Users",
-        path: "/admin/users",
-        icon: Users,
-    },
-    {
-        name: "Categories",
-        path: "/admin/categories",
-        icon: Tags,
-    },
-    {
-        name: "Certificate Templates",
-        path: "/admin/certificate-templates",
-        icon: Award,
-    },
-    {
         name: "All Courses",
         path: "/admin/my-courses",
         icon: BookOpen,
@@ -67,6 +52,21 @@ const navigationItems = [
         name: "Attendance",
         path: "/admin/attendance",
         icon: BookCheck,
+    },
+    {
+        name: "Certificate Templates",
+        path: "/admin/certificate-templates",
+        icon: Award,
+    },
+    {
+        name: "Categories",
+        path: "/admin/categories",
+        icon: Tags,
+    },
+    {
+        name: "Users",
+        path: "/admin/users",
+        icon: Users,
     },
     {
         name: "Feedback",

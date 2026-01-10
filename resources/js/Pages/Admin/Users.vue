@@ -54,7 +54,6 @@ const editForm = ref({
     email: "",
     phone: "",
     role: "",
-    status: "",
     department: "",
 });
 
@@ -96,7 +95,7 @@ const capitalizeRole = (role) => {
 
 // Available options for dropdowns
 const roleOptions = ["Admin", "Trainer", "Trainee"];
-const statusOptions = ["Active", "Inactive"];
+const statusOptions = ["Active", "Inactive"]; // Used for status dropdown in main table
 const departmentOptions = computed(() => {
     return [...new Set(users.value.map((user) => user.department))].filter(d => d !== '-');
 });
@@ -384,7 +383,6 @@ const openEditModal = (user) => {
         email: user.email,
         phone: user.contact,
         role: user.role,
-        status: user.status,
         department: user.department,
     };
     showEditModal.value = true;
@@ -405,7 +403,6 @@ const closeEditModal = () => {
         email: "",
         phone: "",
         role: "",
-        status: "",
         department: "",
     };
     // Update URL back to users page
@@ -428,16 +425,10 @@ const saveUser = async () => {
             'Trainee': 'trainee'
         };
 
-        const statusMapping = {
-            'Active': 'active',
-            'Inactive': 'inactive'
-        };
-
         const payload = {
             name: editForm.value.name,
             email: editForm.value.email,
             role: roleMapping[editForm.value.role] || editForm.value.role.toLowerCase(),
-            status: statusMapping[editForm.value.status] || editForm.value.status.toLowerCase(),
         };
 
         // Call API to update user
@@ -450,7 +441,6 @@ const saveUser = async () => {
             user.email = editForm.value.email;
             user.contact = editForm.value.phone;
             user.role = editForm.value.role;
-            user.status = editForm.value.status;
             user.department = editForm.value.department;
         }
 
@@ -476,7 +466,6 @@ watch(
                     email: user.email,
                     phone: user.contact,
                     role: user.role,
-                    status: user.status,
                     department: user.department,
                 };
                 showEditModal.value = true;
@@ -1002,7 +991,6 @@ onMounted(() => {
                 :editing-user="editingUser"
                 v-model:edit-form="editForm"
                 :role-options="roleOptions"
-                :status-options="statusOptions"
                 :department-options="departmentOptions"
                 @close="closeEditModal"
                 @save="saveUser"

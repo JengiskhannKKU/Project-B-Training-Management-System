@@ -18,10 +18,6 @@ const props = defineProps({
         type: Array,
         required: true,
     },
-    statusOptions: {
-        type: Array,
-        required: true,
-    },
     departmentOptions: {
         type: Array,
         required: true,
@@ -136,61 +132,31 @@ const updateField = (field, value) => {
                             />
                         </div>
 
-                        <!-- Role and Status on same line -->
-                        <div class="flex gap-4">
-                            <!-- Role Dropdown -->
-                            <div class="flex-1">
-                                <label
-                                    for="role"
-                                    class="block text-sm font-medium text-gray-700 mb-1"
+                        <!-- Role Dropdown -->
+                        <div>
+                            <label
+                                for="role"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Role
+                            </label>
+                            <select
+                                id="role"
+                                :value="editForm.role"
+                                @change="updateField('role', $event.target.value)"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
+                            >
+                                <option value="" disabled>
+                                    Select role
+                                </option>
+                                <option
+                                    v-for="role in roleOptions"
+                                    :key="role"
+                                    :value="role"
                                 >
-                                    Role
-                                </label>
-                                <select
-                                    id="role"
-                                    :value="editForm.role"
-                                    @change="updateField('role', $event.target.value)"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                                >
-                                    <option value="" disabled>
-                                        Select role
-                                    </option>
-                                    <option
-                                        v-for="role in roleOptions"
-                                        :key="role"
-                                        :value="role"
-                                    >
-                                        {{ role }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Status Dropdown -->
-                            <div class="flex-1">
-                                <label
-                                    for="status"
-                                    class="block text-sm font-medium text-gray-700 mb-1"
-                                >
-                                    Status
-                                </label>
-                                <select
-                                    id="status"
-                                    :value="editForm.status"
-                                    @change="updateField('status', $event.target.value)"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f837d] focus:border-transparent"
-                                >
-                                    <option value="" disabled>
-                                        Select status
-                                    </option>
-                                    <option
-                                        v-for="status in statusOptions"
-                                        :key="status"
-                                        :value="status"
-                                    >
-                                        {{ status }}
-                                    </option>
-                                </select>
-                            </div>
+                                    {{ role }}
+                                </option>
+                            </select>
                         </div>
 
                         <!-- Department Field -->
