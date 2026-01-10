@@ -16,14 +16,14 @@ class CertificateSeeder extends Seeder
         // Find completed enrollments
         $completedEnrollments = Enrollment::whereNotNull('completed_at')
             ->where('status', 'completed')
-            ->with(['session', 'session.program'])
+            ->with(['session', 'session.course'])
             ->get();
 
         $globalTemplate = CertificateTemplate::where('scope', 'global')->first();
 
         foreach ($completedEnrollments as $enrollment) {
             // Find specific template or global
-            $template = CertificateTemplate::where('program_id', $enrollment->session->program_id)->first() ?? $globalTemplate;
+            $template = CertificateTemplate::where('course_id', $enrollment->session->course_id)->first() ?? $globalTemplate;
 
             // Randomly decide if certificate is issued provided it's completed (most should be)
             if (rand(0, 100) > 10) { // 90% chance
@@ -31,7 +31,7 @@ class CertificateSeeder extends Seeder
                     ['enrollment_id' => $enrollment->id],
                     [
                         'user_id' => $enrollment->user_id,
-                        'program_id' => $enrollment->session->program_id,
+                        'course_id' => $enrollment->session->course_id,
                         'session_id' => $enrollment->session_id,
                         'template_id' => $template?->id,
                         'issued_by' => 1, // Assuming admin ID 1 exists, or could fetch.

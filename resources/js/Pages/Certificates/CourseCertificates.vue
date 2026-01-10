@@ -28,7 +28,7 @@ const layoutComponent = computed(() =>
     isAdmin.value ? AdminLayout : TrainerLayout
 );
 const backLink = computed(() =>
-    isAdmin.value ? "/admin/my-courses" : "/trainer/programs"
+    isAdmin.value ? "/admin/my-courses" : "/trainer/courses"
 );
 
 const program = ref(props.program);

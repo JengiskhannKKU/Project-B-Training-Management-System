@@ -313,7 +313,7 @@ const fetchPrograms = async () => {
     isLoadingPrograms.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get('/api/programs');
+        const { data } = await axios.get('/api/courses');
         const list = data?.data || data || [];
 
         // Filter to show only programs created by this trainer
@@ -634,7 +634,7 @@ const mockPrograms = [
                             v-for="course in paginatedCourses"
                             :key="course.id"
                             :id="course.id"
-                            :href="`/trainer/programs/${course.id}`"
+                            :href="`/trainer/courses/${course.id}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"

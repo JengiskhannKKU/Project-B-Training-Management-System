@@ -16,7 +16,7 @@ class Review extends Model
         'user_id',
         'enrollment_id',
         'session_id',
-        'program_id',
+        'course_id',
         'rating',
         'comment',
     ];
@@ -40,8 +40,8 @@ class Review extends Model
         return $this->belongsTo(TrainingSession::class, 'session_id');
     }
 
-    public function program(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Course::class);
     }
 }

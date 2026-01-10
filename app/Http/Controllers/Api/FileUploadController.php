@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 class FileUploadController extends Controller
 {
     /**
-     * Upload an image file for programs.
+     * Upload an image file for courses.
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -18,7 +18,7 @@ class FileUploadController extends Controller
     public function image(Request $request)
     {
         if (!$request->user()->isRole('admin')) {
-            return $this->forbiddenResponse('Only admin can upload program images.');
+            return $this->forbiddenResponse('Only admin can upload course images.');
         }
 
         $request->validate([
@@ -30,8 +30,8 @@ class FileUploadController extends Controller
         // Generate unique filename
         $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
         
-        // Store file in public/programs directory
-        $path = $file->storeAs('programs', $filename, 'public');
+        // Store file in public/courses directory
+        $path = $file->storeAs('courses', $filename, 'public');
         
         if (!$path) {
             return $this->errorResponse('Failed to upload image', 500);
@@ -61,8 +61,8 @@ class FileUploadController extends Controller
 
         $path = $request->input('path');
         
-        // Security check: only allow deletion from programs directory
-        if (!str_starts_with($path, 'programs/')) {
+        // Security check: only allow deletion from courses directory
+        if (!str_starts_with($path, 'courses/')) {
             return $this->errorResponse('Invalid file path', 400);
         }
 

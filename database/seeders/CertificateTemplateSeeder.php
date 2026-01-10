@@ -3,95 +3,102 @@
 namespace Database\Seeders;
 
 use App\Models\CertificateTemplate;
-use App\Models\Program;
+use App\Models\Course;
+use App\Models\TrainingSession;
 use Illuminate\Database\Seeder;
 
 class CertificateTemplateSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        // 1. Global Standard Template
-        CertificateTemplate::updateOrCreate(
-            ['name' => 'Standard Global Certificate'],
-            [
-                'scope' => 'global',
-                'program_id' => null,
+        // 1. Global Template (Default)
+        CertificateTemplate::create([
+            'name' => 'Default Global Template',
+            'scope' => 'global',
+            'course_id' => null,
+            'session_id' => null,
+            'layout_config' => [
+                'canvas' => ['width' => 2000, 'height' => 1414],
+                'name' => [
+                    'x' => 1000,
+                    'y' => 600,
+                    'fontSize' => 60,
+                    'font' => 'Prompt-Bold.ttf',
+                    'color' => '#1f2937',
+                    'align' => 'center',
+                ],
+                'course' => [
+                    'x' => 1000,
+                    'y' => 800,
+                    'fontSize' => 40,
+                    'font' => 'Prompt-Regular.ttf',
+                    'color' => '#4b5563',
+                    'align' => 'center',
+                ],
+                'date' => [
+                    'x' => 1000,
+                    'y' => 1000,
+                    'fontSize' => 30,
+                    'font' => 'Prompt-Regular.ttf',
+                    'color' => '#6b7280',
+                    'align' => 'center',
+                    'format' => 'F j, Y',
+                ],
+                'certificate_code' => [
+                    'x' => 1000,
+                    'y' => 1200,
+                    'fontSize' => 20,
+                    'font' => 'Courier',
+                    'color' => '#9ca3af',
+                    'align' => 'center',
+                ],
+                'qr' => [
+                    'x' => 1700,
+                    'y' => 1100,
+                    'size' => 200,
+                ],
+            ],
+            'font_family' => 'Prompt-Regular.ttf',
+            'font_size' => 40,
+            'text_color' => '#000000',
+            'is_active' => true,
+        ]);
+
+        // 2. Course Specific Template
+        $webCourse = Course::where('title', 'Web Development Fundamentals')->first();
+        if ($webCourse) {
+            CertificateTemplate::create([
+                'name' => 'Web Dev Special Template',
+                'scope' => 'course',
+                'course_id' => $webCourse->id,
                 'session_id' => null,
                 'layout_config' => [
-                    'items' => [
-                        [
-                            'type' => 'text',
-                            'key' => 'title',
-                            'label' => 'Title',
-                            'x' => 50,
-                            'y' => 20,
-                            'fontSize' => 32,
-                            'text' => 'Certificate of Completion'
-                        ],
-                        [
-                            'type' => 'placeholder',
-                            'key' => 'trainee_name',
-                            'label' => 'Trainee Name',
-                            'x' => 50,
-                            'y' => 45,
-                            'fontSize' => 24
-                        ],
-                        [
-                            'type' => 'text',
-                            'key' => 'body',
-                            'label' => 'Body Text',
-                            'x' => 50,
-                            'y' => 55,
-                            'fontSize' => 16,
-                            'text' => 'This is to certify that the above named individual has successfully completed the course.'
-                        ],
-                        [
-                            'type' => 'placeholder',
-                            'key' => 'course_name',
-                            'label' => 'Course Name',
-                            'x' => 50,
-                            'y' => 65,
-                            'fontSize' => 20
-                        ],
-                        [
-                            'type' => 'placeholder',
-                            'key' => 'issue_date',
-                            'label' => 'Issue Date',
-                            'x' => 20,
-                            'y' => 80,
-                            'fontSize' => 14
-                        ]
-                    ]
+                    'canvas' => ['width' => 2000, 'height' => 1414],
+                    'name' => ['x' => 1000, 'y' => 500, 'fontSize' => 70, 'color' => '#2563eb'],
+                    'course' => ['x' => 1000, 'y' => 700, 'fontSize' => 50],
                 ],
                 'is_active' => true,
-            ]
-        );
+            ]);
+        }
 
-        // 2. Program Specific Template
-        $webProgram = Program::where('code', 'WEB-101')->first();
-        if ($webProgram) {
-            CertificateTemplate::updateOrCreate(
-                ['name' => 'Web Development Certificate'],
-                [
-                    'scope' => 'program',
-                    'program_id' => $webProgram->id,
-                    'session_id' => null,
-                    'layout_config' => [
-                        'items' => [
-                            [
-                                'type' => 'text',
-                                'text' => 'Web Development Specialist',
-                                'x' => 50,
-                                'y' => 30,
-                                'fontSize' => 40,
-                                'color' => '#4F46E5'
-                            ]
-                            // ... simple config
-                        ]
-                    ],
-                    'is_active' => true,
-                ]
-            );
+        // 3. Session Specific Template
+        $session = TrainingSession::first();
+        if ($session) {
+            CertificateTemplate::create([
+                'name' => 'Session Exclusive Template',
+                'scope' => 'session',
+                'course_id' => null,
+                'session_id' => $session->id,
+                'layout_config' => [
+                    'canvas' => ['width' => 2000, 'height' => 1414],
+                    'name' => ['x' => 1000, 'y' => 500, 'fontSize' => 70, 'color' => '#dc2626'],
+                    'course' => ['x' => 1000, 'y' => 700, 'fontSize' => 50],
+                ],
+                'is_active' => true,
+            ]);
         }
     }
 }

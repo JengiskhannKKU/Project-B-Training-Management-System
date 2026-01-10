@@ -39,20 +39,20 @@ class TrainerDashboardController extends Controller
             ? (($totalTrainees - $lastMonthTrainees) / $lastMonthTrainees) * 100
             : 0;
 
-        // 2. Total Courses - count of distinct programs this trainer teaches
+        // 2. Total Courses - count of distinct courses this trainer teaches
         $totalCourses = TrainingSession::where('trainer_id', $trainerId)
-            ->distinct('program_id')
-            ->count('program_id');
+            ->distinct('course_id')
+            ->count('course_id');
 
         $activeCourses = TrainingSession::where('trainer_id', $trainerId)
             ->where('status', 'active')
-            ->distinct('program_id')
-            ->count('program_id');
+            ->distinct('course_id')
+            ->count('course_id');
 
         $pendingCourses = TrainingSession::where('trainer_id', $trainerId)
             ->where('approval_status', 'pending')
-            ->distinct('program_id')
-            ->count('program_id');
+            ->distinct('course_id')
+            ->count('course_id');
 
         // 3. Pending Certifications
         $pendingCertifications = CertificateRequest::where('trainer_id', $trainerId)
@@ -133,29 +133,29 @@ class TrainerDashboardController extends Controller
 
     private function getTopCourses($trainerId)
     {
-        $topPrograms = DB::table('training_sessions')
-            ->join('programs', 'training_sessions.program_id', '=', 'programs.id')
+        $topCourses = DB::table('training_sessions')
+            ->join('courses', 'training_sessions.course_id', '=', 'courses.id')
             ->leftJoin('enrollments', 'training_sessions.id', '=', 'enrollments.session_id')
             ->where('training_sessions.trainer_id', $trainerId)
             ->select(
-                'programs.id',
-                'programs.name',
-                'programs.category',
+                'courses.id',
+                'courses.title',
+                'courses.category',
                 DB::raw('COUNT(DISTINCT enrollments.user_id) as enrollment_count')
             )
-            ->groupBy('programs.id', 'programs.name', 'programs.category')
+            ->groupBy('courses.id', 'courses.title', 'courses.category')
             ->orderBy('enrollment_count', 'desc')
             ->limit(3)
             ->get();
 
         $badgeColors = ['bg-amber-500', 'bg-gray-400', 'bg-orange-600'];
 
-        return $topPrograms->map(function ($program, $index) use ($badgeColors) {
+        return $topCourses->map(function ($course, $index) use ($badgeColors) {
             return [
                 'rank' => $index + 1,
-                'name' => $program->name,
-                'category' => $program->category ?? 'Uncategorized',
-                'enrollments' => $program->enrollment_count,
+                'name' => $course->title,
+                'category' => $course->category ?? 'Uncategorized',
+                'enrollments' => $course->enrollment_count,
                 'badgeColor' => $badgeColors[$index] ?? 'bg-gray-400',
             ];
         })->values()->toArray();
@@ -181,8 +181,8 @@ class TrainerDashboardController extends Controller
         $atRisk = 0;
 
         foreach ($enrollments as $enrollment) {
-            // Get total sessions for this enrollment's program
-            $totalSessions = TrainingSession::where('program_id', $enrollment->session->program_id)
+            // Get total sessions for this enrollment's course
+            $totalSessions = TrainingSession::where('course_id', $enrollment->session->course_id)
                 ->where('start_date', '<=', Carbon::now())
                 ->count();
 

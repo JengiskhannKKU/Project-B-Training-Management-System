@@ -12,7 +12,7 @@ class MockupDataSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            ProgramSeeder::class,
+            CourseSeeder::class,
             TrainingSessionSeeder::class,
             EnrollmentSeeder::class,
             AttendanceSeeder::class,

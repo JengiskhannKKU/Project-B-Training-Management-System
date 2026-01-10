@@ -15,7 +15,7 @@ class TrainingSession extends Model
     protected $table = 'training_sessions';
 
     protected $fillable = [
-        'program_id',
+        'course_id',
         'title',
         'start_date',
         'end_date',
@@ -39,9 +39,9 @@ class TrainingSession extends Model
         'approved_at' => 'datetime',
     ];
 
-    public function program(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Course::class);
     }
 
     public function trainer(): BelongsTo

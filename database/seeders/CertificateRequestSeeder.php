@@ -1,71 +1,62 @@
 <?php
 
-
 namespace Database\Seeders;
 
 use App\Models\CertificateRequest;
-use App\Models\User;
-use App\Models\Program;
+use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\TrainingSession;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Carbon\Carbon;
 
 class CertificateRequestSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        $trainer = User::whereHas('role', fn($q) => $q->where('name', 'trainer'))->first();
-        $admin = User::firstWhere('email', 'admin@example.com');
+        $trainer = User::where('email', 'trainer@example.com')->first();
+        $admin = User::where('email', 'admin@example.com')->first();
+        $course = Course::first();
+        $session = TrainingSession::where('status', 'completed')->first();
 
-        $program = Program::first();
-        $session = TrainingSession::whereNotNull('completed_at')->first(); // Completed session
-
-        if (!$trainer || !$program)
+        if (!$trainer || !$course) {
             return;
-
-        $requests = [
-            // Approved session request
-            [
-                'trainer_id' => $trainer->id,
-                'program_id' => $program->id,
-                'session_id' => $session?->id,
-                'type' => 'session',
-                'status' => 'approved',
-                'approved_by' => $admin->id ?? 1,
-                'approved_at' => Carbon::now()->subDays(8),
-                'note' => 'Request for session certificates.',
-            ],
-            // Pending program request
-            [
-                'trainer_id' => $trainer->id,
-                'program_id' => $program->id,
-                'session_id' => null,
-                'type' => 'program',
-                'status' => 'pending',
-                'approved_by' => null,
-                'approved_at' => null,
-                'note' => 'Requesting program-level certificates.',
-            ],
-            // Rejected request
-            [
-                'trainer_id' => $trainer->id,
-                'program_id' => $program->id,
-                'session_id' => null,
-                'type' => 'program',
-                'status' => 'rejected',
-                'approved_by' => $admin->id ?? 1,
-                'approved_at' => Carbon::now()->subDays(2),
-                'note' => 'Not eligible yet.',
-            ],
-        ];
-
-        foreach ($requests as $request) {
-            // Check if session_id is required for type='session'
-            if ($request['type'] === 'session' && !$request['session_id'])
-                continue;
-
-            CertificateRequest::create($request);
         }
+
+        // 1. Pending Session Request
+        if ($session) {
+            CertificateRequest::create([
+                'trainer_id' => $trainer->id,
+                'session_id' => $session->id,
+                'course_id' => $session->course_id,
+                'type' => 'session',
+                'status' => 'pending',
+                'note' => 'Please approve certificates for the completed Web Dev session.',
+            ]);
+        }
+
+        // 2. Pending Course Request
+        CertificateRequest::create([
+            'trainer_id' => $trainer->id,
+            'course_id' => $course->id,
+            'session_id' => null,
+            'type' => 'course',
+            'status' => 'pending',
+            'note' => 'Requesting course-level certificates.',
+        ]);
+
+        // 3. Approved Request
+        CertificateRequest::create([
+            'trainer_id' => $trainer->id,
+            'course_id' => $course->id,
+            'session_id' => null,
+            'type' => 'course',
+            'status' => 'approved',
+            'approved_by' => $admin->id,
+            'approved_at' => now(),
+            'note' => 'Approved as requested.',
+        ]);
     }
 }
-

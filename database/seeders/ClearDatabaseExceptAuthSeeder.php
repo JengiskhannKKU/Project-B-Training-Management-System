@@ -24,7 +24,7 @@ class ClearDatabaseExceptAuthSeeder extends Seeder
             'enrollments',
             'session_reviews',
             'training_sessions',
-            'programs',
+            'courses',
             'admin_requests',
             'auth_sessions',
             'personal_access_tokens',

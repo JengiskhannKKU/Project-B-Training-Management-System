@@ -19,7 +19,7 @@ class CertificateFileService
 
     public function forceGenerateAndStoreFile(Certificate $certificate): Certificate
     {
-        $certificate->loadMissing(['session.program', 'program', 'enrollment.session.program']);
+        $certificate->loadMissing(['session.course', 'course', 'enrollment.session.course']);
 
         $template = $this->resolveTemplate($certificate);
 
@@ -54,7 +54,7 @@ class CertificateFileService
      *
      * KAN-390: Template selection order:
      * 1. Session-level template (if certificate is linked to a session)
-     * 2. Program-level template
+     * 2. Course-level template
      * 3. Global default template
      * 4. Fallback to hardcoded basic template (KAN-391)
      *
@@ -80,12 +80,12 @@ class CertificateFileService
             }
         }
 
-        // KAN-390: Priority 2 - Program-level template
-        $program = $certificate->program ?? $session?->program;
-        if ($program) {
-            $programTemplate = $program->activeCertificateTemplate()->first();
-            if ($programTemplate) {
-                return $programTemplate;
+        // KAN-390: Priority 2 - Course-level template
+        $course = $certificate->course ?? $session?->course;
+        if ($course) {
+            $courseTemplate = $course->activeCertificateTemplate()->first();
+            if ($courseTemplate) {
+                return $courseTemplate;
             }
         }
 
@@ -121,7 +121,7 @@ class CertificateFileService
                 'x' => 192,
                 'y' => 384,
             ],
-            'program' => [
+            'course' => [
                 'x' => 192,
                 'y' => 504,
             ],

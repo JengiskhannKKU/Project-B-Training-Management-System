@@ -22,7 +22,7 @@ class CertificateRequestService
     {
         $checks = [
             'enrollment_completed' => $request->enrollment && $request->enrollment->status === 'completed',
-            'session_completed' => $request->type === 'program' ||
+            'session_completed' => $request->type === 'course' ||
                                    ($request->session && $request->session->status === 'completed'),
             'no_existing_certificate' => !$request->enrollment || !Certificate::where('enrollment_id', $request->enrollment_id)
                                                     ->where('status', 'valid')
@@ -108,7 +108,7 @@ class CertificateRequestService
         ?User $scopedToTrainer = null,
         ?string $status = null,
         ?string $type = null,
-        ?int $programId = null,
+        ?int $courseId = null,
         ?int $sessionId = null,
         ?int $trainerId = null,
         ?string $search = null,
@@ -117,10 +117,10 @@ class CertificateRequestService
         $query = CertificateRequest::query()
             ->with([
                 'enrollment.user',
-                'session.program',
+                'session.course',
                 'session.trainer',
-                'program',
-                'program.creator',
+                'course',
+                'course.owner',
                 'approver',
                 'requester',
             ]);
@@ -129,7 +129,7 @@ class CertificateRequestService
         if ($scopedToTrainer && !$scopedToTrainer->isRole('admin')) {
             $query->where(function ($q) use ($scopedToTrainer) {
                 $q->whereHas('session', fn($q) => $q->where('trainer_id', $scopedToTrainer->id))
-                  ->orWhereHas('program', fn($q) => $q->where('created_by', $scopedToTrainer->id));
+                  ->orWhereHas('course', fn($q) => $q->where('owner_id', $scopedToTrainer->id));
             });
         }
 
@@ -142,8 +142,8 @@ class CertificateRequestService
             $query->where('type', $type);
         }
 
-        if ($programId) {
-            $query->where('program_id', $programId);
+        if ($courseId) {
+            $query->where('course_id', $courseId);
         }
 
         if ($sessionId) {
@@ -153,7 +153,7 @@ class CertificateRequestService
         if ($trainerId) {
             $query->where(function ($q) use ($trainerId) {
                 $q->whereHas('session', fn($q) => $q->where('trainer_id', $trainerId))
-                  ->orWhereHas('program', fn($q) => $q->where('created_by', $trainerId));
+                  ->orWhereHas('course', fn($q) => $q->where('owner_id', $trainerId));
             });
         }
 
@@ -182,12 +182,12 @@ class CertificateRequestService
             }
         }
 
-        // Check program template
-        if ($request->program) {
-            $programTemplate = CertificateTemplate::where('program_id', $request->program_id)
+        // Check course template
+        if ($request->course) {
+            $courseTemplate = CertificateTemplate::where('course_id', $request->course_id)
                 ->where('is_active', true)
                 ->exists();
-            if ($programTemplate) {
+            if ($courseTemplate) {
                 return true;
             }
         }

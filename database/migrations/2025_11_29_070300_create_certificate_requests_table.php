@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('trainer_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('program_id')->nullable()->constrained('programs')->nullOnDelete();
             $table->foreignId('session_id')->nullable()->constrained('training_sessions')->nullOnDelete();
-            $table->enum('type', ['program', 'session']);
+            $table->enum('type', ['course', 'session']);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();

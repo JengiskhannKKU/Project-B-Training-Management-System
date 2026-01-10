@@ -84,8 +84,8 @@ const backLink = computed(() => {
         if (certificate.value.session_id) {
             return `/sessions/${certificate.value.session_id}/certificates`;
         }
-        if (certificate.value.program_id) {
-            return `/programs/${certificate.value.program_id}/certificates`;
+        if (certificate.value.course_id) {
+            return `/courses/${certificate.value.course_id}/certificates`;
         }
         return "/trainer/attendance";
     }

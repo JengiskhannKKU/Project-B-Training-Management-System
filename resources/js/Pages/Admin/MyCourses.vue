@@ -280,38 +280,38 @@ const handleModalClose = () => {
 const handleEditCourse = (course: any) => {
     editingCourse.value = {
         id: course.id,
-        title: course.name,
-        short_description: course.description || '',
-        full_description: course.description || '',
-        category: course.department || course.category || '',
-        level: course.level || 'beginner',
-        code: course.code || '',
-        duration_hours: course.duration_hours || 40,
-        status: course.status || 'active',
-        image_url: course.image_url || '',
+        title: course.title,
+        description: course.description,
+        category: course.category,
+        level: course.level,
+        learning_outcomes: course.learning_outcomes,
+        target_audience: course.target_audience,
+        prerequisites: course.prerequisites,
+        additional_info: course.additional_info,
+        min_participants: course.min_participants,
+        max_participants: course.max_participants,
+        thumbnail_path: course.thumbnail_path,
+        status: course.status,
     };
     showCreateModal.value = true;
 };
 
 const handleDeleteCourse = async (courseId: number) => {
-    if (!confirm('Are you sure you want to delete this program? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
         return;
     }
 
     try {
         await axios.get('/sanctum/csrf-cookie');
-        await axios.delete(`/api/programs/${courseId}`);
-        toast.success('Program deleted successfully!');
+        await axios.delete(`/api/admin/courses/${courseId}`);
+        toast.success('Course deleted successfully!');
         await fetchPrograms();
     } catch (error: any) {
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            'Failed to delete program.';
+            'Failed to delete course.';
         toast.error(message);
-        if ([401, 403, 419].includes(error?.response?.status)) {
-            showApiLogin.value = true;
-        }
     }
 };
 
@@ -322,13 +322,11 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
         await axios.get('/sanctum/csrf-cookie');
 
         if (editingCourse.value?.id) {
-            // Update existing program (admin direct update)
-            await axios.put(`/api/admin/programs/${editingCourse.value.id}`, payload);
-            toast.success('Program updated successfully!');
+            await axios.put(`/api/admin/courses/${editingCourse.value.id}`, payload);
+            toast.success('Course updated successfully!');
         } else {
-            // Create new program (admin direct creation)
-            await axios.post('/api/admin/programs', payload);
-            toast.success('Program created successfully!');
+            await axios.post('/api/admin/courses', payload);
+            toast.success('Course created successfully!');
         }
 
         showCreateModal.value = false;
@@ -338,11 +336,8 @@ const handleCreateProgram = async (payload: Record<string, unknown> | undefined)
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            `Failed to ${editingCourse.value ? 'update' : 'create'} program.`;
+            `Failed to ${editingCourse.value ? 'update' : 'create'} course.`;
         toast.error(message);
-        if ([401, 403, 419].includes(error?.response?.status)) {
-            showApiLogin.value = true;
-        }
     } finally {
         isSubmittingProgram.value = false;
     }
@@ -410,26 +405,37 @@ const fetchPrograms = async () => {
     try {
         await ensureCsrf();
 
-        // Fetch actual programs (not admin requests)
-        const { data } = await axios.get('/api/programs');
+        // Fetch actual courses
+        const { data } = await axios.get('/api/courses');
         const list = data?.data || data || [];
 
         // Transform and map API data to match CourseCard props
-        const mappedList = list.map((program: any) => ({
-            id: program.id,
-            name: program.name,
-            image_url: program.image_url || '',
-            rating: program.rating || 0,
-            level: program.level || 'beginner',
-            trainees_count: program.trainees_count || program.enrollments_count || 0,
-            price: program.price || 'Free',
-            date: program.start_date || program.created_at || '',
-            time: program.start_time || '',
-            location: program.location || 'Online',
-            department: program.category || 'General',
-            status: program.status || 'active',
-            created_by_id: program.created_by,
-            created_at: program.created_at,
+        const mappedList = list.map((course: any) => ({
+            id: course.id,
+            name: course.title, // Map title to name for CourseCard
+            image_url: course.thumbnail_path || '',
+            rating: 0,
+            level: course.level || 'beginner',
+            trainees_count: 0,
+            price: 'Free',
+            date: course.created_at || '',
+            time: '',
+            location: 'Online',
+            department: course.category || 'General',
+            status: course.status || 'draft',
+            created_by_id: course.owner_id,
+            created_at: course.created_at,
+            // Raw fields for editing
+            title: course.title,
+            description: course.description,
+            category: course.category,
+            learning_outcomes: course.learning_outcomes,
+            target_audience: course.target_audience,
+            prerequisites: course.prerequisites,
+            additional_info: course.additional_info,
+            min_participants: course.min_participants,
+            max_participants: course.max_participants,
+            thumbnail_path: course.thumbnail_path,
         }));
 
         // Sort programs by ID or created_at in descending order (newest first)
@@ -446,7 +452,7 @@ const fetchPrograms = async () => {
         const message =
             error?.response?.data?.message ||
             error?.message ||
-            'Unable to load programs.';
+            'Unable to load courses.';
         toast.error(message);
         if ([401, 403, 419].includes(error?.response?.status)) {
             showApiLogin.value = true;

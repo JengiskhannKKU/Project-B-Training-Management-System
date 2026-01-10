@@ -13,7 +13,7 @@ class Certificate extends Model
     protected $fillable = [
         'enrollment_id',
         'user_id',
-        'program_id',
+        'course_id',
         'session_id',
         'template_id',
         'issued_by',
@@ -56,9 +56,9 @@ class Certificate extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function program(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Course::class);
     }
 
     public function session(): BelongsTo

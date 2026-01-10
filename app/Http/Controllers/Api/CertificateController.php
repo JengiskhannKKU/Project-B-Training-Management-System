@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\CertificateRequest;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\TrainingSession;
 use App\Services\CertificateFileService;
 use App\Services\CertificateGenerationService;
@@ -20,9 +20,9 @@ class CertificateController extends Controller
         $user = $request->user();
 
         $certificates = Certificate::with([
-            'program:id,name',
-            'session:id,title,program_id,start_date,end_date',
-            'session.program:id,name',
+            'course:id,title',
+            'session:id,title,course_id,start_date,end_date',
+            'session.course:id,title',
         ])
             ->where('user_id', $user->id)
             ->latest()
@@ -42,7 +42,7 @@ class CertificateController extends Controller
 
         $certificates = Certificate::with([
             'user:id,name,email',
-            'program:id,name',
+            'course:id,title',
             'session:id,title',
             'enrollment:id,status',
         ])
@@ -54,40 +54,40 @@ class CertificateController extends Controller
         return $this->successResponse($certificates, 'Session certificates retrieved successfully.');
     }
 
-    public function programCertificates(Request $request, Program $program)
+    public function courseCertificates(Request $request, Course $course)
     {
         $user = $request->user();
 
-        if (!$user->isRole('admin') && $program->created_by !== $user->id) {
-            return $this->forbiddenResponse('Only the program owner or admin can view certificates.');
+        if (!$user->isRole('admin') && $course->owner_id !== $user->id) {
+            return $this->forbiddenResponse('Only the course owner or admin can view certificates.');
         }
 
         $certificates = Certificate::with([
             'user:id,name,email',
-            'program:id,name',
-            'session:id,title,program_id,start_date,end_date',
+            'course:id,title',
+            'session:id,title,course_id,start_date,end_date',
             'enrollment:id,status',
         ])
-            ->where('program_id', $program->id)
+            ->where('course_id', $course->id)
             ->latest()
             ->get()
             ->makeHidden(['file_data', 'background_image']);
 
-        return $this->successResponse($certificates, 'Program certificates retrieved successfully.');
+        return $this->successResponse($certificates, 'Course certificates retrieved successfully.');
     }
 
     public function adminIndex(Request $request)
     {
         $query = Certificate::with([
             'user:id,name,email',
-            'program:id,name',
-            'session:id,title,program_id',
+            'course:id,title',
+            'session:id,title,course_id',
             'issuer:id,name',
             'enrollment:id,status',
         ])->latest();
 
-        if ($request->filled('program_id')) {
-            $query->where('program_id', $request->integer('program_id'));
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->integer('course_id'));
         }
 
         if ($request->filled('session_id')) {
@@ -117,8 +117,8 @@ class CertificateController extends Controller
 
         $certificate->load([
             'user:id,name,email',
-            'program:id,name,created_by',
-            'session:id,title,program_id,trainer_id',
+            'course:id,title,owner_id',
+            'session:id,title,course_id,trainer_id',
             'enrollment.session:id,trainer_id',
         ]);
 
@@ -135,7 +135,7 @@ class CertificateController extends Controller
     {
         $certificate = Certificate::with([
             'user:id,name',
-            'program:id,name',
+            'course:id,title',
             'session:id,title',
         ])->where('certificate_code', $certificateCode)->first();
 
@@ -154,7 +154,7 @@ class CertificateController extends Controller
             'is_valid' => $certificate->status === 'valid',
             'status' => $certificate->status,
             'holder_name' => $certificate->user?->name,
-            'program' => $certificate->program?->name,
+            'course' => $certificate->course?->title,
             'session' => $certificate->session?->title,
             'issued_at' => $certificate->issued_at,
         ]);
@@ -271,7 +271,7 @@ class CertificateController extends Controller
         return $this->successResponse($result, 'Certificates generated successfully.');
     }
 
-    public function generateForProgram(Request $request, Program $program, CertificateGenerationService $certificateService)
+    public function generateForCourse(Request $request, Course $course, CertificateGenerationService $certificateService)
     {
         $user = $request->user();
 
@@ -283,24 +283,19 @@ class CertificateController extends Controller
             return $this->forbiddenResponse('Only admin can generate certificates.');
         }
 
-        if ($program->approval_status !== 'approved') {
+        // Check course status instead of approval_status (as admin creates it)
+        if ($course->status !== 'published') {
             return $this->validationErrorResponse([
-                'program_id' => ['Program must be approved before generating certificates.'],
-            ]);
-        }
-
-        if ($program->status !== 'active') {
-            return $this->validationErrorResponse([
-                'status' => ['Program must be active before generating certificates.'],
+                'status' => ['Course must be published before generating certificates.'],
             ]);
         }
 
         $eagerGeneration = $request->boolean('eager_generation', false);
 
-        $result = DB::transaction(function () use ($program, $user, $certificateService, $eagerGeneration) {
-            $this->logAutoCertificateRequest($user->id, 'program', $program->id, null);
+        $result = DB::transaction(function () use ($course, $user, $certificateService, $eagerGeneration) {
+            $this->logAutoCertificateRequest($user->id, 'course', $course->id, null);
 
-            return $certificateService->generateCertificatesForProgram($program, $user->id, $eagerGeneration);
+            return $certificateService->generateCertificatesForCourse($course, $user->id, $eagerGeneration);
         });
 
         return $this->successResponse($result, 'Certificates generated successfully.');
@@ -309,7 +304,7 @@ class CertificateController extends Controller
     private function loadCertificateAccessRelations(Certificate $certificate): void
     {
         $certificate->loadMissing([
-            'program:id,created_by',
+            'course:id,owner_id',
             'session:id,trainer_id',
             'enrollment.session:id,trainer_id',
         ]);
@@ -320,11 +315,11 @@ class CertificateController extends Controller
         $isOwner = $certificate->user_id === $user->id;
         $trainerId = $certificate->session?->trainer_id ?? $certificate->enrollment?->session?->trainer_id;
         $isTrainer = $trainerId && $trainerId === $user->id;
-        $programOwnerId = $certificate->program?->created_by;
-        $isProgramOwner = $programOwnerId && $programOwnerId === $user->id;
+        $courseOwnerId = $certificate->course?->owner_id;
+        $isCourseOwner = $courseOwnerId && $courseOwnerId === $user->id;
         $isAdmin = $user->isRole('admin');
 
-        return $isOwner || $isTrainer || $isProgramOwner || $isAdmin;
+        return $isOwner || $isTrainer || $isCourseOwner || $isAdmin;
     }
 
     private function buildCertificateFileResponse(Certificate $certificate, string $disposition)
@@ -356,11 +351,11 @@ class CertificateController extends Controller
         };
     }
 
-    private function logAutoCertificateRequest(int $userId, string $type, ?int $programId, ?int $sessionId): void
+    private function logAutoCertificateRequest(int $userId, string $type, ?int $courseId, ?int $sessionId): void
     {
         CertificateRequest::create([
             'trainer_id' => $userId,
-            'program_id' => $programId,
+            'course_id' => $courseId,
             'session_id' => $sessionId,
             'type' => $type,
             'status' => 'approved',

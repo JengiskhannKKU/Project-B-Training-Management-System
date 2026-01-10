@@ -81,14 +81,9 @@ class User extends Authenticatable
         return $this->role->name === $role;
     }
 
-    public function createdPrograms(): HasMany
+    public function createdCourses(): HasMany
     {
-        return $this->hasMany(Program::class, 'created_by');
-    }
-
-    public function approvedPrograms(): HasMany
-    {
-        return $this->hasMany(Program::class, 'approved_by');
+        return $this->hasMany(Course::class, 'owner_id');
     }
 
     public function trainingSessions(): HasMany

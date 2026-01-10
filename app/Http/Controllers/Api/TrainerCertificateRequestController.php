@@ -28,7 +28,7 @@ class TrainerCertificateRequestController extends Controller
             scopedToTrainer: $request->user(),
             status: $request->query('status'),
             type: $request->query('type'),
-            programId: $request->query('program_id') ? (int) $request->query('program_id') : null,
+            courseId: $request->query('course_id') ? (int) $request->query('course_id') : null,
             sessionId: $request->query('session_id') ? (int) $request->query('session_id') : null,
             search: $request->query('search'),
             perPage: $request->query('per_page', 15)
@@ -47,10 +47,10 @@ class TrainerCertificateRequestController extends Controller
         $certificateRequest->load([
             'enrollment.user',
             'enrollment.attendances',
-            'session.program',
+            'session.course',
             'session.trainer',
-            'program',
-            'program.creator',
+            'course',
+            'course.owner',
             'approver',
             'requester',
         ]);
@@ -73,10 +73,8 @@ class TrainerCertificateRequestController extends Controller
             }
         }
 
-        if (!$templateInfo && $certificateRequest->program) {
-            $template = $certificateRequest->program->certificateTemplates()
-                ->where('is_active', true)
-                ->first();
+        if (!$templateInfo && $certificateRequest->course) {
+            $template = $certificateRequest->course->activeCertificateTemplate()->first();
             if ($template) {
                 $templateInfo = [
                     'id' => $template->id,

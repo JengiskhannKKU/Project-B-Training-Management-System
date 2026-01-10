@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
+use App\Models\Course;
 use App\Services\CompletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,8 +23,8 @@ class TrainingSessionController extends Controller
             $query->where('trainer_id', $user->id);
         }
 
-        if ($request->filled('program_id')) {
-            $query->where('program_id', $request->integer('program_id'));
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->integer('course_id'));
         }
 
         $sessions = $query->get();
@@ -39,7 +40,7 @@ class TrainingSessionController extends Controller
         }
 
         $data = $request->validate([
-            'program_id' => ['required', 'integer', 'exists:programs,id'],
+            'course_id' => ['required', 'integer', 'exists:courses,id'],
             'title' => ['required', 'string', 'max:255'],
             'start_date' => ['required', 'date', 'before:end_date'],
             'end_date' => ['required', 'date', 'after:start_date'],
@@ -72,7 +73,7 @@ class TrainingSessionController extends Controller
              return $this->forbiddenResponse('You are not authorized to view this session.');
         }
 
-        $session->load('program');
+        $session->load('course');
         return $this->successResponse($session, 'Session retrieved successfully');
     }
 
@@ -86,7 +87,7 @@ class TrainingSessionController extends Controller
         }
 
         $data = $request->validate([
-            'program_id' => ['sometimes', 'required', 'integer', 'exists:programs,id'],
+            'course_id' => ['sometimes', 'required', 'integer', 'exists:courses,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'start_date' => [
                 'sometimes',
@@ -176,7 +177,7 @@ class TrainingSessionController extends Controller
     }
 
     /**
-     * Get all approved programs for the authenticated trainer (with or without sessions).
+     * Get all approved courses for the authenticated trainer (with or without sessions).
      */
     public function trainerSessions(Request $request): JsonResponse
     {
@@ -186,26 +187,26 @@ class TrainingSessionController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        // Get all approved programs created by this trainer
-        $programs = \App\Models\Program::where('created_by', $user->id)
-            ->where('status', 'active')
+        // Get all approved courses created by this trainer (owner)
+        $courses = Course::where('owner_id', $user->id)
+            ->where('status', 'published')
             ->with(['sessions' => function ($query) {
                 $query->withCount('enrollments')
                     ->orderBy('start_date', 'desc');
             }])
             ->get()
-            ->map(function ($program) {
-                $sessions = $program->sessions;
+            ->map(function ($course) {
+                $sessions = $course->sessions; // Assuming relationship is renamed in model, need to check Course model
 
-                // Find the AdminRequest linked to this program
-                $adminRequest = \App\Models\AdminRequest::where('target_type', 'program')
-                    ->where('target_id', $program->id)
+                // Find the AdminRequest linked to this course (if any)
+                $adminRequest = \App\Models\AdminRequest::where('target_type', 'course')
+                    ->where('target_id', $course->id)
                     ->where('status', 'approved')
                     ->first();
 
                 // Calculate aggregated data
-                $totalEnrolled = $sessions->sum('enrollments_count');
-                $dates = $sessions->pluck('start_date')->filter();
+                $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
+                $dates = $sessions ? $sessions->pluck('start_date')->filter() : collect();
                 $earliestDate = $dates->min();
                 $latestDate = $dates->max();
 
@@ -220,34 +221,34 @@ class TrainingSessionController extends Controller
                 }
 
                 // Get most common location
-                $locations = $sessions->pluck('location')->filter();
+                $locations = $sessions ? $sessions->pluck('location')->filter() : collect();
                 $locationCounts = $locations->countBy();
                 $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
 
                 // Get time range from first session
-                $firstSession = $sessions->first();
+                $firstSession = $sessions ? $sessions->first() : null;
                 $timeRange = 'N/A';
                 if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
                     $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
                 }
 
                 return [
-                    'id' => $program->id,
+                    'id' => $course->id,
                     'request_id' => $adminRequest?->id,
-                    'code' => $program->code,
-                    'name' => $program->name,
-                    'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-                    'rating' => 4.5, // Placeholder - can be calculated from feedback if available
-                    'level' => ucfirst($program->level ?? 'Beginner'),
+                    // 'code' => $course->code, // Removed
+                    'name' => $course->title, // Mapped to name
+                    'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                    'rating' => 4.5, // Placeholder
+                    'level' => ucfirst($course->level ?? 'Beginner'),
                     'trainees_count' => $totalEnrolled,
-                    'price' => 'Free', // Placeholder - add to Program model if needed
+                    'price' => 'Free', 
                     'date' => $dateRange,
                     'time' => $timeRange,
                     'location' => $mostCommonLocation,
-                    'category' => $program->category,
-                    'duration' => $program->duration_hours ? $program->duration_hours . ' hours' : 'N/A',
-                    'status' => $program->status,
-                    'sessions' => $sessions->map(function ($session) {
+                    'category' => $course->category,
+                    'duration' => 'N/A', // Removed duration_hours
+                    'status' => $course->status,
+                    'sessions' => $sessions ? $sessions->map(function ($session) {
                         return [
                             'id' => $session->id,
                             'name' => $session->title,
@@ -265,15 +266,15 @@ class TrainingSessionController extends Controller
                             'enrolled' => $session->enrollments_count,
                             'status' => $session->status,
                         ];
-                    })->values()->all(),
+                    })->values()->all() : [],
                 ];
             });
 
-        return $this->successResponse($programs, 'Trainer programs retrieved successfully');
+        return $this->successResponse($courses, 'Trainer courses retrieved successfully');
     }
 
     /**
-     * Get all approved programs for admin (with or without sessions).
+     * Get all approved courses for admin (with or without sessions).
      */
     public function adminSessions(Request $request): JsonResponse
     {
@@ -283,25 +284,25 @@ class TrainingSessionController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        // Get all approved programs
-        $programs = \App\Models\Program::where('status', 'active')
+        // Get all approved courses
+        $courses = Course::where('status', 'published')
             ->with(['sessions' => function ($query) {
                 $query->withCount('enrollments')
                     ->orderBy('start_date', 'desc');
             }])
             ->get()
-            ->map(function ($program) {
-                $sessions = $program->sessions;
+            ->map(function ($course) {
+                $sessions = $course->sessions; // Check Course relationship
 
-                // Find the AdminRequest linked to this program
-                $adminRequest = \App\Models\AdminRequest::where('target_type', 'program')
-                    ->where('target_id', $program->id)
+                // Find the AdminRequest linked to this course
+                $adminRequest = \App\Models\AdminRequest::where('target_type', 'course')
+                    ->where('target_id', $course->id)
                     ->where('status', 'approved')
                     ->first();
 
                 // Calculate aggregated data
-                $totalEnrolled = $sessions->sum('enrollments_count');
-                $dates = $sessions->pluck('start_date')->filter();
+                $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
+                $dates = $sessions ? $sessions->pluck('start_date')->filter() : collect();
                 $earliestDate = $dates->min();
                 $latestDate = $dates->max();
 
@@ -316,34 +317,34 @@ class TrainingSessionController extends Controller
                 }
 
                 // Get most common location
-                $locations = $sessions->pluck('location')->filter();
+                $locations = $sessions ? $sessions->pluck('location')->filter() : collect();
                 $locationCounts = $locations->countBy();
                 $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
 
                 // Get time range from first session
-                $firstSession = $sessions->first();
+                $firstSession = $sessions ? $sessions->first() : null;
                 $timeRange = 'N/A';
                 if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
                     $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
                 }
 
                 return [
-                    'id' => $program->id,
+                    'id' => $course->id,
                     'request_id' => $adminRequest?->id,
-                    'code' => $program->code,
-                    'name' => $program->name,
-                    'image_url' => $program->image_url ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-                    'rating' => 4.5, // Placeholder - can be calculated from feedback if available
-                    'level' => ucfirst($program->level ?? 'Beginner'),
+                    // 'code' => $course->code,
+                    'name' => $course->title,
+                    'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                    'rating' => 4.5, // Placeholder
+                    'level' => ucfirst($course->level ?? 'Beginner'),
                     'trainees_count' => $totalEnrolled,
-                    'price' => 'Free', // Placeholder - add to Program model if needed
+                    'price' => 'Free', // Placeholder
                     'date' => $dateRange,
                     'time' => $timeRange,
                     'location' => $mostCommonLocation,
-                    'category' => $program->category,
-                    'duration' => $program->duration_hours ? $program->duration_hours . ' hours' : 'N/A',
-                    'status' => $program->status,
-                    'sessions' => $sessions->map(function ($session) {
+                    'category' => $course->category,
+                    'duration' => 'N/A',
+                    'status' => $course->status,
+                    'sessions' => $sessions ? $sessions->map(function ($session) {
                         return [
                             'id' => $session->id,
                             'name' => $session->title,
@@ -361,11 +362,11 @@ class TrainingSessionController extends Controller
                             'enrolled' => $session->enrollments_count,
                             'status' => $session->status,
                         ];
-                    })->values()->all(),
+                    })->values()->all() : [],
                 ];
             });
 
-        return $this->successResponse($programs, 'Admin programs retrieved successfully');
+        return $this->successResponse($courses, 'Admin courses retrieved successfully');
     }
 
     /**
@@ -373,12 +374,12 @@ class TrainingSessionController extends Controller
      */
     public function sessionsForAttendance(Request $request): JsonResponse
     {
-        $query = TrainingSession::with(['program', 'trainer'])
+        $query = TrainingSession::with(['course', 'trainer'])
             ->withCount(['enrollments', 'attendances']);
 
         // Apply filters
-        if ($request->filled('program_id')) {
-            $query->where('program_id', $request->program_id);
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
         }
 
         if ($request->filled('status')) {

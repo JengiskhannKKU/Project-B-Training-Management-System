@@ -23,7 +23,7 @@ class ClearDatabaseSeeder extends Seeder
             'enrollments',
             'session_reviews',
             'training_sessions',
-            'programs',
+            'courses',
             'admin_requests',
             'profiles',
             'auth_sessions',

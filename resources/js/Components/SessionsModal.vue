@@ -55,10 +55,10 @@ const programBaseUrl = computed(() => {
     }
 
     if (props.baseUrl === '/trainer') {
-        return '/trainer/programs';
+        return '/trainer/courses';
     }
 
-    return `${props.baseUrl}/programs`;
+    return `${props.baseUrl}/courses`;
 });
 </script>
 

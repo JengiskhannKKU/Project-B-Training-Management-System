@@ -27,7 +27,7 @@ const props = defineProps({
     },
     programsEndpoint: {
         type: String,
-        default: "/api/programs",
+        default: "/api/courses",
     },
 });
 

@@ -102,14 +102,14 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * List current user's enrollments with session + program info.
+     * List current user's enrollments with session + course info.
      */
     public function myEnrollments(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $enrollments = Enrollment::with([
-            'session.program',
+            'session.course',
             'review',
         ])
             ->where('user_id', $user->id)

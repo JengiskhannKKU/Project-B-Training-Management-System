@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Api\ProgramController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TrainingSessionController;
 use App\Http\Controllers\Api\AdminUserController;
@@ -14,7 +13,6 @@ use App\Http\Controllers\Api\FileUploadController;
 
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\CertificateTemplateController;
-use App\Http\Controllers\Api\AdminProgramController;
 use App\Http\Controllers\Api\AdminSessionController;
 use App\Http\Controllers\Api\ReviewController;
 use Illuminate\Support\Facades\Route;
@@ -23,8 +21,8 @@ Route::post('auth/register', [AuthController::class, 'register']);
 Route::post('auth/login', [AuthController::class, 'login']);
 
 // Public catalog
-Route::get('catalog/programs', [CatalogController::class, 'programs']);
-Route::get('catalog/programs/{program}/sessions', [CatalogController::class, 'sessions']);
+Route::get('catalog/courses', [CatalogController::class, 'courses']);
+Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -45,11 +43,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Trainees can view their own enrollment attendance
     Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
 
-    Route::apiResource('programs', ProgramController::class);
+    Route::apiResource('courses', \App\Http\Controllers\Api\CourseController::class);
     Route::apiResource('sessions', TrainingSessionController::class);
 
     // Reviews
-    Route::get('programs/{program}/reviews', [ReviewController::class, 'programReviews']);
+    Route::get('courses/{course}/reviews', [ReviewController::class, 'courseReviews']);
     Route::get('sessions/{session}/reviews', [ReviewController::class, 'sessionReviews']);
     Route::post('reviews', [ReviewController::class, 'store']);
     Route::put('reviews/{review}', [ReviewController::class, 'update']);
@@ -62,9 +60,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('sessions/{session}/attendance-summary', [AttendanceController::class, 'attendanceSummary']);
         Route::get('sessions/{session}/eligible-enrollments', [AttendanceController::class, 'eligibleEnrollments']);
         Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
-        Route::get('programs/{program}/certificates', [CertificateController::class, 'programCertificates']);
+        Route::get('courses/{course}/certificates', [CertificateController::class, 'courseCertificates']);
         Route::post('sessions/{session}/certificates/generate', [CertificateController::class, 'generateForSession']);
-        Route::post('programs/{program}/certificates/generate', [CertificateController::class, 'generateForProgram']);
+        Route::post('courses/{course}/certificates/generate', [CertificateController::class, 'generateForCourse']);
         Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);
         Route::post('attendances', [AttendanceController::class, 'store']);
         Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
@@ -81,7 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::apiResource('certificate-templates', CertificateTemplateController::class)
                 ->except(['create', 'edit']);
 
-            // Image upload for programs
+            // Image upload for programs (now courses)
             Route::post('upload/image', [FileUploadController::class, 'image']);
             Route::delete('upload/image', [FileUploadController::class, 'deleteImage']);
         });
@@ -106,9 +104,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('admin/upload/image', [FileUploadController::class, 'image']);
         Route::delete('admin/upload/image', [FileUploadController::class, 'deleteImage']);
 
-        // Admin direct program/session creation (bypass approval)
-        Route::post('admin/programs', [AdminProgramController::class, 'store']);
-        Route::put('admin/programs/{program}', [AdminProgramController::class, 'update']);
         Route::post('admin/sessions', [AdminSessionController::class, 'store']);
         Route::put('admin/sessions/{session}', [AdminSessionController::class, 'update']);
     });

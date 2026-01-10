@@ -56,7 +56,7 @@ const openSessions = computed(() =>
 
 const userRole = computed(() => page.props.auth?.user?.role?.name || "");
 
-const backLink = computed(() => "/programs");
+const backLink = computed(() => "/courses");
 
 const backLinkText = computed(() =>
     userRole.value === "student" ? "Back to My Courses" : "Back to Courses"
@@ -93,12 +93,12 @@ const fetchProgram = async () => {
     isLoadingProgram.value = true;
     programError.value = null;
     try {
-        const { data } = await axios.get("/api/catalog/programs");
+        const { data } = await axios.get("/api/catalog/courses");
         const list = data || [];
         const match = list.find((item) => String(item.id) === String(props.programId));
         program.value = match || null;
         if (!match) {
-            programError.value = "Program not found.";
+            programError.value = "Course not found.";
         }
     } catch (error) {
         program.value = null;
@@ -115,7 +115,7 @@ const fetchSessions = async () => {
     sessionsError.value = null;
     try {
         const { data } = await axios.get(
-            `/api/catalog/programs/${props.programId}/sessions`
+            `/api/catalog/courses/${props.programId}/sessions`
         );
         sessions.value = data || [];
     } catch (error) {
@@ -132,7 +132,7 @@ const fetchReviews = async () => {
     isLoadingReviews.value = true;
     try {
         const { data } = await axios.get(
-            `/api/programs/${props.programId}/reviews`
+            `/api/courses/${props.programId}/reviews`
         );
         reviews.value = data.data?.reviews || [];
         averageRating.value = data.data?.average_rating || null;

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AdminRequest;
 use App\Models\Enrollment;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\Role;
 use App\Models\TrainingSession;
 use App\Models\User;
@@ -43,14 +43,10 @@ class AdminRequestActionController extends Controller
             'resolved_at' => now(),
         ]);
 
-        // If this is a program request with a linked program, mark the program as rejected
-        if ($adminRequest->target_type === 'program' && $adminRequest->target_id) {
-            Program::where('id', $adminRequest->target_id)->update([
-                'approval_status' => 'rejected',
-                'approved_by' => $request->user()->id,
-                'approved_at' => now(),
-                'approval_note' => $data['admin_note'] ?? null,
-                'status' => 'inactive',
+        // If this is a course request with a linked course, mark the course as archived or inactive
+        if ($adminRequest->target_type === 'course' && $adminRequest->target_id) {
+            Course::where('id', $adminRequest->target_id)->update([
+                'status' => 'archived', // Or inactive if schema supported it, but 'archived' is standard
             ]);
         }
 
@@ -84,53 +80,53 @@ class AdminRequestActionController extends Controller
         }
 
         return match ($adminRequest->target_type) {
-            'program' => $this->approveProgram($request, $adminRequest),
+            'course' => $this->approveCourse($request, $adminRequest),
             'session' => $this->approveSession($request, $adminRequest),
             'trainee' => $this->approveTrainee($request, $adminRequest),
             default => $this->validationErrorResponse(['target_type' => ['Unsupported request type']]),
         };
     }
 
-    protected function approveProgram(Request $request, AdminRequest $adminRequest)
+    protected function approveCourse(Request $request, AdminRequest $adminRequest)
     {
         $payload = $adminRequest->payload ?? [];
 
         return DB::transaction(function () use ($request, $adminRequest, $payload) {
-            $programData = [
-                'name' => $payload['title'] ?? $payload['name'] ?? 'Untitled Program',
-                'code' => $payload['code'] ?? 'PRG-' . strtoupper(Str::random(6)),
-                'description' => $payload['full_description'] ?? $payload['short_description'] ?? null,
+            $courseData = [
+                'title' => $payload['title'] ?? $payload['name'] ?? 'Untitled Course',
+                'description' => $payload['description'] ?? $payload['full_description'] ?? $payload['short_description'] ?? null,
                 'category' => $payload['category'] ?? 'General',
                 'level' => $payload['level'] ?? 'beginner',
-                'duration_hours' => $payload['duration_hours'] ?? 1,
-                'image_url' => $payload['image_url'] ?? null,
-                'created_by' => $adminRequest->requester_id,
-                'approval_status' => 'approved',
-                'approved_by' => $request->user()->id,
-                'approved_at' => now(),
-                'status' => 'active',
-                'approval_note' => $adminRequest->admin_note,
+                'learning_outcomes' => $payload['learning_outcomes'] ?? null,
+                'target_audience' => $payload['target_audience'] ?? null,
+                'prerequisites' => $payload['prerequisites'] ?? null,
+                'additional_info' => $payload['additional_info'] ?? null,
+                'thumbnail_path' => $payload['thumbnail_path'] ?? $payload['image_url'] ?? null,
+                'status' => $payload['status'] ?? 'published',
+                'min_participants' => $payload['min_participants'] ?? 1,
+                'max_participants' => $payload['max_participants'] ?? 20,
+                'owner_id' => $adminRequest->requester_id,
             ];
 
-            $program = null;
+            $course = null;
 
             if ($adminRequest->action === 'create') {
                 if ($adminRequest->target_id) {
-                    $program = Program::find($adminRequest->target_id);
+                    $course = Course::find($adminRequest->target_id);
                 }
 
-                if (!$program) {
-                    $program = Program::create($programData);
-                    $adminRequest->target_id = $program->id;
+                if (!$course) {
+                    $course = Course::create($courseData);
+                    $adminRequest->target_id = $course->id;
                 } else {
-                    $program->update($programData);
+                    $course->update($courseData);
                 }
             } else {
-                $program = Program::find($adminRequest->target_id);
-                if (!$program) {
-                    return $this->notFoundResponse('Program not found');
+                $course = Course::find($adminRequest->target_id);
+                if (!$course) {
+                    return $this->notFoundResponse('Course not found');
                 }
-                $program->update($programData);
+                $course->update($courseData);
             }
 
             $adminRequest->status = 'approved';
@@ -138,7 +134,7 @@ class AdminRequestActionController extends Controller
             $adminRequest->resolved_at = now();
             $adminRequest->save();
 
-            return $this->successResponse($adminRequest->fresh(), 'Program request approved');
+            return $this->successResponse($adminRequest->fresh(), 'Course request approved');
         });
     }
 
@@ -146,55 +142,34 @@ class AdminRequestActionController extends Controller
     {
         $payload = $adminRequest->payload ?? [];
 
-        $programId = $payload['program_id'] ?? null;
-        if (!$programId) {
-            return $this->validationErrorResponse(['program_id' => ['Program is required for sessions']]);
+        $courseId = $payload['course_id'] ?? null;
+        if (!$courseId) {
+            return $this->validationErrorResponse(['course_id' => ['Course is required for sessions']]);
         }
 
-        // Resolve program. Sometimes the payload may carry the program request id instead of the program id.
-        $program = Program::find($programId);
-        if (!$program && $programId) {
-            $maybeProgramRequest = AdminRequest::where('id', $programId)
-                ->where('target_type', 'program')
+        // Resolve course. Sometimes the payload may carry the course request id instead of the course id.
+        $course = Course::find($courseId);
+        if (!$course && $courseId) {
+            $maybeCourseRequest = AdminRequest::where('id', $courseId)
+                ->where('target_type', 'course')
                 ->first();
-            if ($maybeProgramRequest && $maybeProgramRequest->target_id) {
-                $program = Program::find($maybeProgramRequest->target_id);
-                if (!$program) {
-                    $programPayload = $maybeProgramRequest->payload ?? [];
-                    $programData = [
-                        'name' => $programPayload['title'] ?? $programPayload['name'] ?? 'Untitled Program',
-                        'code' => $programPayload['code'] ?? 'PRG-' . strtoupper(Str::random(6)),
-                        'description' => $programPayload['full_description'] ?? $programPayload['short_description'] ?? null,
-                        'category' => $programPayload['category'] ?? 'General',
-                        'level' => $programPayload['level'] ?? 'beginner',
-                        'duration_hours' => $programPayload['duration_hours'] ?? 1,
-                        'image_url' => $programPayload['image_url'] ?? null,
-                        'created_by' => $maybeProgramRequest->requester_id,
-                        'approval_status' => 'approved',
-                        'approved_by' => $request->user()->id,
-                        'approved_at' => now(),
-                        'status' => 'active',
-                        'approval_note' => $maybeProgramRequest->admin_note,
-                    ];
-                    $program = Program::create($programData);
-                    $maybeProgramRequest->update([
-                        'target_id' => $program->id,
-                        'status' => 'approved',
-                        'resolved_by' => $request->user()->id,
-                        'resolved_at' => now(),
-                    ]);
+            if ($maybeCourseRequest && $maybeCourseRequest->target_id) {
+                $course = Course::find($maybeCourseRequest->target_id);
+                if (!$course) {
+                    // Create course if not exists (fallback logic, though approveCourse should handle this)
+                    // ... simpler to just fail if parent course not approved yet
+                    return $this->validationErrorResponse(['course_id' => ['Parent course not found or not approved']]);
                 }
-
-                // Update payload to the real program id for future attempts
-                $payload['program_id'] = $program->id;
+                // Update payload to the real course id for future attempts
+                $payload['course_id'] = $course->id;
                 $adminRequest->payload = $payload;
                 $adminRequest->save();
-                $programId = $program->id;
+                $courseId = $course->id;
             }
         }
 
-        if (!$program) {
-            return $this->notFoundResponse('Program not found');
+        if (!$course) {
+            return $this->notFoundResponse('Course not found');
         }
 
         $statusMap = [
@@ -205,13 +180,13 @@ class AdminRequestActionController extends Controller
         $enrollmentLimit = $payload['enrollment_limit'] ?? null;
         $capacityValue = $enrollmentLimit === 'unlimited'
             ? 9999
-            : (int) ($payload['capacity'] ?? 1);
+            : (int) ($payload['capacity'] ?? $course->max_participants ?? 20);
 
         $payloadStatus = $payload['status'] ?? null;
         $normalizedStatus = $statusMap[$payloadStatus] ?? ($payloadStatus ?: 'open');
 
         $sessionData = [
-            'program_id' => $program->id,
+            'course_id' => $course->id,
             'title' => $payload['course'] ?? $payload['title'] ?? 'Session',
             'start_date' => $payload['date'] ?? now()->toDateString(),
             'end_date' => $payload['date'] ?? now()->toDateString(),

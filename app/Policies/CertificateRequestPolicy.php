@@ -17,7 +17,7 @@ class CertificateRequestPolicy
     }
 
     /**
-     * Check if trainer owns the related session/program
+     * Check if trainer owns the related session/course
      */
     private function ownsResource(User $user, CertificateRequest $request): bool
     {
@@ -25,8 +25,8 @@ class CertificateRequestPolicy
             return $request->session && $request->session->trainer_id === $user->id;
         }
 
-        if ($request->type === 'program') {
-            return $request->program && $request->program->created_by === $user->id;
+        if ($request->type === 'course') {
+            return $request->course && $request->course->owner_id === $user->id;
         }
 
         return false;

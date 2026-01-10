@@ -24,7 +24,7 @@ const currentPath = computed(() => page.url);
 const navigationItems = computed(() => [
     {
         name: $t("All Courses"),
-        path: "/programs",
+        path: "/courses",
         icon: BookOpen,
     },
     {
@@ -45,8 +45,8 @@ const navigationItems = computed(() => [
 ]);
 
 const isActive = (path) => {
-    if (path === "/programs") {
-        return currentPath.value.startsWith("/programs");
+    if (path === "/courses") {
+        return currentPath.value.startsWith("/courses");
     }
     if (path === "/me/enrollments") {
         return currentPath.value.startsWith("/me/enrollments");
@@ -98,7 +98,7 @@ const handleClearAllNotifications = () => {
         >
             <div class="h-full px-6 pb-4 overflow-y-auto bg-white flex flex-col">
                 <div class="flex-1">
-                    <Link href="/programs" class="flex pt-4 pb-14">
+                    <Link href="/courses" class="flex pt-4 pb-14">
                         <img
                             src="/images/project_logo.png"
                             class="h-12 w-auto object-contain max-w-full"

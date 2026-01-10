@@ -14,7 +14,7 @@ class CertificateTemplate extends Model
     protected $fillable = [
         'name',
         'scope',
-        'program_id',
+        'course_id',
         'session_id',
         'background_image',
         'background_mime_type',
@@ -38,9 +38,9 @@ class CertificateTemplate extends Model
         'is_active' => 'boolean',
     ];
 
-    public function program(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Course::class);
     }
 
     public function session(): BelongsTo

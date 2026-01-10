@@ -30,7 +30,7 @@ const fetchPrograms = async () => {
     isLoading.value = true;
     errorMessage.value = null;
     try {
-        const { data } = await axios.get("/api/catalog/programs");
+        const { data } = await axios.get("/api/catalog/courses");
         programs.value = data || [];
     } catch (error) {
         programs.value = [];
@@ -317,7 +317,7 @@ const exportToPDF = () => {
                         v-for="program in filteredPrograms"
                         :key="program.id"
                         :id="program.id"
-                        :href="`/programs/${program.id}`"
+                        :href="`/courses/${program.id}`"
                         :name="program.name || 'Untitled program'"
                         :image_url="program.image_url || ''"
                         :rating="program.rating ?? 4.6"

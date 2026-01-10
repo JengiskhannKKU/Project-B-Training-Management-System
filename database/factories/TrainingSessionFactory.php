@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,7 +22,7 @@ class TrainingSessionFactory extends Factory
         $endDate = fake()->dateTimeBetween($startDate, '+2 months');
 
         return [
-            'program_id' => Program::factory(),
+            'course_id' => Course::factory(),
             'title' => fake()->sentence(4),
             'start_date' => $startDate,
             'end_date' => $endDate,

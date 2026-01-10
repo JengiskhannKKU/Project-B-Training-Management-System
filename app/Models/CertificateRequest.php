@@ -12,7 +12,7 @@ class CertificateRequest extends Model
 
     protected $fillable = [
         'trainer_id',
-        'program_id',
+        'course_id',
         'session_id',
         'enrollment_id',
         'requested_by',
@@ -32,9 +32,9 @@ class CertificateRequest extends Model
         return $this->belongsTo(User::class, 'trainer_id');
     }
 
-    public function program(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Course::class);
     }
 
     public function session(): BelongsTo

@@ -5,173 +5,151 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CertificateRequest;
 use App\Services\CertificateRequestService;
-use Illuminate\Http\Request;
+use App\Services\CertificateGenerationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class AdminCertificateRequestController extends Controller
 {
-    use AuthorizesRequests;
+    protected $requestService;
 
-    public function __construct(
-        private CertificateRequestService $requestService
-    ) {}
-
-    /**
-     * List all certificate requests (admin can see all)
-     */
-    public function index(Request $request): JsonResponse
+    public function __construct(CertificateRequestService $requestService)
     {
-        // Admin sees all - no trainer scoping
-        $requests = $this->requestService->getRequests(
-            scopedToTrainer: null, // Admin = no scope
-            status: $request->query('status'),
-            type: $request->query('type'),
-            programId: $request->query('program_id') ? (int) $request->query('program_id') : null,
-            sessionId: $request->query('session_id') ? (int) $request->query('session_id') : null,
-            trainerId: $request->query('trainer_id') ? (int) $request->query('trainer_id') : null,
-            search: $request->query('search'),
-            perPage: $request->query('per_page', 15)
-        );
-
-        return $this->successResponse($requests, 'Certificate requests retrieved successfully.');
+        $this->requestService = $requestService;
     }
 
     /**
-     * View specific request (admin can view any)
+     * Get all certificate requests (Admin view)
+     */
+    public function index(Request $request): JsonResponse
+    {
+        // Admin sees all requests
+        $requests = $this->requestService->getRequests(
+            scopedToTrainer: null, // No trainer scope for admin
+            status: $request->query('status'),
+            type: $request->query('type'),
+            courseId: $request->query('course_id') ? (int) $request->query('course_id') : null,
+            sessionId: $request->query('session_id') ? (int) $request->query('session_id') : null,
+            trainerId: $request->query('trainer_id') ? (int) $request->query('trainer_id') : null,
+            search: $request->query('search'),
+            perPage: $request->query('per_page') ? (int) $request->query('per_page') : 15
+        );
+
+        return $this->successResponse($requests);
+    }
+
+    /**
+     * Get specific certificate request details
      */
     public function show(CertificateRequest $certificateRequest): JsonResponse
     {
-        // Admin can view all - no authorization check needed
         $certificateRequest->load([
             'enrollment.user',
-            'enrollment.attendances',
-            'session.program',
+            'session.course',
             'session.trainer',
-            'program',
-            'program.creator',
+            'course',
+            'course.owner',
             'approver',
             'requester',
         ]);
 
-        // Add validation data
-        $validation = $this->requestService->validateRequest($certificateRequest);
-
-        // Get certificate template info
+        // Check if template is available for this request context
         $templateInfo = null;
         if ($certificateRequest->type === 'session' && $certificateRequest->session) {
-            $template = $certificateRequest->session->certificateTemplates()
-                ->where('is_active', true)
-                ->first();
+            $template = $certificateRequest->session->activeCertificateTemplate;
             if ($template) {
                 $templateInfo = [
                     'id' => $template->id,
                     'name' => $template->name,
-                    'scope' => $template->scope,
+                    'scope' => 'session'
                 ];
             }
         }
 
-        if (!$templateInfo && $certificateRequest->program) {
-            $template = $certificateRequest->program->certificateTemplates()
-                ->where('is_active', true)
-                ->first();
+        if (!$templateInfo && $certificateRequest->course) {
+            $template = $certificateRequest->course->activeCertificateTemplate()->first();
             if ($template) {
                 $templateInfo = [
                     'id' => $template->id,
                     'name' => $template->name,
-                    'scope' => $template->scope,
+                    'scope' => 'course'
                 ];
             }
         }
 
-        // Calculate attendance info if enrollment exists
-        $attendanceInfo = null;
-        if ($certificateRequest->enrollment) {
-            $totalDays = 1; // Default for single-day sessions
-            if ($certificateRequest->session) {
-                $startDate = new \DateTime($certificateRequest->session->start_date);
-                $endDate = new \DateTime($certificateRequest->session->end_date);
-                $totalDays = max(1, $startDate->diff($endDate)->days + 1);
+        if (!$templateInfo) {
+            $globalTemplate = \App\Models\CertificateTemplate::where('scope', 'global')
+                ->where('is_active', true)
+                ->first();
+            if ($globalTemplate) {
+                $templateInfo = [
+                    'id' => $globalTemplate->id,
+                    'name' => $globalTemplate->name,
+                    'scope' => 'global'
+                ];
             }
-
-            $attendanceCount = $certificateRequest->enrollment->attendances()
-                ->whereIn('status', ['present', 'late'])
-                ->count();
-
-            $attendanceInfo = [
-                'attendance_count' => $attendanceCount,
-                'total_days' => $totalDays,
-                'attendance_rate' => $totalDays > 0 ? round(($attendanceCount / $totalDays) * 100, 2) : 0,
-            ];
         }
 
         return $this->successResponse([
             'request' => $certificateRequest,
-            'validation' => $validation,
-            'certificate_template' => $templateInfo,
-            'attendance' => $attendanceInfo,
-        ], 'Certificate request retrieved successfully.');
+            'template' => $templateInfo
+        ]);
     }
 
     /**
-     * Approve certificate request (reuses same service method)
+     * Approve certificate request
      */
     public function approve(Request $request, CertificateRequest $certificateRequest): JsonResponse
     {
-        $request->validate([
-            'note' => 'nullable|string|max:1000',
-        ]);
+        $admin = $request->user();
+
+        if ($certificateRequest->status !== 'pending') {
+            return $this->validationErrorResponse(['status' => 'Request is not pending']);
+        }
 
         try {
-            // SAME SERVICE METHOD as trainer
             $certificate = $this->requestService->approve(
-                request: $certificateRequest,
-                approver: $request->user(), // Admin user
-                note: $request->input('note')
+                $certificateRequest,
+                $admin,
+                $request->input('note')
             );
 
             return $this->successResponse([
-                'certificate_request' => $certificateRequest->fresh(),
-                'certificate' => $certificate,
-            ], 'Certificate request approved successfully.');
+                'request' => $certificateRequest->fresh(),
+                'certificate' => $certificate
+            ], 'Certificate request approved and certificate generated.');
 
-        } catch (\InvalidArgumentException $e) {
-            return $this->validationErrorResponse([
-                'request' => [$e->getMessage()],
-            ]);
         } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), 500);
+            return $this->errorResponse($e->getMessage());
         }
     }
 
     /**
-     * Reject certificate request (reuses same service method)
+     * Reject certificate request
      */
     public function reject(Request $request, CertificateRequest $certificateRequest): JsonResponse
     {
-        $request->validate([
-            'note' => 'required|string|min:10|max:1000',
+        $admin = $request->user();
+
+        $validated = $request->validate([
+            'note' => ['required', 'string', 'min:5']
         ]);
 
+        if ($certificateRequest->status !== 'pending') {
+            return $this->validationErrorResponse(['status' => 'Request is not pending']);
+        }
+
         try {
-            // SAME SERVICE METHOD as trainer
             $updatedRequest = $this->requestService->reject(
-                request: $certificateRequest,
-                rejector: $request->user(), // Admin user
-                note: $request->input('note')
+                $certificateRequest,
+                $admin,
+                $validated['note']
             );
 
-            return $this->successResponse([
-                'certificate_request' => $updatedRequest,
-            ], 'Certificate request rejected successfully.');
+            return $this->successResponse($updatedRequest, 'Certificate request rejected.');
 
-        } catch (\InvalidArgumentException $e) {
-            return $this->validationErrorResponse([
-                'note' => [$e->getMessage()],
-            ]);
         } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), 500);
+            return $this->errorResponse($e->getMessage());
         }
     }
 }

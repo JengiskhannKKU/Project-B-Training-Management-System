@@ -88,7 +88,7 @@ const backLink = computed(() => {
     if (currentUrl.startsWith('/admin/') || userRole.value === 'admin') {
         return '/admin/my-courses';
     }
-    return '/trainer/programs';
+    return '/trainer/courses';
 });
 
 const backLinkText = computed(() => {
@@ -597,15 +597,15 @@ const fetchProgramRequestFallback = async () => {
             console.log('[DEBUG] Setting requestFallback with payload:', match.payload);
             requestFallback.value = match;
             
-            // If this request is approved and has a target_id, also fetch the actual program data
+            // If this request is approved and has a target_id, also fetch the actual course data
             if (match.status === 'approved' && match.target_id) {
                 try {
-                    const { data } = await axios.get(`/api/programs/${match.target_id}`);
+                    const { data } = await axios.get(`/api/courses/${match.target_id}`);
                     program.value = (data?.data || data) as ProgramData;
-                    console.log('[DEBUG] Loaded program from programs table:', program.value);
+                    console.log('[DEBUG] Loaded course from courses table:', program.value);
                 } catch (err: any) {
-                    console.log('[DEBUG] Failed to load program from programs table:', err?.message);
-                    // Program might not exist yet, use payload as fallback
+                    console.log('[DEBUG] Failed to load course from courses table:', err?.message);
+                    // Course might not exist yet, use payload as fallback
                 }
             }
         } else {
@@ -623,20 +623,20 @@ const fetchProgram = async () => {
     try {
         await ensureCsrf();
         
-        // First, try to fetch the admin_request to get the program data
-        // The URL ID is the admin_request.id, not the program.id
+        // First, try to fetch the admin_request to get the course data
+        // The URL ID is the admin_request.id, not the course.id
         await fetchProgramRequestFallback();
-        
-        // If we found a request with target_id, the program data was already loaded
-        // If not, try to load from programs table as a fallback (in case URL has actual program ID)
+
+        // If we found a request with target_id, the course data was already loaded
+        // If not, try to load from courses table as a fallback (in case URL has actual course ID)
         if (!program.value && !requestFallback.value) {
             try {
-                const { data } = await axios.get(`/api/programs/${props.program.id}`);
+                const { data } = await axios.get(`/api/courses/${props.program.id}`);
                 program.value = (data?.data || data || props.program) as ProgramData;
             } catch (error: any) {
-                // Program not found - this is expected for pending requests
+                // Course not found - this is expected for pending requests
                 if (![401, 403, 404].includes(error?.response?.status)) {
-                    handleApiError(error, 'Unable to load program details.');
+                    handleApiError(error, 'Unable to load course details.');
                 }
             }
         }

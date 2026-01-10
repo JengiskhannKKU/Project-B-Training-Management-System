@@ -16,8 +16,8 @@ $redirectToRoleDashboard = function () {
 
     return redirect()->route(match ($role) {
         'admin' => 'admin.dashboard',
-        'trainer' => 'trainer.programs.index',
-        default => 'trainee.programs.index',
+        'trainer' => 'trainer.courses.index',
+        default => 'trainee.courses.index',
     });
 };
 
@@ -53,7 +53,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('me.enrollments.show');
     Route::get('/me/certificates', function () {
         $user = Auth::user();
-        $certificates = \App\Models\Certificate::with(['program', 'session.program'])
+        $certificates = \App\Models\Certificate::with(['course', 'session.course'])
             ->where('user_id', $user->id)
             ->orderBy('issued_at', 'desc')
             ->get();
@@ -66,8 +66,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/certificates/{id}', function ($id) {
         $certificate = \App\Models\Certificate::with([
             'user',
-            'program',
-            'session.program',
+            'course',
+            'session.course',
             'issuer'
         ])->findOrFail($id);
 
@@ -76,7 +76,7 @@ Route::middleware(['auth'])->group(function () {
             $user->role->name === 'admin' ||
             ($user->role->name === 'trainer' && (
                 $certificate->session?->trainer_id === $user->id ||
-                $certificate->program?->created_by === $user->id
+                $certificate->course?->owner_id === $user->id
             ));
 
         if (!$canView) {
@@ -120,14 +120,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.my-courses');
 
     Route::get('/admin/my-courses/{id}', function ($id) {
-        $program = \App\Models\Program::with('creator')->find($id);
+        $course = \App\Models\Course::with('owner')->find($id);
 
-        if (! $program) {
-            return Inertia::render('Trainer/Programs/Show', [
+        if (! $course) {
+            return Inertia::render('Trainer/Courses/Show', [
                 'program' => [
                     'id' => $id,
                     'name' => '',
-                    'code' => '',
                     'category' => '',
                     'level' => '',
                     'period' => '',
@@ -138,29 +137,28 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                     'status' => '',
                     'description' => '',
                     'image_url' => null,
-                    'approval_status' => 'pending',
-                    'duration_hours' => null,
+                    'approval_status' => 'approved', // Admin created courses are auto-approved
                 ],
             ]);
         }
 
-        return Inertia::render('Trainer/Programs/Show', [
+        return Inertia::render('Trainer/Courses/Show', [
             'program' => [
-                'id' => $program->id,
-                'name' => $program->name,
-                'code' => $program->code,
-                'category' => $program->category,
-                'level' => $program->level ?? '',
-                'period' => $program->duration_hours ? $program->duration_hours . ' hours' : '',
+                'id' => $course->id,
+                'name' => $course->title,
+                // 'code' => $course->code, // Code removed
+                'category' => $course->category,
+                'level' => $course->level ?? '',
+                'period' => '', // Duration removed
                 'time' => '',
                 'location' => '',
-                'trainer' => $program->creator?->name ?? '',
+                'trainer' => $course->owner?->name ?? '',
                 'certificated' => '',
-                'status' => $program->status,
-                'description' => $program->description ?? '',
-                'image_url' => $program->image_url,
-                'approval_status' => $program->approval_status ?? 'pending',
-                'duration_hours' => $program->duration_hours,
+                'status' => $course->status,
+                'description' => $course->description ?? '',
+                'image_url' => $course->thumbnail_path,
+                'approval_status' => 'approved',
+                // 'duration_hours' => $course->duration_hours,
             ],
         ]);
     })->name('admin.my-courses.show');
@@ -207,22 +205,21 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     Route::get('/trainer', function () {
-        return redirect()->route('trainer.programs.index');
+        return redirect()->route('trainer.courses.index');
     })->name('trainer.dashboard');
 
-    // Trainer Program Routes
-    Route::get('/trainer/programs', function () {
-        return Inertia::render('Trainer/Programs/Index', [
+    // Trainer Course Routes
+    Route::get('/trainer/courses', function () {
+        return Inertia::render('Trainer/Courses/Index', [
             'programs' => []
         ]);
-    })->name('trainer.programs.index');
+    })->name('trainer.courses.index');
 
-    Route::get('/trainer/programs/{id}', function ($id) {
-        return Inertia::render('Trainer/Programs/Show', [
+    Route::get('/trainer/courses/{id}', function ($id) {
+        return Inertia::render('Trainer/Courses/Show', [
             'program' => [
                 'id' => $id,
                 'name' => '',
-                'code' => '',
                 'category' => '',
                 'level' => '',
                 'period' => '',
@@ -235,7 +232,7 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
                 'image_url' => null,
             ]
         ]);
-    })->name('trainer.programs.show');
+    })->name('trainer.courses.show');
 
     Route::get('/trainer/attendance', function () {
         return Inertia::render('Trainer/Attendance');
@@ -259,7 +256,7 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
 
 
     Route::get('/sessions/{id}/certificates', function ($id) {
-        $session = \App\Models\TrainingSession::with(['program'])->findOrFail($id);
+        $session = \App\Models\TrainingSession::with(['course'])->findOrFail($id);
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
@@ -281,28 +278,28 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         ]);
     })->name('sessions.certificates');
 
-    Route::get('/programs/{id}/certificates', function ($id) {
-        $program = \App\Models\Program::findOrFail($id);
+    Route::get('/courses/{id}/certificates', function ($id) {
+        $course = \App\Models\Course::findOrFail($id);
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
-            ($user->role->name === 'trainer' && $program->created_by === $user->id);
+            ($user->role->name === 'trainer' && $course->owner_id === $user->id);
 
         if (!$canView) {
-            abort(403, 'Unauthorized to view program certificates');
+            abort(403, 'Unauthorized to view course certificates');
         }
 
         $certificates = \App\Models\Certificate::with(['user', 'session'])
-            ->where('program_id', $id)
+            ->where('course_id', $id)
             ->orderBy('issued_at', 'desc')
             ->get();
 
-        return Inertia::render('Certificates/ProgramCertificates', [
+        return Inertia::render('Certificates/CourseCertificates', [
             'programId' => $id,
-            'program' => $program,
+            'program' => $course, // Passing as program prop to reuse component
             'certificates' => $certificates,
         ]);
-    })->name('programs.certificates');
+    })->name('courses.certificates');
 });
 
 Route::middleware(['auth', 'role:trainee'])->group(function () {
@@ -310,25 +307,25 @@ Route::middleware(['auth', 'role:trainee'])->group(function () {
         return Inertia::render('Trainee/Dashboard');
     })->name('trainee.dashboard');
 
-    // Trainee Program Catalog Routes
-    Route::get('/trainee/programs', function () {
-        return Inertia::render('Trainee/Programs/Index', [
+    // Trainee Course Catalog Routes
+    Route::get('/trainee/courses', function () {
+        return Inertia::render('Trainee/Courses/Index', [
             'programs' => []
         ]);
-    })->name('trainee.programs.index');
+    })->name('trainee.courses.index');
 
-    Route::get('/programs', function () {
-        return Inertia::render('Trainee/Programs/Index', [
+    Route::get('/courses', function () {
+        return Inertia::render('Trainee/Courses/Index', [
             'programs' => []
         ]);
-    })->name('programs.index');
+    })->name('courses.index');
 });
 
-Route::get('/programs/{id}', function ($id) {
-    return Inertia::render('Trainee/Programs/Show', [
+Route::get('/courses/{id}', function ($id) {
+    return Inertia::render('Trainee/Courses/Show', [
         'programId' => $id,
     ]);
-})->name('programs.show');
+})->name('courses.show');
 
 
 require __DIR__ . '/auth.php';

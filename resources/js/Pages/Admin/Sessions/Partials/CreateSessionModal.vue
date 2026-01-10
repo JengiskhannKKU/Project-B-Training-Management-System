@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import { X, Loader2 } from 'lucide-vue-next';
@@ -11,17 +11,13 @@ const props = defineProps({
         type: Boolean,
         default: false
     },
-    session: {
-        type: Object,
-        default: null
-    },
     programs: {
         type: Array,
         default: () => []
     }
 });
 
-const emit = defineEmits(['close', 'updated']);
+const emit = defineEmits(['close', 'created']);
 
 const isSubmitting = ref(false);
 const trainers = ref([]);
@@ -32,44 +28,39 @@ const form = ref({
     title: '',
     start_date: '',
     end_date: '',
-    start_time: '',
-    end_time: '',
-    capacity: '',
+    start_time: '09:00',
+    end_time: '17:00',
+    capacity: 30,
     trainer_id: '',
-    trainer_name: '',
-    trainer_photo_url: '',
     location: '',
     status: 'upcoming'
 });
 
 const errors = ref({});
 
-// Watch for session prop changes and populate form
-watch(() => props.session, (newSession) => {
-    if (newSession) {
-        form.value = {
-            course_id: newSession.course_id || '',
-            title: newSession.title || '',
-            start_date: newSession.start_date || '',
-            end_date: newSession.end_date || '',
-            start_time: newSession.start_time || '',
-            end_time: newSession.end_time || '',
-            capacity: newSession.capacity || '',
-            trainer_id: newSession.trainer_id || '',
-            trainer_name: newSession.trainer_name || '',
-            trainer_photo_url: newSession.trainer_photo_url || '',
-            location: newSession.location || '',
-            status: newSession.status || 'upcoming'
-        };
-    }
-}, { immediate: true });
-
 // Fetch trainers when modal opens
 watch(() => props.show, (isShown) => {
     if (isShown) {
+        resetForm();
         fetchTrainers();
     }
 });
+
+const resetForm = () => {
+    form.value = {
+        course_id: '',
+        title: '',
+        start_date: '',
+        end_date: '',
+        start_time: '09:00',
+        end_time: '17:00',
+        capacity: 30,
+        trainer_id: '',
+        location: '',
+        status: 'upcoming'
+    };
+    errors.value = {};
+};
 
 const fetchTrainers = async () => {
     isLoadingTrainers.value = true;
@@ -85,27 +76,23 @@ const fetchTrainers = async () => {
 };
 
 const handleSubmit = async () => {
-    if (!props.session) return;
-
     isSubmitting.value = true;
     errors.value = {};
 
     try {
         await axios.get('/sanctum/csrf-cookie');
 
-        const { data } = await axios.put(
-            `/api/admin/sessions/${props.session.id}`,
-            form.value
-        );
+        const { data } = await axios.post('/api/admin/sessions', form.value);
 
-        toast.success('Session updated successfully');
-        emit('updated', data.data);
+        toast.success('Session created successfully');
+        emit('created', data.data);
         emit('close');
+        resetForm();
     } catch (error) {
         if (error?.response?.status === 422) {
             errors.value = error.response.data.errors || {};
         }
-        toast.error(error?.response?.data?.message || 'Failed to update session');
+        toast.error(error?.response?.data?.message || 'Failed to create session');
     } finally {
         isSubmitting.value = false;
     }
@@ -113,7 +100,7 @@ const handleSubmit = async () => {
 
 const handleClose = () => {
     if (!isSubmitting.value) {
-        errors.value = {};
+        resetForm();
         emit('close');
     }
 };
@@ -130,8 +117,8 @@ const handleClose = () => {
             <div class="border-b px-6 py-4 sticky top-0 bg-white z-10">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-900">Edit Session</h2>
-                        <p class="mt-1 text-sm text-gray-500">Update session details and settings</p>
+                        <h2 class="text-xl font-bold text-gray-900">Create New Session</h2>
+                        <p class="mt-1 text-sm text-gray-500">Add a new training session to a course</p>
                     </div>
                     <button
                         @click="handleClose"
@@ -338,53 +325,6 @@ const handleClose = () => {
                     </div>
                 </div>
 
-                <!-- Status -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                    </label>
-                    <select
-                        v-model="form.status"
-                        :disabled="isSubmitting"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.status ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    >
-                        <option value="upcoming">Upcoming</option>
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                    <p v-if="errors.status" class="mt-1 text-sm text-red-600">
-                        {{ errors.status[0] }}
-                    </p>
-                </div>
-
-                <!-- Trainer Name Override (Optional) -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Trainer Name Override
-                    </label>
-                    <input
-                        v-model="form.trainer_name"
-                        type="text"
-                        :disabled="isSubmitting"
-                        placeholder="Leave empty to use trainer's profile name"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.trainer_name ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">
-                        Optional: Use a different name to display for this session
-                    </p>
-                    <p v-if="errors.trainer_name" class="mt-1 text-sm text-red-600">
-                        {{ errors.trainer_name[0] }}
-                    </p>
-                </div>
-
                 <!-- Action Buttons -->
                 <div class="flex gap-3 pt-4 border-t">
                     <button
@@ -401,7 +341,7 @@ const handleClose = () => {
                         class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
                     >
                         <Loader2 v-if="isSubmitting" class="h-4 w-4 animate-spin" />
-                        <span>{{ isSubmitting ? 'Updating...' : 'Update Session' }}</span>
+                        <span>{{ isSubmitting ? 'Creating...' : 'Create Session' }}</span>
                     </button>
                 </div>
             </form>

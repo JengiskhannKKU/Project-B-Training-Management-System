@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Enrollment;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\Review;
 use App\Models\TrainingSession;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +24,7 @@ class ReviewController extends Controller
         ]);
 
         $user = $request->user();
-        $enrollment = Enrollment::with('session.program')->findOrFail($data['enrollment_id']);
+        $enrollment = Enrollment::with('session.course')->findOrFail($data['enrollment_id']);
 
         // Verify user owns this enrollment
         if ($enrollment->user_id !== $user->id) {
@@ -54,7 +54,7 @@ class ReviewController extends Controller
             'user_id' => $user->id,
             'enrollment_id' => $enrollment->id,
             'session_id' => $enrollment->session_id,
-            'program_id' => $enrollment->session->program_id,
+            'course_id' => $enrollment->session->course_id,
             'rating' => $data['rating'],
             'comment' => $data['comment'] ?? null,
         ]);
@@ -123,20 +123,20 @@ class ReviewController extends Controller
     }
 
     /**
-     * Get all reviews for a program.
+     * Get all reviews for a course.
      */
-    public function programReviews(Program $program): JsonResponse
+    public function courseReviews(Course $course): JsonResponse
     {
         $user = request()->user();
-        if ($user && $user->isRole('trainer') && $program->created_by !== $user->id) {
+        if ($user && $user->isRole('trainer') && $course->owner_id !== $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized to view feedback for this program.',
+                'message' => 'Unauthorized to view feedback for this course.',
             ], 403);
         }
 
         $reviews = Review::with('user:id,name')
-            ->where('program_id', $program->id)
+            ->where('course_id', $course->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -145,7 +145,7 @@ class ReviewController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Program reviews retrieved successfully.',
+            'message' => 'Course reviews retrieved successfully.',
             'data' => [
                 'reviews' => $reviews,
                 'average_rating' => $averageRating ? round($averageRating, 1) : null,

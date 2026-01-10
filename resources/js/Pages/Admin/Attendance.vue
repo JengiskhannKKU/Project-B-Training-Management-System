@@ -74,10 +74,10 @@ const fetchSessions = async () => {
 
 const fetchPrograms = async () => {
     try {
-        const { data } = await axios.get("/api/programs");
+        const { data } = await axios.get("/api/courses");
         programs.value = data?.data || [];
     } catch (error) {
-        toast.error("Failed to load programs");
+        toast.error("Failed to load courses");
     }
 };
 

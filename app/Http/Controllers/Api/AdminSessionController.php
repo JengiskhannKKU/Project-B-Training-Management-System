@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Carbon;
 
 class AdminSessionController extends Controller
 {
     /**
-     * Create a new training session directly (admin bypass approval).
+     * Create a new session directly (admin bypass approval).
      */
     public function store(Request $request)
     {
@@ -20,7 +21,7 @@ class AdminSessionController extends Controller
         }
 
         $validated = $request->validate([
-            'program_id' => ['required', 'integer', 'exists:programs,id'],
+            'course_id' => ['required', 'integer', 'exists:courses,id'],
             'title' => ['required', 'string', 'max:255'],
             'start_date' => ['required', 'date', 'before:end_date'],
             'end_date' => ['required', 'date', 'after:start_date'],
@@ -31,10 +32,9 @@ class AdminSessionController extends Controller
             'trainer_name' => ['nullable', 'string', 'max:255'],
             'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
+            'status' => ['required', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
         ]);
 
-        // Admin creates session directly with approved status
         $session = TrainingSession::create([
             ...$validated,
             'approval_status' => 'approved',
@@ -50,7 +50,7 @@ class AdminSessionController extends Controller
     }
 
     /**
-     * Update a training session directly (admin bypass approval).
+     * Update a session directly (admin bypass approval).
      */
     public function update(Request $request, TrainingSession $session)
     {
@@ -59,7 +59,7 @@ class AdminSessionController extends Controller
         }
 
         $validated = $request->validate([
-            'program_id' => ['sometimes', 'required', 'integer', 'exists:programs,id'],
+            'course_id' => ['sometimes', 'required', 'integer', 'exists:courses,id'],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'start_date' => [
                 'sometimes',
@@ -90,10 +90,9 @@ class AdminSessionController extends Controller
             'trainer_name' => ['nullable', 'string', 'max:255'],
             'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
+            'status' => ['sometimes', 'required', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
         ]);
 
-        // Update session directly
         $session->update($validated);
 
         return response()->json([

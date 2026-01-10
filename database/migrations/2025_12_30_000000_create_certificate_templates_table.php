@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('certificate_templates', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('scope', ['program', 'session', 'global']);
+            $table->enum('scope', ['course', 'session', 'global']);
             $table->foreignId('program_id')->nullable()->constrained('programs')->nullOnDelete();
             $table->foreignId('session_id')->nullable()->constrained('training_sessions')->nullOnDelete();
             $table->binary('background_image')->nullable();

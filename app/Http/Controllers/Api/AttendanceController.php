@@ -185,7 +185,7 @@ class AttendanceController extends Controller
     {
         $enrollments = $session->enrollments()
             ->where('status', 'completed')
-            ->with(['user', 'session.program'])
+            ->with(['user', 'session.course'])
             ->get();
 
         return $this->successResponse($enrollments, 'Eligible enrollments retrieved successfully');

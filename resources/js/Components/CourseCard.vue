@@ -64,7 +64,7 @@ const getStarType = (index: number, rating: number) => {
 
 <template>
     <Link
-        :href="href || `/trainer/programs/${id}`"
+        :href="href || `/trainer/courses/${id}`"
         class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer relative group"
     >
         <!-- Action Buttons (top-right corner, visible on hover) -->

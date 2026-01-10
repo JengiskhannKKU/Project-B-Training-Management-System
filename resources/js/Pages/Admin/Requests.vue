@@ -16,7 +16,7 @@ import ExportModal from "@/Components/ExportModal.vue";
 import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import CourseModal from "@/Components/CourseModal.vue";
-import ProgramRequestRow from "@/Components/Admin/ProgramRequestRow.vue";
+import CourseRequestRow from "@/Components/Admin/CourseRequestRow.vue";
 import ConfirmActionModal from "@/Components/Admin/ConfirmActionModal.vue";
 import { useAdminRequests } from "@/composables/useAdminRequests";
 import jsPDF from "jspdf";
@@ -715,7 +715,7 @@ onMounted(() => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <ProgramRequestRow
+                                <CourseRequestRow
                                     v-for="(course, index) in paginatedCourses"
                                     :key="course.id"
                                     :course="course"

@@ -19,22 +19,22 @@ class CertificateRenderer
     {
         $certificate->loadMissing([
             'user:id,name',
-            'program:id,name',
-            'session:id,title,program_id,start_date,end_date',
-            'session.program:id,name',
+            'course:id,title',
+            'session:id,title,course_id,start_date,end_date',
+            'session.course:id,title',
             'issuer:id,name',
-            'enrollment.session:id,title,program_id,start_date,end_date',
-            'enrollment.session.program:id,name',
+            'enrollment.session:id,title,course_id,start_date,end_date',
+            'enrollment.session.course:id,title',
         ]);
 
         $session = $certificate->session ?? $certificate->enrollment?->session;
-        $program = $certificate->program ?? $session?->program;
+        $course = $certificate->course ?? $session?->course;
 
         return [
             'name' => $certificate->user?->name,
-            'program' => $program?->name,
+            'program' => $course?->title, // Legacy support for templates using 'program'
+            'course' => $course?->title,
             'session' => $session?->title,
-            'course' => $session?->title ?? $program?->name,
             'start_date' => $session?->start_date,
             'end_date' => $session?->end_date,
             'issued_at' => $certificate->issued_at,

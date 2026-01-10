@@ -3,39 +3,28 @@
 namespace Database\Seeders;
 
 use App\Models\Certificate;
+use App\Models\CertificateTemplate;
+use App\Models\Course;
 use App\Models\Enrollment;
-use App\Models\Program;
-use App\Models\Role;
 use App\Models\TrainingSession;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CertificateViewerTestSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-        // Get or create roles
-        $traineeRole = Role::firstOrCreate(['name' => 'trainee']);
-        $trainerRole = Role::firstOrCreate(['name' => 'trainer']);
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-
-        // Create test users
-        $trainee = User::firstOrCreate(
-            ['email' => 'trainee@example.com'],
+        // Ensure we have a user
+        $user = User::firstOrCreate(
+            ['email' => 'student@example.com'],
             [
-                'name' => 'Trainee User',
+                'name' => 'Test Student',
                 'password' => bcrypt('password'),
-                'role_id' => $traineeRole->id,
-            ]
-        );
-
-        $trainer = User::firstOrCreate(
-            ['email' => 'trainer@example.com'],
-            [
-                'name' => 'Trainer User',
-                'password' => bcrypt('password'),
-                'role_id' => $trainerRole->id,
+                'role_id' => 1, // Assuming 1 is student/trainee
             ]
         );
 
@@ -44,73 +33,81 @@ class CertificateViewerTestSeeder extends Seeder
             [
                 'name' => 'Admin User',
                 'password' => bcrypt('password'),
-                'role_id' => $adminRole->id,
+                'role_id' => 3, // Assuming 3 is admin
             ]
         );
 
-        // Create test program
-        $program = Program::firstOrCreate(
-            ['name' => 'Full Stack Web Development'],
+        // Create test course
+        $course = Course::firstOrCreate(
+            ['title' => 'Certificate Test Course'],
             [
-                'description' => 'Learn modern web development with React, Node.js, and databases.',
+                'description' => 'A course to test certificate viewing',
                 'category' => 'Programming',
-                'duration_hours' => 120,
                 'level' => 'intermediate',
-                'created_by' => $trainer->id,
-                'status' => 'approved',
-                'approved_at' => Carbon::now()->subDays(30),
-                'approved_by' => $admin->id,
+                'owner_id' => $admin->id,
+                'status' => 'published',
             ]
         );
 
-        // Create completed session
+        // Create test session
         $session = TrainingSession::firstOrCreate(
+            ['title' => 'Certificate Test Session'],
             [
-                'program_id' => $program->id,
-                'title' => 'Full Stack Web Development - Batch 1',
-            ],
-            [
-                'trainer_id' => $trainer->id,
-                'start_date' => Carbon::now()->subDays(60),
-                'end_date' => Carbon::now()->subDays(30),
-                'location' => 'Online via Zoom',
-                'capacity' => 30,
+                'course_id' => $course->id,
+                'start_date' => now()->subDays(10),
+                'end_date' => now()->subDays(5),
+                'capacity' => 20,
+                'trainer_id' => $admin->id,
                 'status' => 'completed',
+                'approval_status' => 'approved',
             ]
         );
 
-        // Create enrollment for trainee
+        // Create enrollment
         $enrollment = Enrollment::firstOrCreate(
             [
-                'user_id' => $trainee->id,
+                'user_id' => $user->id,
                 'session_id' => $session->id,
             ],
             [
                 'status' => 'completed',
-                'enrolled_at' => Carbon::now()->subDays(60),
-                'completed_at' => Carbon::now()->subDays(30),
+                'completed_at' => now()->subDays(1),
             ]
         );
 
-        // Create certificates for the trainee
-        Certificate::firstOrCreate(
+        // Create a template
+        $template = CertificateTemplate::firstOrCreate(
+            ['name' => 'Test Template'],
             [
-                'user_id' => $trainee->id,
+                'scope' => 'global',
+                'layout_config' => [
+                    'canvas' => ['width' => 2000, 'height' => 1414],
+                    'name' => ['x' => 1000, 'y' => 600, 'fontSize' => 60, 'align' => 'center'],
+                    'course' => ['x' => 1000, 'y' => 800, 'fontSize' => 40, 'align' => 'center'],
+                    'date' => ['x' => 1000, 'y' => 1000, 'fontSize' => 30, 'align' => 'center'],
+                ],
+                'is_active' => true,
+            ]
+        );
+
+        // Create a certificate
+        $code = 'TEST-VIEW-' . Str::upper(Str::random(6));
+        
+        if (!Certificate::where('certificate_code', $code)->exists()) {
+            Certificate::create([
                 'enrollment_id' => $enrollment->id,
-            ],
-            [
-                'program_id' => $program->id,
+                'user_id' => $user->id,
+                'course_id' => $course->id,
                 'session_id' => $session->id,
-                'certificate_code' => 'CERT-' . strtoupper(uniqid()),
-                'issued_at' => Carbon::now()->subDays(25),
-                'issued_by' => $trainer->id,
+                'template_id' => $template->id,
+                'issued_by' => $admin->id,
+                'issued_at' => now(),
+                'certificate_code' => $code,
                 'status' => 'valid',
-            ]
-        );
-
-        $this->command->info('Certificate test data created successfully!');
-        $this->command->info('Trainee: trainee@example.com / password');
-        $this->command->info('Trainer: trainer@example.com / password');
-        $this->command->info('Admin: admin@example.com / password');
+                'file_data' => 'fake_pdf_content', // Mock data
+                'file_mime_type' => 'application/pdf',
+                'file_size' => 1024,
+            ]);
+        }
     }
 }

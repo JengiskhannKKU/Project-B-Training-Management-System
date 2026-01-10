@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Certificate;
 use App\Models\CertificateRequest;
 use App\Models\Enrollment;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\TrainingSession;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -25,14 +25,14 @@ class CertificateGenerationService
             ->get();
     }
 
-    public function getEligibleEnrollmentsForProgram(int $programId): Collection
+    public function getEligibleEnrollmentsForCourse(int $courseId): Collection
     {
-        // For program-level certificates, we want ONE certificate per user
+        // For course-level certificates, we want ONE certificate per user
         // Select the most recent completed enrollment for each user
         $enrollments = Enrollment::query()
             ->where('status', 'completed')
-            ->whereHas('session', function ($builder) use ($programId) {
-                $builder->where('program_id', $programId);
+            ->whereHas('session', function ($builder) use ($courseId) {
+                $builder->where('course_id', $courseId);
             })
             ->with('session')
             ->get();
@@ -51,18 +51,18 @@ class CertificateGenerationService
         $enrollments = $this->getEligibleEnrollmentsForSession($session->id);
 
         return $this->issueCertificates($enrollments, [
-            'program_id' => $session->program_id,
+            'course_id' => $session->course_id,
             'session_id' => $session->id,
             'issued_by' => $issuedBy,
         ], $eagerGeneration);
     }
 
-    public function generateCertificatesForProgram(Program $program, int $issuedBy, bool $eagerGeneration = false): array
+    public function generateCertificatesForCourse(Course $course, int $issuedBy, bool $eagerGeneration = false): array
     {
-        $enrollments = $this->getEligibleEnrollmentsForProgram($program->id);
+        $enrollments = $this->getEligibleEnrollmentsForCourse($course->id);
 
         return $this->issueCertificates($enrollments, [
-            'program_id' => $program->id,
+            'course_id' => $course->id,
             'session_id' => null,
             'issued_by' => $issuedBy,
         ], $eagerGeneration);
@@ -76,7 +76,7 @@ class CertificateGenerationService
             return $this->getEligibleEnrollmentsForSession($request->session_id);
         }
 
-        return $this->getEligibleEnrollmentsForProgram($request->program_id);
+        return $this->getEligibleEnrollmentsForCourse($request->course_id);
     }
 
     public function generateCertificates(int $certificateRequestId, int $issuedBy, bool $eagerGeneration = false): array
@@ -98,7 +98,7 @@ class CertificateGenerationService
 
             $payload = [
                 'user_id' => $enrollment->user_id,
-                'program_id' => $enrollment->session?->program_id ?? $request->program_id,
+                'course_id' => $enrollment->session?->course_id ?? $request->course_id,
                 'session_id' => $request->type === 'session' ? $enrollment->session_id : null,
                 'issued_by' => $issuedBy,
                 'issued_at' => now(),
@@ -145,7 +145,7 @@ class CertificateGenerationService
 
             $payload = [
                 'user_id' => $enrollment->user_id,
-                'program_id' => $context['program_id'] ?? $enrollment->session?->program_id,
+                'course_id' => $context['course_id'] ?? $enrollment->session?->course_id,
                 'session_id' => $context['session_id'],
                 'issued_by' => $context['issued_by'],
                 'issued_at' => now(),

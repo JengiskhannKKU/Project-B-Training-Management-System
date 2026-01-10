@@ -3,35 +3,34 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\TrainingSession;
 use Illuminate\Http\JsonResponse;
 
 class CatalogController extends Controller
 {
     /**
-     * Public catalog of approved + active programs.
+     * Public catalog of published courses.
      */
-    public function programs(): JsonResponse
+    public function courses(): JsonResponse
     {
-        $programs = Program::query()
-            ->where('approval_status', 'approved')
-            ->where('status', 'active')
+        $courses = Course::query()
+            ->where('status', 'published')
             ->latest()
             ->get();
 
-        return response()->json($programs);
+        return response()->json($courses);
     }
 
     /**
-     * Public catalog of approved + open sessions for a program.
+     * Public catalog of approved + open sessions for a course.
      */
-    public function sessions(Program $program): JsonResponse
+    public function sessions(Course $course): JsonResponse
     {
         $sessions = TrainingSession::query()
             ->select([
                 'id',
-                'program_id',
+                'course_id',
                 'title',
                 'start_date',
                 'end_date',
@@ -51,7 +50,7 @@ class CatalogController extends Controller
                     $q->where('status', '!=', 'cancelled');
                 },
             ])
-            ->where('program_id', $program->id)
+            ->where('course_id', $course->id)
             ->where('approval_status', 'approved')
             ->where('status', 'open')
             ->orderByDesc('start_date')

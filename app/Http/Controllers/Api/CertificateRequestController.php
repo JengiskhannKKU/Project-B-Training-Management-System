@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CertificateRequest;
-use App\Models\Program;
+use App\Models\Course;
 use App\Models\TrainingSession;
 use App\Services\CertificateGenerationService;
 use Illuminate\Http\Request;
@@ -22,8 +22,8 @@ class CertificateRequestController extends Controller
         }
 
         $data = $request->validate([
-            'type' => ['required', Rule::in(['program', 'session'])],
-            'program_id' => ['required_if:type,program', 'nullable', 'integer', 'exists:programs,id'],
+            'type' => ['required', Rule::in(['course', 'session'])],
+            'course_id' => ['required_if:type,course', 'nullable', 'integer', 'exists:courses,id'],
             'session_id' => ['required_if:type,session', 'nullable', 'integer', 'exists:training_sessions,id'],
             'note' => ['nullable', 'string'],
             'message' => ['nullable', 'string'],
@@ -31,16 +31,17 @@ class CertificateRequestController extends Controller
 
         $note = $data['note'] ?? $data['message'] ?? null;
 
-        if ($data['type'] === 'program') {
-            $program = Program::find($data['program_id']);
-            if (!$program || $program->approval_status !== 'approved') {
+        if ($data['type'] === 'course') {
+            $course = Course::find($data['course_id']);
+            // Courses created by admin are published, so status 'published' is enough
+            if (!$course || $course->status !== 'published') {
                 return $this->validationErrorResponse([
-                    'program_id' => ['Program must be approved to request certificates.'],
+                    'course_id' => ['Course must be published to request certificates.'],
                 ]);
             }
 
-            $duplicate = CertificateRequest::where('type', 'program')
-                ->where('program_id', $program->id)
+            $duplicate = CertificateRequest::where('type', 'course')
+                ->where('course_id', $course->id)
                 ->whereIn('status', ['pending', 'approved'])
                 ->exists();
         } else {
@@ -71,7 +72,7 @@ class CertificateRequestController extends Controller
 
         $certificateRequest = CertificateRequest::create([
             'trainer_id' => $user->id,
-            'program_id' => $data['type'] === 'program' ? $data['program_id'] : null,
+            'course_id' => $data['type'] === 'course' ? $data['course_id'] : null,
             'session_id' => $data['type'] === 'session' ? $data['session_id'] : null,
             'type' => $data['type'],
             'status' => 'pending',
@@ -89,7 +90,7 @@ class CertificateRequestController extends Controller
             return $this->forbiddenResponse('Only trainers can view certificate requests.');
         }
 
-        $requests = CertificateRequest::with(['program', 'session', 'approver'])
+        $requests = CertificateRequest::with(['course', 'session', 'approver'])
             ->where('trainer_id', $user->id)
             ->latest()
             ->get();
@@ -99,7 +100,7 @@ class CertificateRequestController extends Controller
 
     public function adminIndex(Request $request)
     {
-        $query = CertificateRequest::with(['trainer', 'program', 'session']);
+        $query = CertificateRequest::with(['trainer', 'course', 'session']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->string('status'));
@@ -109,8 +110,8 @@ class CertificateRequestController extends Controller
             $query->where('type', $request->string('type'));
         }
 
-        if ($request->filled('program_id')) {
-            $query->where('program_id', $request->integer('program_id'));
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->integer('course_id'));
         }
 
         if ($request->filled('session_id')) {
@@ -124,7 +125,7 @@ class CertificateRequestController extends Controller
 
     public function show(CertificateRequest $certificateRequest, CertificateGenerationService $certificateService)
     {
-        $certificateRequest->load(['trainer', 'program', 'session']);
+        $certificateRequest->load(['trainer', 'course', 'session']);
 
         $eligibleCount = $certificateService
             ->getEligibleEnrollmentsForRequest($certificateRequest->id)
@@ -203,11 +204,11 @@ class CertificateRequestController extends Controller
 
     private function validateTargetState(CertificateRequest $certificateRequest)
     {
-        if ($certificateRequest->type === 'program') {
-            $program = Program::find($certificateRequest->program_id);
-            if (!$program || $program->approval_status !== 'approved') {
+        if ($certificateRequest->type === 'course') {
+            $course = Course::find($certificateRequest->course_id);
+            if (!$course || $course->status !== 'published') {
                 return $this->validationErrorResponse([
-                    'program_id' => ['Program must be approved to issue certificates.'],
+                    'course_id' => ['Course must be published to issue certificates.'],
                 ]);
             }
         } else {

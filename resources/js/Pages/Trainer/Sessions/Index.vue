@@ -1,167 +1,150 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
-import axios from "axios";
-import { useToast } from "vue-toastification";
-import { Plus, Search, Filter, ArrowDownNarrowWide } from "lucide-vue-next";
+import { ref, watch, onMounted } from "vue";
+import { useForm, Link, router } from "@inertiajs/vue3";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
-import PageHeader from "@/Components/PageHeader.vue";
+import Pagination from "@/Components/SimplePagination.vue";
+import { useToast } from "vue-toastification";
+import axios from "axios";
+import {
+    Search,
+    Filter,
+    Calendar,
+    MapPin,
+    Users,
+    Clock,
+    MoreHorizontal,
+    Eye,
+    FileText,
+    CheckCircle2,
+    XCircle,
+    AlertCircle,
+    UserCheck
+} from "lucide-vue-next";
 import StatusBadge from "@/Components/StatusBadge.vue";
-import SortDropdown from "@/Components/SortDropdown.vue";
-import Skeleton from "@/Components/Skeleton.vue";
-import LoadingSpinner from "@/Components/LoadingSpinner.vue";
-import { formatDate as formatDateUtil, formatTime as formatTimeUtil } from "@/utils/dateFormatter";
 
 const toast = useToast();
 
-const sessions = ref([]);
-const programs = ref([]);
+const props = defineProps({
+    sessions: Object,
+    filters: Object,
+});
+
+const search = ref(props.filters?.search || "");
+const status = ref(props.filters?.status || "");
+const date = ref(props.filters?.date || "");
 const isLoading = ref(false);
-const currentPage = ref(1);
-const totalPages = ref(1);
-const totalResults = ref(0);
-const itemsPerPage = ref(10);
-
-const startResult = computed(() => {
-    if (totalResults.value === 0) return 0;
-    return (currentPage.value - 1) * itemsPerPage.value + 1;
-});
-
-const endResult = computed(() => {
-    const end = currentPage.value * itemsPerPage.value;
-    return end > totalResults.value ? totalResults.value : end;
-});
-
-const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
-        fetchSessions();
-    }
-};
+const courses = ref([]);
+const sessions = ref({ data: [] });
 
 const filters = ref({
-    program_id: "",
-    status: "",
-    search: "",
-    sort_by: "start_date",
-    direction: "desc",
+    search: props.filters?.search || "",
+    status: props.filters?.status || "",
+    course_id: props.filters?.course_id || "",
+    date_from: props.filters?.date_from || "",
+    date_to: props.filters?.date_to || "",
 });
 
-const fetchSessions = async () => {
-    isLoading.value = true;
-    try {
-        const params = new URLSearchParams();
-        if (filters.value.program_id) params.append("program_id", filters.value.program_id);
-        if (filters.value.status) params.append("status", filters.value.status);
-        if (filters.value.search) params.append("search", filters.value.search);
-        params.append("sort_by", filters.value.sort_by);
-        params.append("direction", filters.value.direction);
-        params.append("page", currentPage.value);
-
-        const { data } = await axios.get(`/api/trainer/attendance/sessions?${params.toString()}`);
-
-        sessions.value = data?.data?.data || [];
-        totalPages.value = data?.data?.last_page || 1;
-        currentPage.value = data?.data?.current_page || 1;
-        totalResults.value = data?.data?.total || 0;
-        itemsPerPage.value = data?.data?.per_page || 10;
-    } catch (error) {
-        toast.error(error?.response?.data?.message || "Failed to load sessions");
-        sessions.value = [];
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const fetchPrograms = async () => {
-    try {
-        const { data } = await axios.get("/api/programs");
-        programs.value = data?.data || [];
-    } catch (error) {
-        toast.error("Failed to load programs");
-    }
-};
-
 const applyFilters = () => {
-    currentPage.value = 1;
     fetchSessions();
 };
 
 const resetFilters = () => {
     filters.value = {
-        program_id: "",
-        status: "",
         search: "",
+        status: "",
+        course_id: "",
+        date_from: "",
+        date_to: "",
     };
-    currentPage.value = 1;
-    fetchSessions();
+    applyFilters();
 };
 
-const formatDate = (value) => {
-    if (!value) return "—";
-    return formatDateUtil(value) || "—";
+const fetchCourses = async () => {
+    try {
+        const { data } = await axios.get("/api/courses");
+        courses.value = data || [];
+    } catch (error) {
+        toast.error("Failed to load courses");
+    }
 };
 
-const formatTime = (start, end) => {
-    if (!start || !end) return "—";
-    const formattedStart = formatTimeUtil(start);
-    const formattedEnd = formatTimeUtil(end);
-    return `${formattedStart} - ${formattedEnd}`;
+const fetchSessions = async () => {
+    isLoading.value = true;
+    try {
+        const params = new URLSearchParams();
+        if (filters.value.search) params.append("search", filters.value.search);
+        if (filters.value.status) params.append("status", filters.value.status);
+        if (filters.value.course_id) params.append("course_id", filters.value.course_id);
+        if (filters.value.date_from) params.append("date_from", filters.value.date_from);
+        if (filters.value.date_to) params.append("date_to", filters.value.date_to);
+
+        const url = params.toString() ? `/api/sessions?${params}` : "/api/sessions";
+        const { data } = await axios.get(url);
+        sessions.value = { data: data?.data || data || [] };
+    } catch (error) {
+        toast.error("Failed to load sessions");
+        sessions.value = { data: [] };
+    } finally {
+        isLoading.value = false;
+    }
 };
+
+watch(filters, () => {
+    // Debounce search
+}, { deep: true });
 
 onMounted(() => {
+    fetchCourses();
     fetchSessions();
-    fetchPrograms();
 });
 </script>
 
 <template>
-    <Head title="Sessions Management" />
     <TrainerLayout>
         <div class="space-y-6">
-            <PageHeader
-                title="Sessions Management"
-                description="View and manage all your training sessions."
-            >
-            </PageHeader>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">My Sessions</h1>
+                    <p class="text-gray-500 mt-1">Manage your training sessions and attendance</p>
+                </div>
+                <!-- Actions -->
+            </div>
 
             <!-- Filters -->
-            <div class="rounded-lg border border-gray-200 bg-white p-4">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Search -->
+                    <div class="relative">
+                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                            v-model="filters.search"
+                            type="text"
+                            placeholder="Search sessions..."
+                            class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                            @keyup.enter="applyFilters"
+                        />
+                    </div>
+
+                    <!-- Course Filter -->
                     <div>
-                        <label
-                            for="program-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Program
-                        </label>
                         <select
-                            id="program-filter"
-                            v-model="filters.program_id"
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
+                            v-model="filters.course_id"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                            @change="applyFilters"
                         >
-                            <option value="">All Programs</option>
-                            <option
-                                v-for="program in programs"
-                                :key="program.id"
-                                :value="program.id"
-                            >
-                                {{ program.name }}
+                            <option value="">All Courses</option>
+                            <option v-for="course in courses" :key="course.id" :value="course.id">
+                                {{ course.title }}
                             </option>
                         </select>
                     </div>
 
+                    <!-- Status Filter -->
                     <div>
-                        <label
-                            for="status-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Status
-                        </label>
                         <select
-                            id="status-filter"
                             v-model="filters.status"
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                            @change="applyFilters"
                         >
                             <option value="">All Statuses</option>
                             <option value="upcoming">Upcoming</option>
@@ -172,71 +155,16 @@ onMounted(() => {
                         </select>
                     </div>
 
-                    <div>
-                        <label
-                            for="search-filter"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Search
-                        </label>
-                        <div class="relative">
-                            <input
-                                id="search-filter"
-                                v-model="filters.search"
-                                type="text"
-                                placeholder="Session title..."
-                                class="w-full rounded-lg border-gray-300 pl-10 shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]"
-                                @keyup.enter="applyFilters"
-                            />
-                            <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            {{ $t('Sort') }}
-                        </label>
-                        <SortDropdown
-                            :sortColumn="filters.sort_by"
-                            :sortDirection="filters.direction"
-                            :sortOptions="[
-                                { value: 'start_date', label: 'Date' },
-                                { value: 'title', label: 'Session' },
-                                { value: 'status', label: 'Status' },
-                            ]"
-                            @sort="handleSort"
-                            @reset="resetSort"
-                        >
-                            <template #trigger>
-                                <button
-                                    class="w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 text-left bg-white focus:border-[#2f837d] focus:ring-[#2f837d] flex justify-between items-center"
-                                >
-                                    <span class="block truncate text-gray-700">
-                                        {{ filters.sort_by === 'start_date' ? $t('Date') : 
-                                           filters.sort_by === 'title' ? $t('Session') :
-                                           filters.sort_by === 'status' ? $t('Status') : $t('Sort') }}
-                                        <span v-if="filters.sort_by" class="ml-1 text-xs text-gray-500">
-                                            ({{ filters.direction === 'asc' ? 'A-Z' : 'Z-A' }})
-                                        </span>
-                                    </span>
-                                    <ArrowDownNarrowWide class="h-4 w-4 text-gray-400" />
-                                </button>
-                            </template>
-                        </SortDropdown>
-                    </div>
-
-                    <div class="flex items-end gap-2">
+                    <div class="flex gap-2">
                         <button
                             @click="applyFilters"
-                            class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#266a66]"
+                            class="flex-1 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 text-sm font-medium transition-colors"
                         >
                             Apply
                         </button>
                         <button
                             @click="resetFilters"
-                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors"
                         >
                             Reset
                         </button>
@@ -244,215 +172,83 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Sessions Table -->
-            <div class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
-                <!-- Skeleton Loading State -->
-                <div v-if="isLoading" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+            <!-- Sessions List -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 text-gray-600 font-medium border-b border-gray-100">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Range</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enrolled</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-4">Session Title</th>
+                                <th class="px-6 py-4">Course</th>
+                                <th class="px-6 py-4">Schedule</th>
+                                <th class="px-6 py-4">Location</th>
+                                <th class="px-6 py-4">Enrollment</th>
+                                <th class="px-6 py-4">Status</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <tr v-for="n in 5" :key="n" :class="n % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
-                                <td class="px-6 py-4"><Skeleton variant="text" width="140px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="120px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="150px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="100px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="50px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="50px" height="16px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="rectangular" width="80px" height="24px" /></td>
-                                <td class="px-6 py-4"><Skeleton variant="text" width="60px" height="16px" /></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div v-else-if="sessions.length === 0" class="p-8 text-center">
-                    <Calendar class="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 class="mt-2 text-sm font-semibold text-gray-900">No sessions found</h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                        No training sessions match your current filters.
-                    </p>
-                </div>
-
-                <div v-else class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Session
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Program
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Date Range
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Time
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Capacity
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Enrolled
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Status
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <tr
-                                v-for="(session, index) in sessions"
-                                :key="session.id"
-                                :class="[
-                                    'transition-colors',
-                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
-                                    'hover:bg-gray-100'
-                                ]"
-                            >
-                                <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-for="session in sessions.data" :key="session.id" class="hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4 font-medium text-gray-900">
                                     {{ session.title }}
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    {{ session.program?.name || "—" }}
+                                <td class="px-6 py-4 text-gray-600">
+                                    {{ session.course?.title || "—" }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ formatDate(session.start_date) }} - {{ formatDate(session.end_date) }}
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-center text-gray-900">
+                                            <Calendar class="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                                            {{ session.start_date }}
+                                        </div>
+                                        <div class="flex items-center text-gray-500 text-xs">
+                                            <Clock class="w-3.5 h-3.5 mr-1.5" />
+                                            {{ session.start_time }} - {{ session.end_time }}
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ formatTime(session.start_time, session.end_time) }}
+                                <td class="px-6 py-4 text-gray-600">
+                                    <div class="flex items-center">
+                                        <MapPin class="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                                        {{ session.location || "Online" }}
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ session.capacity || "—" }}
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-full max-w-[80px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full rounded-full bg-teal-500"
+                                                :style="{ width: `${Math.min((session.enrollments_count / session.capacity) * 100, 100)}%` }"
+                                            ></div>
+                                        </div>
+                                        <span class="text-xs text-gray-600">{{ session.enrollments_count }}/{{ session.capacity }}</span>
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ session.enrollments_count || 0 }}
+                                <td class="px-6 py-4">
+                                    <StatusBadge :status="session.status" />
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <StatusBadge :status="session.status || 'upcoming'" />
-                                </td>
-                                <td
-                                    class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-                                >
-                                    <div class="flex justify-end gap-2">
-                                        <Link
-                                            :href="`/trainer/${session.program_id}/sessions/${session.id}/attendance`"
-                                            class="text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
-                                            title="Mark Attendance"
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <Link 
+                                            :href="`/trainer/${session.course_id}/sessions/${session.id}/attendance`"
+                                            class="p-2 hover:bg-teal-50 text-teal-600 rounded-lg transition-colors"
+                                            title="Attendance"
                                         >
-                                            <ClipboardCheck class="h-5 w-5" />
+                                            <UserCheck class="w-4 h-4" />
                                         </Link>
+                                        <!-- Add more actions like edit/view details if needed -->
                                     </div>
                                 </td>
                             </tr>
+                            <tr v-if="!sessions.data.length">
+                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                    No sessions found.
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-
-                <!-- Pagination and Result Counter -->
-                <div
-                    v-if="sessions.length > 0"
-                    class="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200"
-                >
-                    <!-- Pagination (Left) -->
-                    <div class="flex items-center gap-2">
-                        <button
-                            @click="goToPage(currentPage - 1)"
-                            :disabled="currentPage === 1"
-                            :class="[
-                                'px-3 py-1 rounded border transition-colors',
-                                currentPage === 1
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                            ]"
-                        >
-                            Previous
-                        </button>
-
-                        <div class="flex items-center gap-1">
-                            <template
-                                v-for="page in totalPages"
-                                :key="page"
-                            >
-                                <button
-                                    v-if="
-                                        page === 1 ||
-                                        page === totalPages ||
-                                        (page >= currentPage - 1 &&
-                                            page <= currentPage + 1)
-                                    "
-                                    @click="goToPage(page)"
-                                    :class="[
-                                        'px-3 py-1 rounded border transition-colors',
-                                        currentPage === page
-                                            ? 'bg-[#2f837d] text-white border-[#2f837d]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                                    ]"
-                                >
-                                    {{ page }}
-                                </button>
-                                <span
-                                    v-else-if="
-                                        page === currentPage - 2 ||
-                                        page === currentPage + 2
-                                    "
-                                    class="px-2 text-gray-500"
-                                >
-                                    ...
-                                </span>
-                            </template>
-                        </div>
-
-                        <button
-                            @click="goToPage(currentPage + 1)"
-                            :disabled="currentPage === totalPages"
-                            :class="[
-                                'px-3 py-1 rounded border transition-colors',
-                                currentPage === totalPages
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
-                            ]"
-                        >
-                            Next
-                        </button>
-                    </div>
-
-                    <!-- Result Counter (Right) -->
-                    <div class="text-sm text-gray-600">
-                        Showing {{ startResult }}-{{ endResult }} of
-                        {{ totalResults }} results
-                    </div>
-                </div>
+                <Pagination :links="sessions.links" />
             </div>
         </div>
     </TrainerLayout>
