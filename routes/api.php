@@ -43,8 +43,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // Trainees can view their own enrollment attendance
     Route::get('enrollments/{enrollment}/attendances', [AttendanceController::class, 'enrollmentAttendances']);
 
-    Route::apiResource('courses', \App\Http\Controllers\Api\CourseController::class);
-    Route::apiResource('sessions', TrainingSessionController::class);
+    Route::apiResource('courses', \App\Http\Controllers\Api\CourseController::class)->names([
+        'index' => 'api.courses.index',
+        'store' => 'api.courses.store',
+        'show' => 'api.courses.show',
+        'update' => 'api.courses.update',
+        'destroy' => 'api.courses.destroy',
+    ]);
+    Route::apiResource('sessions', TrainingSessionController::class)->names([
+        'index' => 'api.sessions.index',
+        'store' => 'api.sessions.store',
+        'show' => 'api.sessions.show',
+        'update' => 'api.sessions.update',
+        'destroy' => 'api.sessions.destroy',
+    ]);
 
     // Reviews
     Route::get('courses/{course}/reviews', [ReviewController::class, 'courseReviews']);

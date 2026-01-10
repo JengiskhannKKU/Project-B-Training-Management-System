@@ -82,7 +82,7 @@ class GoogleAuthController extends Controller
             return match ($role) {
                 'admin'   => redirect()->route('admin.dashboard'),
                 'trainer' => redirect()->route('trainer.dashboard'),
-                default   => redirect()->route('trainee.courses.index'),
+                default   => redirect()->route('courses.index'),
             };
 
         } catch (Throwable $e) {

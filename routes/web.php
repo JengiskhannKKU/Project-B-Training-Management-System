@@ -17,7 +17,7 @@ $redirectToRoleDashboard = function () {
     return redirect()->route(match ($role) {
         'admin' => 'admin.dashboard',
         'trainer' => 'trainer.courses.index',
-        default => 'trainee.courses.index',
+        default => 'courses.index',
     });
 };
 
@@ -308,12 +308,6 @@ Route::middleware(['auth', 'role:trainee'])->group(function () {
     })->name('trainee.dashboard');
 
     // Trainee Course Catalog Routes
-    Route::get('/trainee/courses', function () {
-        return Inertia::render('Trainee/Courses/Index', [
-            'programs' => []
-        ]);
-    })->name('trainee.courses.index');
-
     Route::get('/courses', function () {
         return Inertia::render('Trainee/Courses/Index', [
             'programs' => []

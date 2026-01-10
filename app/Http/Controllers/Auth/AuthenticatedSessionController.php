@@ -56,7 +56,7 @@ class AuthenticatedSessionController extends Controller
         $redirect = match ($role) {
             'admin'   => redirect()->route('admin.dashboard'),
             'trainer' => redirect()->route('trainer.dashboard'),
-            default   => redirect()->route('trainee.courses.index'),
+            default   => redirect()->route('courses.index'),
         };
 
         \Log::info('Redirecting to', ['url' => $redirect->getTargetUrl()]);
