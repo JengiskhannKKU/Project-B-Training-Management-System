@@ -57,6 +57,7 @@ const sessionForm = useForm({
     start_time: '',
     end_time: '',
     location: '',
+    online_link: '',
     trainer: '',
     capacity: '',
     enrollment_limit: 'limited',
@@ -258,6 +259,7 @@ const submitAddSession = async () => {
                 start_time: sessionForm.start_time || null,
                 end_time: sessionForm.end_time || null,
                 location: sessionForm.location,
+                online_link: sessionForm.online_link,
                 trainer: sessionForm.trainer,
                 enrollment_limit: sessionForm.enrollment_limit,
                 capacity: capacityValue,
@@ -302,6 +304,7 @@ const handleEditSession = (session: any) => {
     sessionForm.start_time = session.start_time || session.startTime || '';
     sessionForm.end_time = session.end_time || session.endTime || '';
     sessionForm.location = session.location || '';
+    sessionForm.online_link = session.online_link || '';
     sessionForm.trainer = session.trainer || '';
     const rawCapacity = session.capacity?.split?.('/')[1] || session.capacity || '';
     const capacityLabel = String(rawCapacity || '');
@@ -337,6 +340,7 @@ const submitEditSession = () => {
                 start_time: sessionForm.start_time || null,
                 end_time: sessionForm.end_time || null,
                 location: sessionForm.location,
+                online_link: sessionForm.online_link,
                 trainer: sessionForm.trainer,
                 enrollment_limit: sessionForm.enrollment_limit,
                 capacity: capacityValue,
@@ -464,6 +468,7 @@ const mapSessionForDisplay = (session: any) => {
         time: `${start} - ${end}`,
         session: session.title || 'Session',
         location: session.location || '',
+        online_link: session.online_link || '',
         capacity: `${capacityTaken}/${capacityLabel || 0}`,
         status: session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Open',
         trainer_photo_url: session.trainer_photo_url || '',
@@ -496,6 +501,7 @@ const mapSessionRequest = (req: any) => {
         time: timeRange,
         session: payload.title || payload.course || `Session ${req.id}`,
         location: payload.location || '',
+        online_link: payload.online_link || '',
         capacity: capacityDisplay,
         status: statusMap[req.status] || req.status || 'Pending',
         enrollment_limit: enrollmentLimit || 'limited',

@@ -354,9 +354,9 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                         </p>
                     </div>
 
-                    <div v-if="isOnline">
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Online Link
+                            Online Link <span class="text-gray-400 text-xs">(Optional)</span>
                         </label>
                         <input
                             v-model="form.online_link"

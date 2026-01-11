@@ -18,6 +18,7 @@ const props = defineProps<{
         start_time: string;
         end_time: string;
         location: string;
+        online_link: string;
         trainer: string;
         capacity: string;
         enrollment_limit: string;
@@ -238,6 +239,24 @@ const handleTrainerPhotoUpload = async (event: Event) => {
                         </div>
                     </div>
                     <p v-if="sessionErrors.location" class="mt-1 text-sm text-red-600">{{ sessionErrors.location }}</p>
+                </div>
+
+                <!-- Online Link -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Online Link <span class="text-gray-400 text-xs">(Optional)</span></label>
+                    <div class="relative mt-1">
+                        <input
+                            v-model="sessionForm.online_link"
+                            type="url"
+                            placeholder="e.g., https://zoom.us/j/123456789"
+                            class="block w-full rounded-md border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                        />
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Enrollment Options -->
