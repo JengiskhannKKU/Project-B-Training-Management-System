@@ -163,9 +163,14 @@ class TrainingSessionController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        // Get all approved courses created by this trainer (owner)
-        $courses = Course::where('owner_id', $user->id)
-            ->where('status', 'published')
+        // Get all approved courses created by this trainer OR where they are assigned as trainer
+        $courses = Course::where('status', 'published')
+            ->where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                      ->orWhereHas('sessions', function ($q) use ($user) {
+                          $q->where('trainer_id', $user->id);
+                      });
+            })
             ->with(['sessions' => function ($query) {
                 $query->withCount('enrollments')
                     ->orderBy('start_at', 'desc');
