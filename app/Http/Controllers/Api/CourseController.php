@@ -33,7 +33,7 @@ class CourseController extends Controller
         if (!$request->user()->isRole('admin')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -44,7 +44,7 @@ class CourseController extends Controller
             'prerequisites' => 'nullable|string',
             'additional_info' => 'nullable|string',
             'thumbnail_path' => 'nullable|string|max:255',
-            'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
+            'status' => ['required', Rule::in(['draft', 'published'])], // Only draft and published allowed for new courses (archived only after creation)
         ]);
 
         $course = Course::create([
@@ -88,7 +88,7 @@ class CourseController extends Controller
             'prerequisites' => 'nullable|string',
             'additional_info' => 'nullable|string',
             'thumbnail_path' => 'nullable|string|max:255',
-            'status' => ['sometimes', 'required', Rule::in(['draft', 'published', 'archived'])],
+            'status' => ['sometimes', 'required', Rule::in(['draft', 'published', 'archived'])], // All statuses allowed when updating
         ]);
 
         $course->update($validated);

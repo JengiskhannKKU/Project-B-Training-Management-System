@@ -549,9 +549,9 @@ const fetchSessions = async () => {
     try {
         // For approved programs, use the actual program ID from the programs table
         // For pending programs, use the request ID to find session requests
-        const programId = program.value?.id || requestFallback.value?.target_id || props.program.id;
+        const courseId = displayProgram.value?.id || requestFallback.value?.target_id || props.program.id;
         const { data } = await axios.get('/api/sessions', {
-            params: { program_id: programId },
+            params: { course_id: courseId },
         });
         const apiSessions = data?.data ?? data ?? [];
         await fetchSessionRequests();

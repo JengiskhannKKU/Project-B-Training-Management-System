@@ -126,7 +126,7 @@ const fetchSessions = async (programId) => {
         return;
     }
     try {
-        const response = await axios.get("/api/sessions", { params: { program_id: programId } });
+        const response = await axios.get("/api/sessions", { params: { course_id: programId } });
         sessions.value = response.data?.data ?? [];
     } catch {
         sessions.value = [];

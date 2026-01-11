@@ -393,7 +393,8 @@ const fetchPrograms = async () => {
         const mappedList = list.map((course: any) => {
             const hasSessions = (course.sessions_count || 0) > 0;
             const isPublished = course.status === 'published';
-            const isIncomplete = !hasSessions || !isPublished;
+            // A course is incomplete only if it's published but has no sessions
+            const isIncomplete = isPublished && !hasSessions;
 
             return {
                 id: course.id,

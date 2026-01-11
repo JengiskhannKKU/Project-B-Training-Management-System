@@ -263,11 +263,20 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <InputLabel value="Status" required />
                             <select v-model="form.status" class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm py-2.5">
-                                <option value="draft">Draft</option>
-                                <option value="published">Published</option>
-                                <option value="archived">Archived</option>
+                                <option value="draft">Draft - Save for later</option>
+                                <option value="published">Published - Ready and active</option>
+                                <option v-if="isEditMode" value="archived">Archived - Store for records</option>
                             </select>
                             <InputError :message="form.errors.status" />
+                            <div v-if="form.status === 'draft'" class="text-xs text-gray-600 mt-1">
+                                💾 Course saved but not active. Use this when details are still uncertain or subject to change.
+                            </div>
+                            <div v-if="form.status === 'published'" class="text-xs text-teal-600 mt-1">
+                                ✓ Course is ready and sessions can be created immediately.
+                            </div>
+                            <div v-if="form.status === 'archived' && isEditMode" class="text-xs text-gray-600 mt-1">
+                                📦 Course stored for records. Used for completed courses or courses you want to keep archived.
+                            </div>
                         </div>
 
                         <!-- Category -->

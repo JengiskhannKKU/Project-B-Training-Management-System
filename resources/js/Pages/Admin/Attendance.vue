@@ -309,7 +309,7 @@ onMounted(() => {
                                     <StatusBadge :status="session.status || 'upcoming'" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <Link :href="`/admin/${session.program_id}/sessions/${session.id}/attendance`"
+                                    <Link :href="`/admin/${session.course_id}/sessions/${session.id}/attendance`"
                                         class="inline-flex items-center gap-1.5 text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
                                         title="Mark Attendance">
                                         <ClipboardCheck class="h-5 w-5" />
