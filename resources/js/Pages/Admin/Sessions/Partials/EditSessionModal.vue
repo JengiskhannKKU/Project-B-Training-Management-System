@@ -93,8 +93,14 @@ watch(() => props.show, (isShown) => {
 const fetchTrainers = async () => {
     isLoadingTrainers.value = true;
     try {
-        const { data } = await axios.get('/api/admin/users?role=trainer');
-        trainers.value = data?.data || [];
+        const { data } = await axios.get('/api/admin/users', {
+            params: {
+                role: 'trainer',
+                per_page: 100
+            }
+        });
+        // Handle both paginated and non-paginated responses
+        trainers.value = data?.data?.data || data?.data || [];
     } catch (error) {
         toast.error('Failed to load trainers');
         trainers.value = [];
@@ -215,25 +221,15 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Trainer <span class="text-red-500">*</span>
                         </label>
-                        <select
+                        <SearchableSelect
                             v-model="form.trainer_id"
+                            :options="trainers"
+                            label-key="name"
+                            value-key="id"
+                            placeholder="Select a trainer"
                             :disabled="isSubmitting || isLoadingTrainers"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                errors.trainer_id ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        >
-                            <option value="">
-                                {{ isLoadingTrainers ? 'Loading trainers...' : 'Select a trainer' }}
-                            </option>
-                            <option
-                                v-for="trainer in trainers"
-                                :key="trainer.id"
-                                :value="trainer.id"
-                            >
-                                {{ trainer.name }}
-                            </option>
-                        </select>
+                            :error="errors.trainer_id ? errors.trainer_id[0] : ''"
+                        />
                         <p v-if="errors.trainer_id" class="mt-1 text-sm text-red-600">
                             {{ errors.trainer_id[0] }}
                         </p>

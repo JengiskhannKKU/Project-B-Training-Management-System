@@ -45,8 +45,6 @@ class CourseController extends Controller
             'additional_info' => 'nullable|string',
             'thumbnail_path' => 'nullable|string|max:255',
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
-            'min_participants' => 'required|integer|min:1',
-            'max_participants' => 'required|integer|gte:min_participants',
         ]);
 
         $course = Course::create([
@@ -91,8 +89,6 @@ class CourseController extends Controller
             'additional_info' => 'nullable|string',
             'thumbnail_path' => 'nullable|string|max:255',
             'status' => ['sometimes', 'required', Rule::in(['draft', 'published', 'archived'])],
-            'min_participants' => 'sometimes|required|integer|min:1',
-            'max_participants' => 'sometimes|required|integer|gte:min_participants',
         ]);
 
         $course->update($validated);
