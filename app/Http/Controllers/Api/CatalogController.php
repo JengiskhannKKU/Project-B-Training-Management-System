@@ -126,4 +126,73 @@ class CatalogController extends Controller
 
         return response()->json($sessions);
     }
+
+    /**
+     * Show full details of a published course.
+     */
+    public function show($id): JsonResponse
+    {
+        $course = Course::where('id', $id)
+            ->where('status', 'published')
+            ->with(['sessions' => function ($query) {
+                $query->whereIn('status', ['scheduled', 'ongoing'])
+                      ->orderBy('start_at', 'asc');
+            }, 'reviews', 'owner'])
+            ->withCount('reviews as reviews_count')
+            ->withAvg('reviews as rating', 'rating')
+            ->firstOrFail();
+
+        // Calculate total trainees
+        $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function($q) use ($course) {
+            $q->select('id')->from('training_sessions')->where('course_id', $course->id);
+        })->where('status', '!=', 'cancelled')->count();
+
+        // Determine display session
+        $displaySession = $course->sessions->first();
+        $dateStr = 'No upcoming sessions';
+        $timeStr = '-';
+        $locationStr = 'TBD';
+
+        if ($displaySession) {
+            if ($displaySession->start_at && $displaySession->end_at) {
+                $start = $displaySession->start_at;
+                $end = $displaySession->end_at;
+                
+                if ($start->isSameDay($end)) {
+                    $dateStr = $start->format('M j, Y');
+                } else {
+                    $dateStr = $start->format('M j') . '-' . $end->format('j, Y');
+                }
+                $timeStr = $start->format('H:i') . ' - ' . $end->format('H:i');
+            }
+            $locationStr = $displaySession->location ?? $displaySession->online_link ?? 'Online';
+        }
+
+        $data = [
+            'id' => $course->id,
+            'name' => $course->title,
+            'description' => $course->description,
+            'image_url' => $course->thumbnail_path,
+            'category' => $course->category,
+            'level' => ucfirst($course->level ?? 'Beginner'),
+            'trainees_count' => $totalTrainees,
+            'rating' => round($course->rating ?? 0, 1),
+            'reviews_count' => $course->reviews_count,
+            'price' => 'Free',
+            'date' => $dateStr,
+            'time' => $timeStr,
+            'location' => $locationStr,
+            'status' => $course->status,
+            'learning_outcomes' => $course->learning_outcomes,
+            'target_audience' => $course->target_audience,
+            'prerequisites' => $course->prerequisites,
+            'additional_info' => $course->additional_info,
+            'owner' => $course->owner ? [
+                'name' => $course->owner->name,
+                // 'rating' => ... if needed
+            ] : null,
+        ];
+
+        return response()->json($data);
+    }
 }

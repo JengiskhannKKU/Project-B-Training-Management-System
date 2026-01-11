@@ -23,6 +23,7 @@ Route::post('auth/login', [AuthController::class, 'login']);
 // Public catalog
 Route::get('catalog/courses', [CatalogController::class, 'courses']);
 Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
+Route::get('catalog/courses/{id}', [CatalogController::class, 'show']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {

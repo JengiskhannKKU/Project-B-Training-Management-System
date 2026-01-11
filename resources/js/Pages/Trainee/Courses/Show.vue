@@ -50,7 +50,7 @@ const programCategory = computed(() => program.value?.category || "General");
 const openSessions = computed(() =>
     sessions.value.filter((session) => {
         const status = (session?.status || "").toLowerCase();
-        return status === "open";
+        return status === "open" || status === "scheduled" || status === "ongoing";
     })
 );
 
@@ -65,7 +65,7 @@ const backLinkText = computed(() =>
 const programDescription = computed(
     () =>
         program.value?.description ||
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue ullam consectetur ornare consectetur sed in leo. Enim imperdiet urna tincidunt at integer nunc amet vitae orci."
+        "No description provided."
 );
 
 const formattedDuration = computed(() => {
@@ -75,31 +75,22 @@ const formattedDuration = computed(() => {
     return `${program.value.duration_hours} hrs`;
 });
 
-const whatYouLearn = computed(() => [
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    "Integer vitae congue ullam consectetur ornare consectetur sed in leo.",
-    "Enim imperdiet urna tincidunt at integer nunc amet vitae orci.",
-    "Ultrices augue scelerisque.",
-]);
+const whatYouLearn = computed(() => {
+    if (!program.value?.learning_outcomes) return [];
+    return program.value.learning_outcomes.split('\n').filter(line => line.trim() !== '');
+});
 
-const whoShouldAttend = computed(() => [
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    "Integer vitae congue ullam consectetur ornare consectetur sed in leo.",
-    "Enim imperdiet urna tincidunt at integer nunc amet vitae orci.",
-    "Ultrices augue scelerisque.",
-]);
+const whoShouldAttend = computed(() => {
+    if (!program.value?.target_audience) return [];
+    return program.value.target_audience.split('\n').filter(line => line.trim() !== '');
+});
 
 const fetchProgram = async () => {
     isLoadingProgram.value = true;
     programError.value = null;
     try {
-        const { data } = await axios.get("/api/catalog/courses");
-        const list = data || [];
-        const match = list.find((item) => String(item.id) === String(props.programId));
-        program.value = match || null;
-        if (!match) {
-            programError.value = "Course not found.";
-        }
+        const { data } = await axios.get(`/api/catalog/courses/${props.programId}`);
+        program.value = data || null;
     } catch (error) {
         program.value = null;
         const message = error?.response?.data?.message || "Unable to load program details.";
@@ -182,20 +173,41 @@ const closeSuccessModal = () => {
 
 const formattedDate = (value) => {
     if (!value) return "-";
-    return value;
+    // Assuming value is already formatted or ISO date
+    // Backend sends ISO date string 'YYYY-MM-DD' or datetime
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return value;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const formatSessionMeta = (session) => {
-    const date = formattedDate(session.start_date);
+    const date = formattedDate(session.start_at || session.start_date);
     const time = formattedTime(session);
     const location = session.location || "Smart Classroom";
     return `${date} · ${time} · ${location}`;
 };
 
 const formattedTime = (session) => {
-    const start = session?.start_time ? session.start_time.slice(0, 5) : "--:--";
-    const end = session?.end_time ? session.end_time.slice(0, 5) : "--:--";
-    return `${start} - ${end}`;
+    // Backend might return start_at/end_at (datetime) or start_time/end_time (string)
+    // If start_at is datetime, extract time
+    let start = '';
+    let end = '';
+    
+    if (session.start_at) {
+        const d = new Date(session.start_at);
+        start = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (session.start_time) {
+        start = session.start_time.slice(0, 5);
+    }
+
+    if (session.end_at) {
+        const d = new Date(session.end_at);
+        end = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (session.end_time) {
+        end = session.end_time.slice(0, 5);
+    }
+
+    return start && end ? `${start} - ${end}` : (start || "--:--");
 };
 
 const sessionTrainerPhoto = (session) =>
@@ -295,7 +307,6 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                     <span class="rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">Published</span>
                     <span class="rounded-full bg-blue-100 px-3 py-1 font-semibold text-blue-700">Registration Open</span>
-                    <span class="rounded-full bg-amber-100 px-3 py-1 font-semibold text-amber-700">Start in 15 days</span>
                 </div>
 
                 <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
@@ -304,10 +315,11 @@ onMounted(() => {
                             <h2 class="text-lg font-semibold text-gray-900">
                                 Description
                             </h2>
-                            <p class="mt-3 text-sm text-gray-500">
+                            <p class="mt-3 text-sm text-gray-500 whitespace-pre-line">
                                 {{ programDescription }}
                             </p>
-                            <div class="mt-6">
+                            
+                            <div class="mt-6" v-if="whatYouLearn.length > 0">
                                 <h3 class="text-sm font-semibold text-gray-900">What You'll Learn</h3>
                                 <ul class="mt-3 space-y-2 text-sm text-gray-500">
                                     <li v-for="item in whatYouLearn" :key="item" class="flex items-start gap-2">
@@ -316,7 +328,8 @@ onMounted(() => {
                                     </li>
                                 </ul>
                             </div>
-                            <div class="mt-6">
+                            
+                            <div class="mt-6" v-if="whoShouldAttend.length > 0">
                                 <h3 class="text-sm font-semibold text-gray-900">Who Should Attend</h3>
                                 <ul class="mt-3 space-y-2 text-sm text-gray-500">
                                     <li v-for="item in whoShouldAttend" :key="item" class="flex items-start gap-2">
@@ -324,6 +337,16 @@ onMounted(() => {
                                         <span>{{ item }}</span>
                                     </li>
                                 </ul>
+                            </div>
+
+                            <div class="mt-6" v-if="program?.prerequisites">
+                                <h3 class="text-sm font-semibold text-gray-900">Prerequisites</h3>
+                                <p class="mt-3 text-sm text-gray-500 whitespace-pre-line">{{ program.prerequisites }}</p>
+                            </div>
+
+                            <div class="mt-6" v-if="program?.additional_info">
+                                <h3 class="text-sm font-semibold text-gray-900">Additional Information</h3>
+                                <p class="mt-3 text-sm text-gray-500 whitespace-pre-line">{{ program.additional_info }}</p>
                             </div>
                         </div>
 
@@ -432,31 +455,23 @@ onMounted(() => {
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Level:</span>
-                                    <span class="font-semibold text-gray-800">Advance</span>
+                                    <span class="font-semibold text-gray-800">{{ program?.level || 'Beginner' }}</span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span>Period:</span>
-                                    <span class="font-semibold text-gray-800">May 1 - MAY 2</span>
+                                    <span>Date:</span>
+                                    <span class="font-semibold text-gray-800">{{ program?.date || '-' }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Time:</span>
-                                    <span class="font-semibold text-gray-800">09:00 - 12:00 AM</span>
+                                    <span class="font-semibold text-gray-800">{{ program?.time || '-' }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Location:</span>
-                                    <span class="font-semibold text-gray-800">Smart Classroom</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Trainer:</span>
-                                    <span class="font-semibold text-gray-800">Natthiya Chakaew</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Certificated:</span>
-                                    <span class="font-semibold text-gray-800">Standard</span>
+                                    <span class="font-semibold text-gray-800">{{ program?.location || '-' }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Status:</span>
-                                    <span class="font-semibold text-emerald-600">OPEN</span>
+                                    <span class="font-semibold text-emerald-600">{{ program?.status || '-' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -465,20 +480,7 @@ onMounted(() => {
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900">Instructor</h3>
-                                    <p class="text-sm text-gray-500">สมชาย ใจดี</p>
-                                </div>
-                                <div class="text-right text-sm text-gray-500">
-                                    <div class="text-lg font-semibold text-gray-900">4.8 ★</div>
-                                    <div>(16,124 reviews)</div>
-                                </div>
-                            </div>
-                            <div class="mt-4 flex items-center gap-4">
-                                <div class="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
-                                    aT
-                                </div>
-                                <div class="text-sm text-gray-500">
-                                    <div class="font-semibold text-gray-900">85%</div>
-                                    Positive
+                                    <p class="text-sm text-gray-500">{{ program?.owner?.name || 'Unknown' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -486,7 +488,7 @@ onMounted(() => {
                         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                             <h3 class="text-lg font-semibold text-gray-900">Course URL</h3>
                             <div class="mt-4 flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600">
-                                https://example.com/courses/ux*de
+                                {{ `http://localhost:8000/courses/${programId}` }}
                             </div>
                             <div class="mt-4 grid grid-cols-3 gap-2 text-xs text-gray-500">
                                 <button class="flex flex-col items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 hover:bg-gray-50">
@@ -531,7 +533,7 @@ onMounted(() => {
                         Date
                     </div>
                     <div class="mt-1 text-sm font-semibold text-gray-900">
-                        {{ formattedDate(selectedSession?.start_date) }}
+                        {{ formattedDate(selectedSession?.start_at || selectedSession?.start_date) }}
                     </div>
                 </div>
                 <div class="rounded-2xl border border-gray-200 p-3">
