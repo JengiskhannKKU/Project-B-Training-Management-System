@@ -44,12 +44,12 @@ const navigationItems = [
         icon: BookOpen,
     },
     {
-        name: "All Sessions",
+        name: "รอบการอบรมทั้งหมด",
         path: "/admin/sessions",
         icon: Calendar,
     },
     {
-        name: "All Attendance",
+        name: "การเข้าเรียนทั้งหมด",
         path: "/admin/attendance",
         icon: BookCheck,
     },
