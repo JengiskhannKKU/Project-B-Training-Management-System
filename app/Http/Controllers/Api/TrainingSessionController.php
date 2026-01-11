@@ -16,7 +16,10 @@ class TrainingSessionController extends Controller
     
     public function index(Request $request)
     {
-        $query = TrainingSession::query()->latest();
+        $query = TrainingSession::query()
+            ->with(['course', 'trainer'])
+            ->withCount('enrollments')
+            ->latest();
         $user = $request->user();
 
         if ($user && $user->isRole('trainer')) {

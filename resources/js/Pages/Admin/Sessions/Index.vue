@@ -35,6 +35,18 @@ const selectedSession = ref(null);
 const isLoading = ref(false);
 const initialCourseId = ref('');
 
+const formatDate = (dateString) => {
+    if (!dateString) return '—';
+    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const formatTimeRange = (start, end) => {
+    if (!start || !end) return '—';
+    const s = new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const e = new Date(end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${s} - ${e}`;
+};
+
 const filters = ref({
     search: props.filters?.search || "",
     status: props.filters?.status || "",
@@ -270,11 +282,11 @@ onMounted(() => {
                                         <div class="flex flex-col gap-1">
                                             <div class="flex items-center text-gray-900">
                                                 <Calendar class="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                                                {{ session.start_date }}
+                                                {{ formatDate(session.start_at) }}
                                             </div>
                                             <div class="flex items-center text-gray-500 text-xs">
                                                 <Clock class="w-3.5 h-3.5 mr-1.5" />
-                                                {{ session.start_time }} - {{ session.end_time }}
+                                                {{ formatTimeRange(session.start_at, session.end_at) }}
                                             </div>
                                         </div>
                                     </td>
