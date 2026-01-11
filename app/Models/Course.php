@@ -27,6 +27,8 @@ class Course extends Model
         'owner_id',
     ];
 
+    protected $appends = ['is_complete', 'is_incomplete'];
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -35,5 +37,15 @@ class Course extends Model
     public function sessions(): HasMany
     {
         return $this->hasMany(TrainingSession::class);
+    }
+
+    public function getIsCompleteAttribute(): bool
+    {
+        return $this->status === 'published' && $this->sessions()->count() >= 1;
+    }
+
+    public function getIsIncompleteAttribute(): bool
+    {
+        return !$this->is_complete;
     }
 }

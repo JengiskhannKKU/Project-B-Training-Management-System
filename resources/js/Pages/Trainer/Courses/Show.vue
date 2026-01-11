@@ -854,7 +854,13 @@ const getCertificateStatusColor = (status: string) => {
             </div>
 
             <!-- Content Area -->
-            <ProgramOverviewTab v-if="activeTab === 'overview'" :program="displayProgram" />
+            <ProgramOverviewTab
+                v-if="activeTab === 'overview'"
+                :program="displayProgram"
+                :sessions-count="sessions.length"
+                :is-admin="isAdmin"
+                @create-session="handleAddSession"
+            />
             <SessionsTab
                 v-if="activeTab === 'sessions'"
                 :sessions="sessions"

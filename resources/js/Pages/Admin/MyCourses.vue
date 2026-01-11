@@ -303,7 +303,7 @@ const handleDeleteCourse = async (courseId: number) => {
 
     try {
         await axios.get('/sanctum/csrf-cookie');
-        await axios.delete(`/api/admin/courses/${courseId}`);
+        await axios.delete(`/api/courses/${courseId}`);
         toast.success('Course deleted successfully!');
         await fetchPrograms();
     } catch (error: any) {
@@ -316,31 +316,11 @@ const handleDeleteCourse = async (courseId: number) => {
 };
 
 const handleCreateProgram = async (payload: Record<string, unknown> | undefined) => {
-    if (!payload) return;
-    isSubmittingProgram.value = true;
-    try {
-        await axios.get('/sanctum/csrf-cookie');
-
-        if (editingCourse.value?.id) {
-            await axios.put(`/api/admin/courses/${editingCourse.value.id}`, payload);
-            toast.success('Course updated successfully!');
-        } else {
-            await axios.post('/api/admin/courses', payload);
-            toast.success('Course created successfully!');
-        }
-
-        showCreateModal.value = false;
-        editingCourse.value = null;
-        await fetchPrograms();
-    } catch (error: any) {
-        const message =
-            error?.response?.data?.message ||
-            error?.message ||
-            `Failed to ${editingCourse.value ? 'update' : 'create'} course.`;
-        toast.error(message);
-    } finally {
-        isSubmittingProgram.value = false;
-    }
+    // The API call now happens in CourseModal itself
+    // This handler is called only on success, so just refresh the list
+    showCreateModal.value = false;
+    editingCourse.value = null;
+    await fetchPrograms();
 };
 
 const setBearerToken = (token: string) => {
@@ -411,7 +391,10 @@ const fetchPrograms = async () => {
 
         // Transform and map API data to match CourseCard props
         const mappedList = list.map((course: any) => {
-            const hasSessions = course.sessions_count > 0;
+            const hasSessions = (course.sessions_count || 0) > 0;
+            const isPublished = course.status === 'published';
+            const isIncomplete = !hasSessions || !isPublished;
+
             return {
                 id: course.id,
                 name: course.title, // Map title to name for CourseCard
@@ -424,10 +407,11 @@ const fetchPrograms = async () => {
                 time: '',
                 location: 'Online',
                 department: course.category || 'General',
-                status: hasSessions ? (course.status || 'published') : 'incomplete',
+                status: course.status,
+                isIncomplete: isIncomplete,
                 created_by_id: course.owner_id,
                 created_at: course.created_at,
-                sessions_count: course.sessions_count,
+                sessions_count: course.sessions_count || 0,
                 // Raw fields for editing
                 title: course.title,
                 description: course.description,
@@ -649,6 +633,7 @@ onMounted(() => {
                             :date="course.date"
                             :time="course.time"
                             :location="course.location"
+                            :is-incomplete="course.isIncomplete"
                             :show-actions="true"
                             @edit="handleEditCourse(course)"
                             @delete="handleDeleteCourse(course.id)"

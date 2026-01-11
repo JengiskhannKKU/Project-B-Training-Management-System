@@ -5,6 +5,7 @@ const props = defineProps<{
     program: {
         id?: number;
         name?: string;
+        title?: string;
         code?: string;
         category?: string;
         level?: string;
@@ -17,11 +18,24 @@ const props = defineProps<{
         description?: string;
         image_url?: string | null;
         approval_status?: string;
+        learning_outcomes?: string;
+        target_audience?: string;
+        prerequisites?: string;
+        additional_info?: string;
+        min_participants?: number;
+        max_participants?: number;
+        sessions_count?: number;
     };
+    sessionsCount?: number;
+    isAdmin?: boolean;
+}>();
+
+const emit = defineEmits<{
+    'create-session': [];
 }>();
 
 const programData = computed(() => ({
-    name: props.program?.name || 'Program',
+    name: props.program?.name || props.program?.title || 'Program',
     description: props.program?.description || 'No description provided.',
     category: props.program?.category || 'General',
     level: props.program?.level || 'Beginner',
@@ -32,6 +46,12 @@ const programData = computed(() => ({
     certificated: props.program?.certificated || '—',
     status: props.program?.status || 'pending',
     approval_status: props.program?.approval_status || 'pending',
+    learning_outcomes: props.program?.learning_outcomes || '',
+    target_audience: props.program?.target_audience || '',
+    prerequisites: props.program?.prerequisites || '',
+    additional_info: props.program?.additional_info || '',
+    min_participants: props.program?.min_participants || 1,
+    max_participants: props.program?.max_participants || 20,
 }));
 
 const statusStyles = computed(() => {
@@ -40,75 +60,110 @@ const statusStyles = computed(() => {
     if (s === 'rejected') return { text: 'Rejected', class: 'text-red-700', dot: 'bg-red-500' };
     return { text: 'Pending', class: 'text-amber-700', dot: 'bg-amber-500' };
 });
+
+const isIncomplete = computed(() => {
+    const sessionsCount = props.sessionsCount ?? props.program?.sessions_count ?? 0;
+    return props.program?.status === 'published' && sessionsCount === 0;
+});
+
+const learningOutcomesArray = computed(() => {
+    if (!programData.value.learning_outcomes) return [];
+    return programData.value.learning_outcomes
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+});
+
+const targetAudienceArray = computed(() => {
+    if (!programData.value.target_audience) return [];
+    return programData.value.target_audience
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+});
+
+const getLevelBadgeClass = computed(() => {
+    const level = programData.value.level.toLowerCase();
+    if (level === 'beginner') return 'bg-emerald-100 text-emerald-700';
+    if (level === 'intermediate') return 'bg-amber-100 text-amber-700';
+    if (level === 'advanced') return 'bg-red-100 text-red-700';
+    return 'bg-gray-100 text-gray-700';
+});
 </script>
 
 <template>
-    <div :class="['grid gap-4 sm:gap-6', 'lg:grid-cols-3']">
-        <!-- Main Content -->
-        <div class="lg:col-span-2">
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <h2 class="mb-4 text-lg font-semibold text-gray-900">Description</h2>
-                <p class="text-gray-600">
-                    {{ programData.description }}
-                </p>
-
-                <h3 class="mb-3 mt-6 font-semibold text-gray-900">What You'll Learn</h3>
-                <ul class="space-y-2 text-gray-600">
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Integer vitae congue nullam consectetur ornare consectetur sed in leo.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Enim imperdiet urna tincidunt at integer nunc amet vitae orci.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Ultrices augue scelerisque.</span>
-                    </li>
-                </ul>
-
-                <h3 class="mb-3 mt-6 font-semibold text-gray-900">Who Should Attend</h3>
-                <ul class="space-y-2 text-gray-600">
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Integer vitae congue nullam consectetur ornare consectetur sed in leo.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Enim imperdiet urna tincidunt at integer nunc amet vitae orci.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Ultrices augue scelerisque.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Integer vitae congue nullam consectetur ornare consectetur sed in leo.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Enim imperdiet urna tincidunt at integer nunc amet vitae orci.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-teal-600">•</span>
-                        <span>Ultrices augue scelerisque.</span>
-                    </li>
-                </ul>
+    <div class="space-y-6">
+        <!-- Incomplete Course Banner -->
+        <div v-if="isIncomplete" class="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
+            <div class="flex items-start gap-4">
+                <div class="rounded-full bg-amber-100 p-3">
+                    <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-amber-900 mb-2">This Course is Incomplete</h3>
+                    <p class="text-sm text-amber-700 mb-4">
+                        This course is published but has no sessions yet. It will not be visible to trainees until at least one session is created. Please navigate to the <strong>Sessions</strong> tab to create your first session.
+                    </p>
+                    <button
+                        v-if="isAdmin"
+                        @click="emit('create-session')"
+                        class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>Create First Session</span>
+                    </button>
+                </div>
             </div>
         </div>
+
+        <div :class="['grid gap-4 sm:gap-6', 'lg:grid-cols-3']">
+            <!-- Main Content -->
+            <div class="lg:col-span-2">
+                <div class="rounded-lg bg-white p-6 shadow-sm">
+                    <h2 class="mb-4 text-lg font-semibold text-gray-900">Description</h2>
+                    <p class="text-gray-600 whitespace-pre-wrap">
+                        {{ programData.description }}
+                    </p>
+
+                    <!-- Learning Outcomes -->
+                    <div v-if="learningOutcomesArray.length > 0" class="mt-6">
+                        <h3 class="mb-3 font-semibold text-gray-900">What You'll Learn</h3>
+                        <ul class="space-y-2 text-gray-600">
+                            <li v-for="(outcome, index) in learningOutcomesArray" :key="index" class="flex items-start gap-2">
+                                <span class="text-teal-600 mt-1">•</span>
+                                <span>{{ outcome }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Target Audience -->
+                    <div v-if="targetAudienceArray.length > 0" class="mt-6">
+                        <h3 class="mb-3 font-semibold text-gray-900">Who Should Attend</h3>
+                        <ul class="space-y-2 text-gray-600">
+                            <li v-for="(audience, index) in targetAudienceArray" :key="index" class="flex items-start gap-2">
+                                <span class="text-teal-600 mt-1">•</span>
+                                <span>{{ audience }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Prerequisites -->
+                    <div v-if="programData.prerequisites" class="mt-6">
+                        <h3 class="mb-3 font-semibold text-gray-900">Prerequisites</h3>
+                        <p class="text-gray-600 whitespace-pre-wrap">{{ programData.prerequisites }}</p>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div v-if="programData.additional_info" class="mt-6">
+                        <h3 class="mb-3 font-semibold text-gray-900">Additional Information</h3>
+                        <p class="text-gray-600 whitespace-pre-wrap">{{ programData.additional_info }}</p>
+                    </div>
+                </div>
+            </div>
 
         <!-- Sidebar -->
         <div class="space-y-6">
@@ -130,27 +185,27 @@ const statusStyles = computed(() => {
                     </div>
                     <div>
                         <div class="text-gray-500">Level:</div>
-                        <span class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700">{{ programData.level }}</span>
+                        <span :class="['rounded px-2 py-1 text-xs font-medium', getLevelBadgeClass]">{{ programData.level }}</span>
                     </div>
                     <div>
+                        <div class="text-gray-500">Class Capacity:</div>
+                        <div class="font-medium text-gray-900">{{ programData.min_participants }} - {{ programData.max_participants }} participants</div>
+                    </div>
+                    <div v-if="programData.period && programData.period !== '—'">
                         <div class="text-gray-500">Period:</div>
                         <div class="font-medium text-gray-900">{{ programData.period }}</div>
                     </div>
-                    <div>
+                    <div v-if="programData.time && programData.time !== '—'">
                         <div class="text-gray-500">Time:</div>
                         <div class="font-medium text-gray-900">{{ programData.time }}</div>
                     </div>
-                    <div>
+                    <div v-if="programData.location && programData.location !== '—'">
                         <div class="text-gray-500">Location:</div>
                         <div class="font-medium text-gray-900">{{ programData.location }}</div>
                     </div>
-                    <div>
+                    <div v-if="programData.trainer && programData.trainer !== '—'">
                         <div class="text-gray-500">Trainer:</div>
                         <div class="font-medium text-gray-900">{{ programData.trainer }}</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">Certificated:</div>
-                        <div class="font-medium text-gray-900">{{ programData.certificated }}</div>
                     </div>
                     <div>
                         <div class="text-gray-500">Status:</div>
@@ -219,6 +274,7 @@ const statusStyles = computed(() => {
                     </button>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </template>

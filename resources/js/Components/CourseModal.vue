@@ -98,9 +98,20 @@ const levels = [
     { id: 'advanced', label: 'Advanced', desc: 'Extensive experience required' },
 ];
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
+    // Clear previous errors
+    form.clearErrors();
+
+    // Client-side validation
     if (form.min_participants > form.max_participants) {
         form.setError('min_participants', 'Minimum cannot be greater than maximum');
+        return;
+    }
+
+    if (!form.title || !form.category) {
+        if (!form.title) form.setError('title', 'Course title is required');
+        if (!form.category) form.setError('category', 'Category is required');
+        toast.error('Please fill in all required fields');
         return;
     }
 
@@ -119,8 +130,40 @@ const handleSubmit = () => {
         status: form.status,
     };
 
-    emit('success', payload);
-    handleClose();
+    form.processing = true;
+
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+
+        if (isEditMode.value) {
+            await axios.put(`/api/courses/${props.course.id}`, payload);
+            toast.success('Course updated successfully!');
+        } else {
+            await axios.post('/api/courses', payload);
+            toast.success('Course created successfully!');
+        }
+
+        // Only emit success and close if API call succeeded
+        emit('success', payload);
+        handleClose();
+    } catch (error: any) {
+        // Handle validation errors from API
+        if (error.response?.status === 422 && error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            Object.keys(errors).forEach(field => {
+                form.setError(field, errors[field][0]);
+            });
+            toast.error('Please fix the validation errors');
+        } else if (error.response?.status === 403) {
+            toast.error('Unauthorized: Only admins can create/edit courses');
+        } else {
+            const message = error?.response?.data?.message || error?.message ||
+                `Failed to ${isEditMode.value ? 'update' : 'create'} course`;
+            toast.error(message);
+        }
+    } finally {
+        form.processing = false;
+    }
 };
 
 const handleClose = () => {
@@ -198,10 +241,10 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <InputLabel value="Course Thumbnail" />
                             <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="handleImageUpload" />
-                            
-                            <div 
-                                v-if="!imagePreview && !props.course?.thumbnail_path && !thumbnailPath" 
-                                @click="triggerFileInput" 
+
+                            <div
+                                v-if="!imagePreview && !props.course?.thumbnail_path && !thumbnailPath"
+                                @click="triggerFileInput"
                                 class="aspect-video w-full rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-teal-500 transition-all cursor-pointer flex flex-col items-center justify-center group"
                             >
                                 <div class="p-4 rounded-full bg-white shadow-sm group-hover:scale-110 transition-transform mb-3">
@@ -225,6 +268,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                     <Loader2 class="animate-spin" />
                                 </div>
                             </div>
+                            <InputError :message="form.errors.thumbnail_path" />
                         </div>
 
                         <!-- Status -->
@@ -310,8 +354,8 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                 Difficulty Level
                             </h3>
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <label 
-                                    v-for="lvl in levels" 
+                                <label
+                                    v-for="lvl in levels"
                                     :key="lvl.id"
                                     class="relative flex flex-col cursor-pointer rounded-xl border-2 p-4 transition-all hover:border-teal-300"
                                     :class="form.level === lvl.id ? 'border-teal-500 bg-teal-50/50 ring-1 ring-teal-500' : 'border-gray-200 bg-white'"
@@ -326,6 +370,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                     <span class="text-xs text-gray-500 leading-tight">{{ lvl.desc }}</span>
                                 </label>
                             </div>
+                            <InputError :message="form.errors.level" />
                         </div>
                     </div>
                 </div>
@@ -344,13 +389,14 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                 <InputLabel value="Learning Outcomes" />
                                 <span class="text-xs text-gray-400">{{ form.learning_outcomes.length }}/500 chars</span>
                             </div>
-                            <textarea 
-                                v-model="form.learning_outcomes" 
-                                rows="4" 
+                            <textarea
+                                v-model="form.learning_outcomes"
+                                rows="4"
                                 class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                 placeholder="• Understand the core concepts..."
                                 maxlength="500"
                             ></textarea>
+                            <InputError :message="form.errors.learning_outcomes" />
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -360,13 +406,14 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                     <InputLabel value="Target Audience" />
                                     <span class="text-xs text-gray-400">{{ form.target_audience.length }}/500 chars</span>
                                 </div>
-                                <textarea 
-                                    v-model="form.target_audience" 
-                                    rows="3" 
+                                <textarea
+                                    v-model="form.target_audience"
+                                    rows="3"
                                     class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                     placeholder="Who is this course designed for?"
                                     maxlength="500"
                                 ></textarea>
+                                <InputError :message="form.errors.target_audience" />
                             </div>
 
                             <!-- Prerequisites -->
@@ -375,13 +422,14 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                     <InputLabel value="Prerequisites" />
                                     <span class="text-xs text-gray-400">{{ form.prerequisites.length }}/500 chars</span>
                                 </div>
-                                <textarea 
-                                    v-model="form.prerequisites" 
-                                    rows="3" 
+                                <textarea
+                                    v-model="form.prerequisites"
+                                    rows="3"
                                     class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                     placeholder="Required skills or equipment..."
                                     maxlength="500"
                                 ></textarea>
+                                <InputError :message="form.errors.prerequisites" />
                             </div>
                         </div>
 
@@ -391,13 +439,14 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                 <InputLabel value="Additional Information" />
                                 <span class="text-xs text-gray-400">{{ form.additional_info.length }}/500 chars</span>
                             </div>
-                            <textarea 
-                                v-model="form.additional_info" 
-                                rows="3" 
+                            <textarea
+                                v-model="form.additional_info"
+                                rows="3"
                                 class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm text-sm"
                                 placeholder="Any other details course creators want to include..."
                                 maxlength="500"
                             ></textarea>
+                            <InputError :message="form.errors.additional_info" />
                         </div>
                     </div>
                 </div>

@@ -146,10 +146,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             'program' => [
                 'id' => $course->id,
                 'name' => $course->title,
-                // 'code' => $course->code, // Code removed
+                'title' => $course->title,
                 'category' => $course->category,
-                'level' => $course->level ?? '',
-                'period' => '', // Duration removed
+                'level' => $course->level ?? 'beginner',
+                'period' => '',
                 'time' => '',
                 'location' => '',
                 'trainer' => $course->owner?->name ?? '',
@@ -158,7 +158,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                 'description' => $course->description ?? '',
                 'image_url' => $course->thumbnail_path,
                 'approval_status' => 'approved',
-                // 'duration_hours' => $course->duration_hours,
+                'learning_outcomes' => $course->learning_outcomes ?? '',
+                'target_audience' => $course->target_audience ?? '',
+                'prerequisites' => $course->prerequisites ?? '',
+                'additional_info' => $course->additional_info ?? '',
+                'min_participants' => $course->min_participants ?? 1,
+                'max_participants' => $course->max_participants ?? 20,
             ],
         ]);
     })->name('admin.my-courses.show');

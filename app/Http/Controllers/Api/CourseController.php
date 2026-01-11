@@ -65,7 +65,7 @@ class CourseController extends Controller
      */
     public function show(string $id)
     {
-        $course = Course::findOrFail($id);
+        $course = Course::withCount('sessions')->findOrFail($id);
         return response()->json(['data' => $course]);
     }
 

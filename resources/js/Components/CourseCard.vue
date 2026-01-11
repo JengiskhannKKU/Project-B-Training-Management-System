@@ -16,6 +16,7 @@ interface CourseCardProps {
     location?: string;
     href?: string;
     showActions?: boolean;
+    isIncomplete?: boolean;
 }
 
 const props = defineProps<CourseCardProps>();
@@ -85,7 +86,14 @@ const getStarType = (index: number, rating: number) => {
             </button>
         </div>
 
-        <div class="aspect-video w-full overflow-hidden flex-shrink-0">
+        <div class="aspect-video w-full overflow-hidden flex-shrink-0 relative">
+            <!-- Incomplete Badge (top-left corner) -->
+            <div v-if="isIncomplete" class="absolute top-2 left-2 z-10">
+                <span class="bg-amber-100 text-amber-800 text-xs font-semibold px-3 py-1 rounded-full border border-amber-300">
+                    Incomplete
+                </span>
+            </div>
+
             <img
                 v-if="image_url"
                 :src="image_url"
