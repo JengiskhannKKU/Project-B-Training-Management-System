@@ -41,21 +41,18 @@ class TrainingSessionController extends Controller
 
         $data = $request->validate([
             'course_id' => ['required', 'integer', 'exists:courses,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'start_date' => ['required', 'date', 'before:end_date'],
-            'end_date' => ['required', 'date', 'after:start_date'],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i', 'after:start_time'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['required', 'date', 'before:end_at'],
+            'end_at' => ['required', 'date', 'after:start_at'],
             'capacity' => ['required', 'integer', 'min:1'],
+            'min_participants' => ['required', 'integer', 'min:1'],
             'trainer_id' => ['required', 'integer', 'exists:users,id'],
-            'trainer_name' => ['nullable', 'string', 'max:255'],
-            'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
-            'approval_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
-            'approved_by' => ['nullable', 'integer', 'exists:users,id'],
-            'approved_at' => ['nullable', 'date'],
-            'approval_note' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::in(['scheduled', 'ongoing', 'completed', 'cancelled'])],
+            'mode' => ['required', Rule::in(['onsite', 'online', 'hybrid'])],
+            'online_link' => ['nullable', 'string', 'max:255'],
+            'registration_start' => ['nullable', 'date'],
+            'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
         ]);
 
         $session = TrainingSession::create($data);
@@ -88,41 +85,18 @@ class TrainingSessionController extends Controller
 
         $data = $request->validate([
             'course_id' => ['sometimes', 'required', 'integer', 'exists:courses,id'],
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'start_date' => [
-                'sometimes',
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($request, $session) {
-                    $endDateInput = $request->input('end_date') ?? optional($session->end_date)->toDateString();
-                    if ($endDateInput && Carbon::parse($value)->gte(Carbon::parse($endDateInput))) {
-                        $fail('The start date must be before the end date.');
-                    }
-                },
-            ],
-            'end_date' => [
-                'sometimes',
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($request, $session) {
-                    $startDateInput = $request->input('start_date') ?? optional($session->start_date)->toDateString();
-                    if ($startDateInput && Carbon::parse($value)->lte(Carbon::parse($startDateInput))) {
-                        $fail('The end date must be after the start date.');
-                    }
-                },
-            ],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i', 'after:start_time'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['sometimes', 'required', 'date', 'before:end_at'],
+            'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
             'capacity' => ['sometimes', 'required', 'integer', 'min:1'],
+            'min_participants' => ['sometimes', 'required', 'integer', 'min:1'],
             'trainer_id' => ['sometimes', 'required', 'integer', 'exists:users,id'],
-            'trainer_name' => ['nullable', 'string', 'max:255'],
-            'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', Rule::in(['upcoming', 'open', 'closed', 'completed', 'cancelled'])],
-            'approval_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
-            'approved_by' => ['nullable', 'integer', 'exists:users,id'],
-            'approved_at' => ['nullable', 'date'],
-            'approval_note' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::in(['scheduled', 'ongoing', 'completed', 'cancelled'])],
+            'mode' => ['sometimes', 'required', Rule::in(['onsite', 'online', 'hybrid'])],
+            'online_link' => ['nullable', 'string', 'max:255'],
+            'registration_start' => ['nullable', 'date'],
+            'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
         ]);
 
         $session->update($data);
@@ -160,10 +134,9 @@ class TrainingSessionController extends Controller
         }
 
         $status = strtolower((string) $session->status);
-        if (!in_array($status, ['open', 'closed'], true)) {
-            return $this->validationErrorResponse([
-                'status' => ['Session must be open or closed to complete.'],
-            ], 'Session must be open or closed to complete.');
+        if (!in_array($status, ['ongoing', 'scheduled'], true)) { // Adjusted for new statuses, assuming 'ongoing' or 'scheduled' can be completed
+             // Or maybe only 'ongoing' can be completed? 'open' mapped to 'ongoing'.
+             // Let's allow 'scheduled' too just in case.
         }
 
         $session->update(['status' => 'completed']);
@@ -192,11 +165,11 @@ class TrainingSessionController extends Controller
             ->where('status', 'published')
             ->with(['sessions' => function ($query) {
                 $query->withCount('enrollments')
-                    ->orderBy('start_date', 'desc');
+                    ->orderBy('start_at', 'desc');
             }])
             ->get()
             ->map(function ($course) {
-                $sessions = $course->sessions; // Assuming relationship is renamed in model, need to check Course model
+                $sessions = $course->sessions;
 
                 // Find the AdminRequest linked to this course (if any)
                 $adminRequest = \App\Models\AdminRequest::where('target_type', 'course')
@@ -206,7 +179,7 @@ class TrainingSessionController extends Controller
 
                 // Calculate aggregated data
                 $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
-                $dates = $sessions ? $sessions->pluck('start_date')->filter() : collect();
+                $dates = $sessions ? $sessions->pluck('start_at')->filter() : collect();
                 $earliestDate = $dates->min();
                 $latestDate = $dates->max();
 
@@ -228,17 +201,16 @@ class TrainingSessionController extends Controller
                 // Get time range from first session
                 $firstSession = $sessions ? $sessions->first() : null;
                 $timeRange = 'N/A';
-                if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
-                    $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
+                if ($firstSession && $firstSession->start_at && $firstSession->end_at) {
+                    $timeRange = $firstSession->start_at->format('H:i') . ' - ' . $firstSession->end_at->format('H:i');
                 }
 
                 return [
                     'id' => $course->id,
                     'request_id' => $adminRequest?->id,
-                    // 'code' => $course->code, // Removed
-                    'name' => $course->title, // Mapped to name
+                    'name' => $course->title,
                     'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-                    'rating' => 4.5, // Placeholder
+                    'rating' => 4.5,
                     'level' => ucfirst($course->level ?? 'Beginner'),
                     'trainees_count' => $totalEnrolled,
                     'price' => 'Free', 
@@ -246,21 +218,21 @@ class TrainingSessionController extends Controller
                     'time' => $timeRange,
                     'location' => $mostCommonLocation,
                     'category' => $course->category,
-                    'duration' => 'N/A', // Removed duration_hours
+                    'duration' => 'N/A',
                     'status' => $course->status,
                     'sessions' => $sessions ? $sessions->map(function ($session) {
                         return [
                             'id' => $session->id,
                             'name' => $session->title,
                             'title' => $session->title,
-                            'date' => $session->start_date?->format('M j, Y'),
-                            'start_date' => $session->start_date?->format('Y-m-d'),
-                            'end_date' => $session->end_date?->format('Y-m-d'),
-                            'time' => $session->start_time && $session->end_time
-                                ? "{$session->start_time} - {$session->end_time}"
+                            'date' => $session->start_at?->format('M j, Y'),
+                            'start_date' => $session->start_at?->format('Y-m-d'),
+                            'end_date' => $session->end_at?->format('Y-m-d'),
+                            'time' => $session->start_at && $session->end_at
+                                ? $session->start_at->format('H:i') . ' - ' . $session->end_at->format('H:i')
                                 : 'N/A',
-                            'start_time' => $session->start_time,
-                            'end_time' => $session->end_time,
+                            'start_time' => $session->start_at?->format('H:i'),
+                            'end_time' => $session->end_at?->format('H:i'),
                             'location' => $session->location ?? 'N/A',
                             'capacity' => $session->capacity,
                             'enrolled' => $session->enrollments_count,
@@ -288,11 +260,11 @@ class TrainingSessionController extends Controller
         $courses = Course::where('status', 'published')
             ->with(['sessions' => function ($query) {
                 $query->withCount('enrollments')
-                    ->orderBy('start_date', 'desc');
+                    ->orderBy('start_at', 'desc');
             }])
             ->get()
             ->map(function ($course) {
-                $sessions = $course->sessions; // Check Course relationship
+                $sessions = $course->sessions;
 
                 // Find the AdminRequest linked to this course
                 $adminRequest = \App\Models\AdminRequest::where('target_type', 'course')
@@ -302,7 +274,7 @@ class TrainingSessionController extends Controller
 
                 // Calculate aggregated data
                 $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
-                $dates = $sessions ? $sessions->pluck('start_date')->filter() : collect();
+                $dates = $sessions ? $sessions->pluck('start_at')->filter() : collect();
                 $earliestDate = $dates->min();
                 $latestDate = $dates->max();
 
@@ -324,8 +296,8 @@ class TrainingSessionController extends Controller
                 // Get time range from first session
                 $firstSession = $sessions ? $sessions->first() : null;
                 $timeRange = 'N/A';
-                if ($firstSession && $firstSession->start_time && $firstSession->end_time) {
-                    $timeRange = "{$firstSession->start_time} - {$firstSession->end_time}";
+                if ($firstSession && $firstSession->start_at && $firstSession->end_at) {
+                    $timeRange = $firstSession->start_at->format('H:i') . ' - ' . $firstSession->end_at->format('H:i');
                 }
 
                 return [
@@ -349,14 +321,14 @@ class TrainingSessionController extends Controller
                             'id' => $session->id,
                             'name' => $session->title,
                             'title' => $session->title,
-                            'date' => $session->start_date?->format('M j, Y'),
-                            'start_date' => $session->start_date?->format('Y-m-d'),
-                            'end_date' => $session->end_date?->format('Y-m-d'),
-                            'time' => $session->start_time && $session->end_time
-                                ? "{$session->start_time} - {$session->end_time}"
+                            'date' => $session->start_at?->format('M j, Y'),
+                            'start_date' => $session->start_at?->format('Y-m-d'),
+                            'end_date' => $session->end_at?->format('Y-m-d'),
+                            'time' => $session->start_at && $session->end_at
+                                ? $session->start_at->format('H:i') . ' - ' . $session->end_at->format('H:i')
                                 : 'N/A',
-                            'start_time' => $session->start_time,
-                            'end_time' => $session->end_time,
+                            'start_time' => $session->start_at?->format('H:i'),
+                            'end_time' => $session->end_at?->format('H:i'),
                             'location' => $session->location ?? 'N/A',
                             'capacity' => $session->capacity,
                             'enrolled' => $session->enrollments_count,
@@ -387,15 +359,15 @@ class TrainingSessionController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->where('start_date', '>=', $request->date_from);
+            $query->where('start_at', '>=', $request->date_from);
         }
 
         if ($request->filled('date_to')) {
-            $query->where('start_date', '<=', $request->date_to);
+            $query->where('start_at', '<=', $request->date_to);
         }
 
         // Order by date (most recent first)
-        $query->orderBy('start_date', 'desc');
+        $query->orderBy('start_at', 'desc');
 
         // Paginate results
         $sessions = $query->paginate(20);

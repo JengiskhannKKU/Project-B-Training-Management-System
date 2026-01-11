@@ -24,18 +24,17 @@ class TrainingSessionFactory extends Factory
         return [
             'course_id' => Course::factory(),
             'title' => fake()->sentence(4),
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'start_time' => '09:00',
-            'end_time' => '17:00',
+            'start_at' => $startDate,
+            'end_at' => $endDate,
+            'min_participants' => fake()->numberBetween(5, 10),
             'capacity' => fake()->numberBetween(10, 50),
             'trainer_id' => User::factory(),
             'location' => fake()->randomElement(['Room A101', 'Room B202', 'Room C303', 'Online', 'Hybrid']),
-            'status' => fake()->randomElement(['upcoming', 'open', 'closed', 'completed', 'cancelled']),
-            'approval_status' => 'pending',
-            'approved_by' => null,
-            'approved_at' => null,
-            'approval_note' => null,
+            'mode' => fake()->randomElement(['onsite', 'online', 'hybrid']),
+            'online_link' => fake()->url(),
+            'status' => fake()->randomElement(['scheduled', 'ongoing', 'completed', 'cancelled']),
+            'registration_start' => fake()->dateTimeBetween('-1 month', 'now'),
+            'registration_end' => fake()->dateTimeBetween('now', '+1 week'),
         ];
     }
 }

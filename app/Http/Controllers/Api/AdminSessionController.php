@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,41 +23,38 @@ class AdminSessionController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['required', 'integer', 'exists:courses,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'start_date' => ['required', 'date', 'before:end_date'],
-            'end_date' => ['required', 'date', 'after:start_date'],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i'], // removed after:start_time because dates might differ
+            'title' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['required', 'date', 'before:end_at'],
+            'end_at' => ['required', 'date', 'after:start_at'],
             'min_participants' => ['required', 'integer', 'min:1'],
-            'max_participants' => ['required', 'integer', 'gte:min_participants'],
+            'capacity' => ['required', 'integer', 'gte:min_participants'],
             'registration_start' => ['nullable', 'date'],
             'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
             'mode' => ['required', Rule::in(['onsite', 'online', 'hybrid'])],
             'online_link' => ['nullable', 'string', 'max:255'],
             'trainer_id' => ['required', 'integer', 'exists:users,id'],
-            'trainer_name' => ['nullable', 'string', 'max:255'],
-            'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(['scheduled', 'ongoing', 'completed', 'cancelled'])],
         ]);
 
-        // Determine status based on dates
-        $start = Carbon::parse($validated['start_date'] . ' ' . ($validated['start_time'] ?? '00:00'));
-        $end = Carbon::parse($validated['end_date'] . ' ' . ($validated['end_time'] ?? '23:59'));
-        $now = now();
+        // Determine status based on dates if not provided
+        $status = $validated['status'] ?? null;
+        if (!$status) {
+            $start = Carbon::parse($validated['start_at']);
+            $end = Carbon::parse($validated['end_at']);
+            $now = now();
 
-        $status = 'upcoming';
-        if ($now->gt($end)) {
-            $status = 'completed';
-        } elseif ($now->gte($start)) {
-            $status = 'open';
+            $status = 'scheduled';
+            if ($now->gt($end)) {
+                $status = 'completed';
+            } elseif ($now->gte($start)) {
+                $status = 'ongoing';
+            }
         }
 
         $session = TrainingSession::create([
             ...$validated,
             'status' => $status,
-            'approval_status' => 'approved',
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
         ]);
 
         return response()->json([
@@ -77,41 +75,18 @@ class AdminSessionController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['sometimes', 'required', 'integer', 'exists:courses,id'],
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'start_date' => [
-                'sometimes',
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($request, $session) {
-                    $endDateInput = $request->input('end_date') ?? optional($session->end_date)->toDateString();
-                    if ($endDateInput && Carbon::parse($value)->gt(Carbon::parse($endDateInput))) {
-                        $fail('The start date must be before or equal to the end date.');
-                    }
-                },
-            ],
-            'end_date' => [
-                'sometimes',
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($request, $session) {
-                    $startDateInput = $request->input('start_date') ?? optional($session->start_date)->toDateString();
-                    if ($startDateInput && Carbon::parse($value)->lt(Carbon::parse($startDateInput))) {
-                        $fail('The end date must be after or equal to the start date.');
-                    }
-                },
-            ],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'start_at' => ['sometimes', 'required', 'date', 'before:end_at'],
+            'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
             'min_participants' => ['sometimes', 'required', 'integer', 'min:1'],
-            'max_participants' => ['sometimes', 'required', 'integer', 'gte:min_participants'],
+            'capacity' => ['sometimes', 'required', 'integer', 'gte:min_participants'],
             'registration_start' => ['nullable', 'date'],
             'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
             'mode' => ['sometimes', 'required', Rule::in(['onsite', 'online', 'hybrid'])],
             'online_link' => ['nullable', 'string', 'max:255'],
             'trainer_id' => ['sometimes', 'required', 'integer', 'exists:users,id'],
-            'trainer_name' => ['nullable', 'string', 'max:255'],
-            'trainer_photo_url' => ['nullable', 'string', 'max:2048'],
             'location' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(['scheduled', 'ongoing', 'completed', 'cancelled'])],
         ]);
 
         $session->update($validated);

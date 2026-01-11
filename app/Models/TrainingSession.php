@@ -17,39 +17,25 @@ class TrainingSession extends Model
     protected $fillable = [
         'course_id',
         'title',
-        'start_date',
-        'end_date',
-        'start_time',
-        'end_time',
+        'start_at',
+        'end_at',
         'min_participants',
-        'max_participants',
+        'capacity',
         'registration_start',
         'registration_end',
         'mode',
         'online_link',
         'trainer_id',
-        'trainer_name',
-        'trainer_photo_url',
         'location',
         'status',
-        'approval_status',
-        'approved_by',
-        'approved_at',
-        'approval_note',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'start_at' => 'datetime',
+        'end_at' => 'datetime',
         'registration_start' => 'datetime',
         'registration_end' => 'datetime',
-        'approved_at' => 'datetime',
     ];
-
-    public function getCapacityAttribute()
-    {
-        return $this->max_participants;
-    }
 
     public function course(): BelongsTo
     {
@@ -59,11 +45,6 @@ class TrainingSession extends Model
     public function trainer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'trainer_id');
-    }
-
-    public function approver(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function enrollments(): HasMany

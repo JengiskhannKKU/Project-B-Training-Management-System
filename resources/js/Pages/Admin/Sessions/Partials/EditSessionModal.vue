@@ -34,23 +34,32 @@ const form = ref({
     start_at: '',
     end_at: '',
     min_participants: 1,
-    max_participants: 30,
+    capacity: 30,
     registration_start: '',
     registration_end: '',
     trainer_id: '',
     location: '',
     online_link: '',
-    mode: 'onsite'
+    mode: 'onsite',
+    status: ''
 });
 
 const errors = ref({});
 
 // Helper to format date for datetime-local input
-const formatDateTime = (date, time) => {
-    if (!date) return '';
-    const d = new Date(date);
-    const dateStr = d.toISOString().split('T')[0];
-    return `${dateStr}T${time || '00:00'}`;
+const formatDateTime = (dateTime) => {
+    if (!dateTime) return '';
+    // If it's already in correct format, return it
+    if (dateTime.includes('T') && dateTime.length === 16) return dateTime;
+    
+    const d = new Date(dateTime);
+    // Format to YYYY-MM-DDTHH:mm
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 // Watch for session prop changes and populate form
@@ -59,16 +68,17 @@ watch(() => props.session, (newSession) => {
         form.value = {
             course_id: newSession.course_id || '',
             title: newSession.title || '',
-            start_at: formatDateTime(newSession.start_date, newSession.start_time),
-            end_at: formatDateTime(newSession.end_date, newSession.end_time),
+            start_at: formatDateTime(newSession.start_at),
+            end_at: formatDateTime(newSession.end_at),
             min_participants: newSession.min_participants || 1,
-            max_participants: newSession.max_participants || 30,
+            capacity: newSession.capacity || 30,
             registration_start: newSession.registration_start ? newSession.registration_start.slice(0, 16) : '',
             registration_end: newSession.registration_end ? newSession.registration_end.slice(0, 16) : '',
             trainer_id: newSession.trainer_id || '',
             location: newSession.location || '',
             online_link: newSession.online_link || '',
-            mode: newSession.mode || 'onsite'
+            mode: newSession.mode || 'onsite',
+            status: newSession.status || 'scheduled'
         };
     }
 }, { immediate: true });
@@ -103,25 +113,6 @@ const handleSubmit = async () => {
         // Prepare payload
         const payload = { ...form.value };
         
-        // Helper to split datetime
-        const splitDateTime = (dateTimeStr) => {
-            if (!dateTimeStr) return { date: null, time: null };
-            const [date, time] = dateTimeStr.split('T');
-            return { date, time };
-        };
-
-        if (payload.start_at) {
-            const { date, time } = splitDateTime(payload.start_at);
-            payload.start_date = date;
-            payload.start_time = time;
-        }
-
-        if (payload.end_at) {
-            const { date, time } = splitDateTime(payload.end_at);
-            payload.end_date = date;
-            payload.end_time = time;
-        }
-
         await axios.get('/sanctum/csrf-cookie');
 
         const { data } = await axios.put(
@@ -416,21 +407,44 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                                 Max. Participants
                             </label>
                             <input
-                                v-model="form.max_participants"
+                                v-model="form.capacity"
                                 type="number"
                                 :min="form.min_participants"
                                 :disabled="isSubmitting"
                                 placeholder="e.g., 30"
                                 :class="[
                                     'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                    errors.max_participants ? 'border-red-300' : 'border-gray-300'
+                                    errors.capacity ? 'border-red-300' : 'border-gray-300'
                                 ]"
                             />
-                            <p v-if="errors.max_participants" class="mt-1 text-xs text-red-600">
-                                {{ errors.max_participants[0] }}
+                            <p v-if="errors.capacity" class="mt-1 text-xs text-red-600">
+                                {{ errors.capacity[0] }}
                             </p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Status <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        v-model="form.status"
+                        :disabled="isSubmitting"
+                        :class="[
+                            'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                            errors.status ? 'border-red-300' : 'border-gray-300'
+                        ]"
+                    >
+                        <option value="scheduled">Scheduled</option>
+                        <option value="ongoing">Ongoing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <p v-if="errors.status" class="mt-1 text-sm text-red-600">
+                        {{ errors.status[0] }}
+                    </p>
                 </div>
 
                 <!-- Action Buttons -->

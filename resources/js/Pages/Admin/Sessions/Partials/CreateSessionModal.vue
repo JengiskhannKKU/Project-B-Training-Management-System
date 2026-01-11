@@ -34,13 +34,14 @@ const form = ref({
     start_at: '',
     end_at: '',
     min_participants: 1,
-    max_participants: 30,
+    capacity: 30,
     registration_start: '',
     registration_end: '',
     trainer_id: '',
     location: '',
     online_link: '',
-    mode: 'onsite'
+    mode: 'onsite',
+    status: ''
 });
 
 const errors = ref({});
@@ -60,13 +61,14 @@ const resetForm = () => {
         start_at: '',
         end_at: '',
         min_participants: 1,
-        max_participants: 30,
+        capacity: 30,
         registration_start: '',
         registration_end: '',
         trainer_id: '',
         location: '',
         online_link: '',
-        mode: 'onsite'
+        mode: 'onsite',
+        status: ''
     };
     errors.value = {};
 };
@@ -89,28 +91,9 @@ const handleSubmit = async () => {
     errors.value = {};
 
     try {
-        // Prepare payload to support both new structure and legacy backend if needed
+        // Prepare payload
         const payload = { ...form.value };
         
-        // Helper to split datetime
-        const splitDateTime = (dateTimeStr) => {
-            if (!dateTimeStr) return { date: null, time: null };
-            const [date, time] = dateTimeStr.split('T');
-            return { date, time };
-        };
-
-        if (payload.start_at) {
-            const { date, time } = splitDateTime(payload.start_at);
-            payload.start_date = date;
-            payload.start_time = time;
-        }
-
-        if (payload.end_at) {
-            const { date, time } = splitDateTime(payload.end_at);
-            payload.end_date = date;
-            payload.end_time = time;
-        }
-
         await axios.get('/sanctum/csrf-cookie');
 
         const { data } = await axios.post('/api/admin/sessions', payload);
@@ -404,18 +387,18 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                                 Max. Participants
                             </label>
                             <input
-                                v-model="form.max_participants"
+                                v-model="form.capacity"
                                 type="number"
                                 :min="form.min_participants"
                                 :disabled="isSubmitting"
                                 placeholder="e.g., 30"
                                 :class="[
                                     'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                    errors.max_participants ? 'border-red-300' : 'border-gray-300'
+                                    errors.capacity ? 'border-red-300' : 'border-gray-300'
                                 ]"
                             />
-                            <p v-if="errors.max_participants" class="mt-1 text-xs text-red-600">
-                                {{ errors.max_participants[0] }}
+                            <p v-if="errors.capacity" class="mt-1 text-xs text-red-600">
+                                {{ errors.capacity[0] }}
                             </p>
                         </div>
                     </div>
