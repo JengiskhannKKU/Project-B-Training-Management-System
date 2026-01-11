@@ -133,7 +133,7 @@ onMounted(() => {
 
 <template>
     <AdminLayout>
-        <template #header>
+        <div class="space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     Sessions Management
@@ -146,10 +146,8 @@ onMounted(() => {
                     Create Session
                 </button>
             </div>
-        </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div class="max-w-7xl mx-auto space-y-6">
                 
                 <!-- Filters -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">

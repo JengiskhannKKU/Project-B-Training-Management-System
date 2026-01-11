@@ -22,8 +22,6 @@ class Course extends Model
         'additional_info',
         'thumbnail_path',
         'status',
-        'min_participants',
-        'max_participants',
         'owner_id',
     ];
 

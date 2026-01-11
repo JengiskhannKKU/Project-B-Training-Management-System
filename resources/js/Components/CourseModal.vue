@@ -54,8 +54,6 @@ const form = useForm({
     target_audience: props.course?.target_audience || '',
     prerequisites: props.course?.prerequisites || '',
     additional_info: props.course?.additional_info || '',
-    min_participants: props.course?.min_participants || 1,
-    max_participants: props.course?.max_participants || 20,
     status: props.course?.status || 'published',
 });
 
@@ -72,8 +70,6 @@ watch(() => props.course, (newCourse) => {
         form.target_audience = newCourse.target_audience || '';
         form.prerequisites = newCourse.prerequisites || '';
         form.additional_info = newCourse.additional_info || '';
-        form.min_participants = newCourse.min_participants || 1;
-        form.max_participants = newCourse.max_participants || 20;
         form.status = newCourse.status || 'published';
         thumbnailPath.value = newCourse.thumbnail_path || '';
     } else {
@@ -102,12 +98,6 @@ const handleSubmit = async () => {
     // Clear previous errors
     form.clearErrors();
 
-    // Client-side validation
-    if (form.min_participants > form.max_participants) {
-        form.setError('min_participants', 'Minimum cannot be greater than maximum');
-        return;
-    }
-
     if (!form.title || !form.category) {
         if (!form.title) form.setError('title', 'Course title is required');
         if (!form.category) form.setError('category', 'Category is required');
@@ -124,8 +114,6 @@ const handleSubmit = async () => {
         target_audience: form.target_audience,
         prerequisites: form.prerequisites,
         additional_info: form.additional_info,
-        min_participants: form.min_participants,
-        max_participants: form.max_participants,
         thumbnail_path: thumbnailPath.value || props.course?.thumbnail_path || null,
         status: form.status,
     };
@@ -325,26 +313,6 @@ const triggerFileInput = () => fileInputRef.value?.click();
                                 maxlength="100"
                             ></textarea>
                             <InputError :message="form.errors.description" />
-                        </div>
-
-                        <!-- Capacity -->
-                        <div class="space-y-3">
-                            <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                <Users :size="16" class="text-teal-600" />
-                                Class Capacity
-                            </h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="space-y-1">
-                                    <InputLabel value="Min. Participants" class="text-xs" />
-                                    <TextInput v-model="form.min_participants" type="number" min="1" class="w-full" />
-                                </div>
-                                <div class="space-y-1">
-                                    <InputLabel value="Max. Participants" class="text-xs" />
-                                    <TextInput v-model="form.max_participants" type="number" :min="form.min_participants" class="w-full" />
-                                </div>
-                            </div>
-                            <InputError :message="form.errors.min_participants" />
-                            <InputError :message="form.errors.max_participants" />
                         </div>
 
                         <!-- Level Selection (Cards) -->

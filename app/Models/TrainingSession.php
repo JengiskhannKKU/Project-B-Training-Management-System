@@ -21,7 +21,8 @@ class TrainingSession extends Model
         'end_date',
         'start_time',
         'end_time',
-        'capacity',
+        'min_participants',
+        'max_participants',
         'trainer_id',
         'trainer_name',
         'trainer_photo_url',
@@ -38,6 +39,11 @@ class TrainingSession extends Model
         'end_date' => 'date',
         'approved_at' => 'datetime',
     ];
+
+    public function getCapacityAttribute()
+    {
+        return $this->max_participants;
+    }
 
     public function course(): BelongsTo
     {
