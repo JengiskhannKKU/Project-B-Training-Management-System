@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import { X, Loader2 } from 'lucide-vue-next';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 
 const toast = useToast();
 
@@ -30,19 +31,27 @@ const isLoadingTrainers = ref(false);
 const form = ref({
     course_id: '',
     title: '',
-    start_date: '',
-    end_date: '',
-    start_time: '',
-    end_time: '',
-    capacity: '',
+    start_at: '',
+    end_at: '',
+    min_participants: 1,
+    max_participants: 30,
+    registration_start: '',
+    registration_end: '',
     trainer_id: '',
-    trainer_name: '',
-    trainer_photo_url: '',
     location: '',
-    status: 'upcoming'
+    online_link: '',
+    mode: 'onsite'
 });
 
 const errors = ref({});
+
+// Helper to format date for datetime-local input
+const formatDateTime = (date, time) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const dateStr = d.toISOString().split('T')[0];
+    return `${dateStr}T${time || '00:00'}`;
+};
 
 // Watch for session prop changes and populate form
 watch(() => props.session, (newSession) => {
@@ -50,16 +59,16 @@ watch(() => props.session, (newSession) => {
         form.value = {
             course_id: newSession.course_id || '',
             title: newSession.title || '',
-            start_date: newSession.start_date || '',
-            end_date: newSession.end_date || '',
-            start_time: newSession.start_time || '',
-            end_time: newSession.end_time || '',
-            capacity: newSession.capacity || '',
+            start_at: formatDateTime(newSession.start_date, newSession.start_time),
+            end_at: formatDateTime(newSession.end_date, newSession.end_time),
+            min_participants: newSession.min_participants || 1,
+            max_participants: newSession.max_participants || 30,
+            registration_start: newSession.registration_start ? newSession.registration_start.slice(0, 16) : '',
+            registration_end: newSession.registration_end ? newSession.registration_end.slice(0, 16) : '',
             trainer_id: newSession.trainer_id || '',
-            trainer_name: newSession.trainer_name || '',
-            trainer_photo_url: newSession.trainer_photo_url || '',
             location: newSession.location || '',
-            status: newSession.status || 'upcoming'
+            online_link: newSession.online_link || '',
+            mode: newSession.mode || 'onsite'
         };
     }
 }, { immediate: true });
@@ -74,7 +83,7 @@ watch(() => props.show, (isShown) => {
 const fetchTrainers = async () => {
     isLoadingTrainers.value = true;
     try {
-        const { data } = await axios.get('/api/users?role=trainer');
+        const { data } = await axios.get('/api/admin/users?role=trainer');
         trainers.value = data?.data || [];
     } catch (error) {
         toast.error('Failed to load trainers');
@@ -91,11 +100,33 @@ const handleSubmit = async () => {
     errors.value = {};
 
     try {
+        // Prepare payload
+        const payload = { ...form.value };
+        
+        // Helper to split datetime
+        const splitDateTime = (dateTimeStr) => {
+            if (!dateTimeStr) return { date: null, time: null };
+            const [date, time] = dateTimeStr.split('T');
+            return { date, time };
+        };
+
+        if (payload.start_at) {
+            const { date, time } = splitDateTime(payload.start_at);
+            payload.start_date = date;
+            payload.start_time = time;
+        }
+
+        if (payload.end_at) {
+            const { date, time } = splitDateTime(payload.end_at);
+            payload.end_date = date;
+            payload.end_time = time;
+        }
+
         await axios.get('/sanctum/csrf-cookie');
 
         const { data } = await axios.put(
             `/api/admin/sessions/${props.session.id}`,
-            form.value
+            payload
         );
 
         toast.success('Session updated successfully');
@@ -117,6 +148,9 @@ const handleClose = () => {
         emit('close');
     }
 };
+
+const isOnline = computed(() => ['online', 'hybrid'].includes(form.value.mode));
+const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
 </script>
 
 <template>
@@ -144,152 +178,48 @@ const handleClose = () => {
             </div>
 
             <!-- Form -->
-            <form @submit.prevent="handleSubmit" class="p-6 space-y-5">
-                <!-- Course -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Course <span class="text-red-500">*</span>
-                    </label>
-                    <select
-                        v-model="form.course_id"
-                        :disabled="isSubmitting"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.course_id ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    >
-                        <option value="">Select a course</option>
-                        <option
-                            v-for="program in programs"
-                            :key="program.id"
-                            :value="program.id"
-                        >
-                            {{ program.title || program.name }}
-                        </option>
-                    </select>
-                    <p v-if="errors.course_id" class="mt-1 text-sm text-red-600">
-                        {{ errors.course_id[0] }}
-                    </p>
-                </div>
-
-                <!-- Session Title -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Session Title <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        v-model="form.title"
-                        type="text"
-                        :disabled="isSubmitting"
-                        placeholder="e.g., Leadership Workshop - Week 1"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.title ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    />
-                    <p v-if="errors.title" class="mt-1 text-sm text-red-600">
-                        {{ errors.title[0] }}
-                    </p>
-                </div>
-
-                <!-- Date Range -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form @submit.prevent="handleSubmit" class="p-6 space-y-6">
+                <!-- Course & Title -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Start Date <span class="text-red-500">*</span>
+                            Course <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            v-model="form.start_date"
-                            type="date"
+                        <SearchableSelect
+                            v-model="form.course_id"
+                            :options="programs"
+                            label-key="title"
+                            value-key="id"
+                            placeholder="Select a course"
                             :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                                errors.start_date ? 'border-red-300' : 'border-gray-300'
-                            ]"
+                            :error="errors.course_id ? errors.course_id[0] : ''"
                         />
-                        <p v-if="errors.start_date" class="mt-1 text-sm text-red-600">
-                            {{ errors.start_date[0] }}
+                        <p v-if="errors.course_id" class="mt-1 text-sm text-red-600">
+                            {{ errors.course_id[0] }}
                         </p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            End Date <span class="text-red-500">*</span>
+                            Session Title
                         </label>
                         <input
-                            v-model="form.end_date"
-                            type="date"
+                            v-model="form.title"
+                            type="text"
                             :disabled="isSubmitting"
+                            placeholder="e.g., Batch 1"
                             :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                                errors.end_date ? 'border-red-300' : 'border-gray-300'
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.title ? 'border-red-300' : 'border-gray-300'
                             ]"
                         />
-                        <p v-if="errors.end_date" class="mt-1 text-sm text-red-600">
-                            {{ errors.end_date[0] }}
+                        <p v-if="errors.title" class="mt-1 text-sm text-red-600">
+                            {{ errors.title[0] }}
                         </p>
                     </div>
                 </div>
 
-                <!-- Time Range -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Start Time
-                        </label>
-                        <input
-                            v-model="form.start_time"
-                            type="time"
-                            :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                                errors.start_time ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        />
-                        <p v-if="errors.start_time" class="mt-1 text-sm text-red-600">
-                            {{ errors.start_time[0] }}
-                        </p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            End Time
-                        </label>
-                        <input
-                            v-model="form.end_time"
-                            type="time"
-                            :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                                errors.end_time ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        />
-                        <p v-if="errors.end_time" class="mt-1 text-sm text-red-600">
-                            {{ errors.end_time[0] }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Location -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Location
-                    </label>
-                    <input
-                        v-model="form.location"
-                        type="text"
-                        :disabled="isSubmitting"
-                        placeholder="e.g., Conference Room A"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.location ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    />
-                    <p v-if="errors.location" class="mt-1 text-sm text-red-600">
-                        {{ errors.location[0] }}
-                    </p>
-                </div>
-
-                <!-- Trainer and Capacity -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Trainer & Mode -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Trainer <span class="text-red-500">*</span>
@@ -298,7 +228,7 @@ const handleClose = () => {
                             v-model="form.trainer_id"
                             :disabled="isSubmitting || isLoadingTrainers"
                             :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
                                 errors.trainer_id ? 'border-red-300' : 'border-gray-300'
                             ]"
                         >
@@ -319,74 +249,192 @@ const handleClose = () => {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Capacity <span class="text-red-500">*</span>
+                            Mode <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            v-model="form.capacity"
-                            type="number"
-                            min="1"
+                        <select
+                            v-model="form.mode"
                             :disabled="isSubmitting"
-                            placeholder="e.g., 30"
                             :class="[
-                                'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                                errors.capacity ? 'border-red-300' : 'border-gray-300'
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.mode ? 'border-red-300' : 'border-gray-300'
                             ]"
-                        />
-                        <p v-if="errors.capacity" class="mt-1 text-sm text-red-600">
-                            {{ errors.capacity[0] }}
+                        >
+                            <option value="onsite">Onsite</option>
+                            <option value="online">Online</option>
+                            <option value="hybrid">Hybrid</option>
+                        </select>
+                        <p v-if="errors.mode" class="mt-1 text-sm text-red-600">
+                            {{ errors.mode[0] }}
                         </p>
                     </div>
                 </div>
 
-                <!-- Status -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Status
-                    </label>
-                    <select
-                        v-model="form.status"
-                        :disabled="isSubmitting"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.status ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    >
-                        <option value="upcoming">Upcoming</option>
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                    <p v-if="errors.status" class="mt-1 text-sm text-red-600">
-                        {{ errors.status[0] }}
-                    </p>
+                <!-- Session Schedule -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Start At <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            v-model="form.start_at"
+                            type="datetime-local"
+                            :disabled="isSubmitting"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.start_at ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.start_at" class="mt-1 text-sm text-red-600">
+                            {{ errors.start_at[0] }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            End At <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            v-model="form.end_at"
+                            type="datetime-local"
+                            :disabled="isSubmitting"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.end_at ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.end_at" class="mt-1 text-sm text-red-600">
+                            {{ errors.end_at[0] }}
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Trainer Name Override (Optional) -->
+                <!-- Registration Period -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Registration Start
+                        </label>
+                        <input
+                            v-model="form.registration_start"
+                            type="datetime-local"
+                            :disabled="isSubmitting"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.registration_start ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.registration_start" class="mt-1 text-sm text-red-600">
+                            {{ errors.registration_start[0] }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Registration End
+                        </label>
+                        <input
+                            v-model="form.registration_end"
+                            type="datetime-local"
+                            :disabled="isSubmitting"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.registration_end ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.registration_end" class="mt-1 text-sm text-red-600">
+                            {{ errors.registration_end[0] }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Location Details (Dynamic based on Mode) -->
+                <div class="space-y-6">
+                    <div v-if="isOnsite">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Location <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            v-model="form.location"
+                            type="text"
+                            :disabled="isSubmitting"
+                            placeholder="e.g., Training Room 404"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.location ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.location" class="mt-1 text-sm text-red-600">
+                            {{ errors.location[0] }}
+                        </p>
+                    </div>
+
+                    <div v-if="isOnline">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Online Link
+                        </label>
+                        <input
+                            v-model="form.online_link"
+                            type="text"
+                            :disabled="isSubmitting"
+                            placeholder="e.g., https://zoom.us/j/123456789"
+                            :class="[
+                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                errors.online_link ? 'border-red-300' : 'border-gray-300'
+                            ]"
+                        />
+                        <p v-if="errors.online_link" class="mt-1 text-sm text-red-600">
+                            {{ errors.online_link[0] }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Capacity (Min/Max) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Trainer Name Override
-                    </label>
-                    <input
-                        v-model="form.trainer_name"
-                        type="text"
-                        :disabled="isSubmitting"
-                        placeholder="Leave empty to use trainer's profile name"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-[#2f837d] focus:ring-[#2f837d]',
-                            errors.trainer_name ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">
-                        Optional: Use a different name to display for this session
-                    </p>
-                    <p v-if="errors.trainer_name" class="mt-1 text-sm text-red-600">
-                        {{ errors.trainer_name[0] }}
-                    </p>
+                    <h3 class="block text-sm font-medium text-gray-700 mb-2">
+                        Class Capacity <span class="text-red-500">*</span>
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">
+                                Min. Participants
+                            </label>
+                            <input
+                                v-model="form.min_participants"
+                                type="number"
+                                min="1"
+                                :disabled="isSubmitting"
+                                placeholder="e.g., 5"
+                                :class="[
+                                    'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                    errors.min_participants ? 'border-red-300' : 'border-gray-300'
+                                ]"
+                            />
+                            <p v-if="errors.min_participants" class="mt-1 text-xs text-red-600">
+                                {{ errors.min_participants[0] }}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">
+                                Max. Participants
+                            </label>
+                            <input
+                                v-model="form.max_participants"
+                                type="number"
+                                :min="form.min_participants"
+                                :disabled="isSubmitting"
+                                placeholder="e.g., 30"
+                                :class="[
+                                    'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                    errors.max_participants ? 'border-red-300' : 'border-gray-300'
+                                ]"
+                            />
+                            <p v-if="errors.max_participants" class="mt-1 text-xs text-red-600">
+                                {{ errors.max_participants[0] }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex gap-3 pt-4 border-t">
+                <div class="flex gap-3 pt-6 border-t mt-6">
                     <button
                         type="button"
                         @click="handleClose"
@@ -398,7 +446,7 @@ const handleClose = () => {
                     <button
                         type="submit"
                         :disabled="isSubmitting"
-                        class="flex-1 rounded-lg bg-[#2f837d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#266a66] disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+                        class="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
                     >
                         <Loader2 v-if="isSubmitting" class="h-4 w-4 animate-spin" />
                         <span>{{ isSubmitting ? 'Updating...' : 'Update Session' }}</span>

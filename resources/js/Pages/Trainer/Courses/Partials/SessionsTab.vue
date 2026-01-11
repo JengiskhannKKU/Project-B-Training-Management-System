@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Search, ListFilter, ArrowDownNarrowWide, Share, Award } from 'lucide-vue-next';
 import { formatDate, formatTime } from '@/utils/dateFormatter';
+import { Link } from '@inertiajs/vue3';
 
 defineProps<{
     sessions: Array<{
@@ -81,12 +82,16 @@ const getStatusBadgeClass = (status: string) => {
                         <p>Export</p>
                     </button>
 
-                    <button v-if="isAdmin" @click="emit('add-session')" class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
+                    <Link 
+                        v-if="isAdmin && programId" 
+                        :href="`/admin/sessions?create_session=true&course_id=${programId}`" 
+                        class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
+                    >
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
                         <span>Add Sessions</span>
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -153,11 +158,11 @@ const getStatusBadgeClass = (status: string) => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
                                 </button>
-                                <button @click="emit('edit-session', session)" class="text-gray-400 hover:text-teal-600">
+                                <Link :href="`/admin/sessions?edit_session=true&session_id=${session.id}`" class="text-gray-400 hover:text-teal-600">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
-                                </button>
+                                </Link>
                             </div>
                         </td>
                     </tr>

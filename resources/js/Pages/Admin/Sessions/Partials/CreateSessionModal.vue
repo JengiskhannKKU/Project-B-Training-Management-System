@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import { X, Loader2 } from 'lucide-vue-next';
+import SearchableSelect from '@/Components/SearchableSelect.vue';
 
 const toast = useToast();
 
@@ -14,6 +15,10 @@ const props = defineProps({
     courses: {
         type: Array,
         default: () => []
+    },
+    initialCourseId: {
+        type: [String, Number],
+        default: ''
     }
 });
 
@@ -24,7 +29,7 @@ const trainers = ref([]);
 const isLoadingTrainers = ref(false);
 
 const form = ref({
-    course_id: '',
+    course_id: props.initialCourseId || '',
     title: '',
     start_at: '',
     end_at: '',
@@ -35,8 +40,7 @@ const form = ref({
     trainer_id: '',
     location: '',
     online_link: '',
-    mode: 'onsite',
-    status: 'scheduled'
+    mode: 'onsite'
 });
 
 const errors = ref({});
@@ -51,7 +55,7 @@ watch(() => props.show, (isShown) => {
 
 const resetForm = () => {
     form.value = {
-        course_id: '',
+        course_id: props.initialCourseId || '',
         title: '',
         start_at: '',
         end_at: '',
@@ -62,8 +66,7 @@ const resetForm = () => {
         trainer_id: '',
         location: '',
         online_link: '',
-        mode: 'onsite',
-        status: 'scheduled'
+        mode: 'onsite'
     };
     errors.value = {};
 };
@@ -170,23 +173,15 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Course <span class="text-red-500">*</span>
                         </label>
-                        <select
+                        <SearchableSelect
                             v-model="form.course_id"
+                            :options="courses"
+                            label-key="title"
+                            value-key="id"
+                            placeholder="Select a course"
                             :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                errors.course_id ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        >
-                            <option value="">Select a course</option>
-                            <option
-                                v-for="course in courses"
-                                :key="course.id"
-                                :value="course.id"
-                            >
-                                {{ course.title || course.name }}
-                            </option>
-                        </select>
+                            :error="errors.course_id ? errors.course_id[0] : ''"
+                        />
                         <p v-if="errors.course_id" class="mt-1 text-sm text-red-600">
                             {{ errors.course_id[0] }}
                         </p>
@@ -361,7 +356,7 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
 
                     <div v-if="isOnline">
                         <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Online Link <span class="text-red-500" v-if="!isOnsite">*</span>
+                            Online Link
                         </label>
                         <input
                             v-model="form.online_link"
@@ -424,29 +419,6 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                             </p>
                         </div>
                     </div>
-                </div>
-
-                <!-- Status -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Status <span class="text-red-500">*</span>
-                    </label>
-                    <select
-                        v-model="form.status"
-                        :disabled="isSubmitting"
-                        :class="[
-                            'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                            errors.status ? 'border-red-300' : 'border-gray-300'
-                        ]"
-                    >
-                        <option value="scheduled">Scheduled</option>
-                        <option value="ongoing">Ongoing</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                    <p v-if="errors.status" class="mt-1 text-sm text-red-600">
-                        {{ errors.status[0] }}
-                    </p>
                 </div>
 
                 <!-- Action Buttons -->

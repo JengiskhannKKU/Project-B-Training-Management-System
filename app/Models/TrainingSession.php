@@ -23,6 +23,10 @@ class TrainingSession extends Model
         'end_time',
         'min_participants',
         'max_participants',
+        'registration_start',
+        'registration_end',
+        'mode',
+        'online_link',
         'trainer_id',
         'trainer_name',
         'trainer_photo_url',
@@ -37,6 +41,8 @@ class TrainingSession extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'registration_start' => 'datetime',
+        'registration_end' => 'datetime',
         'approved_at' => 'datetime',
     ];
 

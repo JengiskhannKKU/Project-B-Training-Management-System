@@ -33,6 +33,7 @@ const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 const selectedSession = ref(null);
 const isLoading = ref(false);
+const initialCourseId = ref('');
 
 const filters = ref({
     search: props.filters?.search || "",
@@ -128,6 +129,33 @@ watch(filters, () => {
 onMounted(() => {
     fetchCourses();
     fetchSessions();
+    
+    // Check for create_session query param
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create_session') === 'true') {
+        const courseId = params.get('course_id');
+        if (courseId) {
+            initialCourseId.value = parseInt(courseId);
+        }
+        showCreateModal.value = true;
+        
+        // Optional: Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('edit_session') === 'true') {
+        const sessionId = params.get('session_id');
+        if (sessionId) {
+            axios.get(`/api/sessions/${sessionId}`)
+                .then(({ data }) => {
+                    selectedSession.value = data.data || data;
+                    showEditModal.value = true;
+                    // Optional: Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                })
+                .catch(() => {
+                    toast.error("Failed to load session for editing");
+                });
+        }
+    }
 });
 </script>
 
@@ -312,6 +340,7 @@ onMounted(() => {
         <CreateSessionModal
             :show="showCreateModal"
             :courses="courses"
+            :initial-course-id="initialCourseId"
             @close="showCreateModal = false"
             @created="handleSessionCreated"
         />

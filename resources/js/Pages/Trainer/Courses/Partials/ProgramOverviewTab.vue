@@ -103,16 +103,13 @@ const getLevelBadgeClass = computed(() => {
                     <p class="text-sm text-amber-700 mb-4">
                         This course is published but has no sessions yet. It will not be visible to trainees until at least one session is created. Please create your first session to make this course available.
                     </p>
-                    <Link
-                        v-if="isAdmin"
-                        href="/admin/sessions"
-                        class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all inline-flex items-center gap-2 shadow-sm hover:shadow-md"
-                    >
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        <span>Create First Session</span>
-                    </Link>
+                            <Link
+                                :href="`/admin/sessions?create_session=true&course_id=${program.id}`"
+                                class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <Plus class="w-4 h-4 mr-2" />
+                                <span>Create First Session</span>
+                            </Link>
                 </div>
             </div>
         </div>
