@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps<{
     program: {
@@ -28,10 +29,6 @@ const props = defineProps<{
     };
     sessionsCount?: number;
     isAdmin?: boolean;
-}>();
-
-const emit = defineEmits<{
-    'create-session': [];
 }>();
 
 const programData = computed(() => ({
@@ -104,18 +101,18 @@ const getLevelBadgeClass = computed(() => {
                 <div class="flex-1">
                     <h3 class="text-lg font-semibold text-amber-900 mb-2">This Course is Incomplete</h3>
                     <p class="text-sm text-amber-700 mb-4">
-                        This course is published but has no sessions yet. It will not be visible to trainees until at least one session is created. Please navigate to the <strong>Sessions</strong> tab to create your first session.
+                        This course is published but has no sessions yet. It will not be visible to trainees until at least one session is created. Please create your first session to make this course available.
                     </p>
-                    <button
+                    <Link
                         v-if="isAdmin"
-                        @click="emit('create-session')"
-                        class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
+                        href="/admin/sessions"
+                        class="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all inline-flex items-center gap-2 shadow-sm hover:shadow-md"
                     >
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
                         <span>Create First Session</span>
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -124,13 +121,8 @@ const getLevelBadgeClass = computed(() => {
             <!-- Main Content -->
             <div class="lg:col-span-2">
                 <div class="rounded-lg bg-white p-6 shadow-sm">
-                    <h2 class="mb-4 text-lg font-semibold text-gray-900">Description</h2>
-                    <p class="text-gray-600 whitespace-pre-wrap">
-                        {{ programData.description }}
-                    </p>
-
                     <!-- Learning Outcomes -->
-                    <div v-if="learningOutcomesArray.length > 0" class="mt-6">
+                    <div v-if="learningOutcomesArray.length > 0">
                         <h3 class="mb-3 font-semibold text-gray-900">What You'll Learn</h3>
                         <ul class="space-y-2 text-gray-600">
                             <li v-for="(outcome, index) in learningOutcomesArray" :key="index" class="flex items-start gap-2">

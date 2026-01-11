@@ -859,7 +859,6 @@ const getCertificateStatusColor = (status: string) => {
                 :program="displayProgram"
                 :sessions-count="sessions.length"
                 :is-admin="isAdmin"
-                @create-session="handleAddSession"
             />
             <SessionsTab
                 v-if="activeTab === 'sessions'"
