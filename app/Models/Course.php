@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Course extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'code',
         'title',
         'description',
         'category',
@@ -26,6 +28,40 @@ class Course extends Model
     ];
 
     protected $appends = ['is_complete', 'is_incomplete'];
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName()
+    {
+        return 'code';
+    }
+
+    /**
+     * Boot method to auto-generate course code
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($course) {
+            if (empty($course->code)) {
+                $course->code = static::generateCourseCode();
+            }
+        });
+    }
+
+    /**
+     * Generate a unique course code
+     */
+    public static function generateCourseCode(): string
+    {
+        do {
+            $code = 'CRS-' . Str::upper(Str::random(8));
+        } while (static::where('code', $code)->exists());
+
+        return $code;
+    }
 
     public function owner(): BelongsTo
     {

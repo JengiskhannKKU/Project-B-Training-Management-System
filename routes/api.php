@@ -23,7 +23,7 @@ Route::post('auth/login', [AuthController::class, 'login']);
 // Public catalog
 Route::get('catalog/courses', [CatalogController::class, 'courses']);
 Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
-Route::get('catalog/courses/{id}', [CatalogController::class, 'show']);
+Route::get('catalog/courses/{course}', [CatalogController::class, 'show']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -89,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('trainer')->group(function () {
             Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             Route::get('sessions', [TrainingSessionController::class, 'trainerSessions']);
+            Route::get('courses', [\App\Http\Controllers\Api\CourseController::class, 'trainerCourses']);
             Route::apiResource('certificate-templates', CertificateTemplateController::class)
                 ->except(['create', 'edit']);
 

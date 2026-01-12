@@ -45,14 +45,12 @@ class TrainerDashboardController extends Controller
             ->count('course_id');
 
         $activeCourses = TrainingSession::where('trainer_id', $trainerId)
-            ->where('status', 'active')
+            ->whereIn('status', ['scheduled', 'ongoing'])
             ->distinct('course_id')
             ->count('course_id');
 
-        $pendingCourses = TrainingSession::where('trainer_id', $trainerId)
-            ->where('approval_status', 'pending')
-            ->distinct('course_id')
-            ->count('course_id');
+        // Note: approval_status field has been removed from the schema
+        $pendingCourses = 0;
 
         // 3. Pending Certifications
         $pendingCertifications = CertificateRequest::where('trainer_id', $trainerId)
@@ -105,17 +103,17 @@ class TrainerDashboardController extends Controller
             $date = Carbon::now()->subDays($i)->format('Y-m-d');
 
             $dayHours = TrainingSession::where('trainer_id', $trainerId)
-                ->whereDate('start_date', '<=', $date)
-                ->whereDate('end_date', '>=', $date)
+                ->whereDate('start_at', '<=', $date)
+                ->whereDate('end_at', '>=', $date)
                 ->get()
                 ->sum(function ($session) {
-                    if (!$session->start_time || !$session->end_time) {
+                    if (!$session->start_at || !$session->end_at) {
                         return 0;
                     }
 
                     try {
-                        $start = Carbon::parse($session->start_time);
-                        $end = Carbon::parse($session->end_time);
+                        $start = Carbon::parse($session->start_at);
+                        $end = Carbon::parse($session->end_at);
                         return $start->diffInHours($end);
                     } catch (\Exception $e) {
                         return 0;
@@ -183,7 +181,7 @@ class TrainerDashboardController extends Controller
         foreach ($enrollments as $enrollment) {
             // Get total sessions for this enrollment's course
             $totalSessions = TrainingSession::where('course_id', $enrollment->session->course_id)
-                ->where('start_date', '<=', Carbon::now())
+                ->where('start_at', '<=', Carbon::now())
                 ->count();
 
             if ($totalSessions == 0) {

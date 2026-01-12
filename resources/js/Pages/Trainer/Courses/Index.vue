@@ -313,14 +313,14 @@ const fetchPrograms = async () => {
     isLoadingPrograms.value = true;
     try {
         await ensureCsrf();
-        const { data } = await axios.get('/api/courses');
+        const { data } = await axios.get('/api/trainer/courses');
         const list = data?.data || data || [];
 
-        // Filter to show only programs created by this trainer
+        // API already filters to show courses created by or assigned to this trainer
         programs.value = list
-            .filter((program: any) => program.created_by === page.props.auth?.user?.id)
             .map((program: any) => ({
                 id: program.id,
+                code: program.code,
                 name: program.name,
                 image_url: program.image_url || '',
                 rating: program.rating || null,
@@ -634,7 +634,7 @@ const mockPrograms = [
                             v-for="course in paginatedCourses"
                             :key="course.id"
                             :id="course.id"
-                            :href="`/trainer/courses/${course.id}`"
+                            :href="`/trainer/courses/${course.code}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"

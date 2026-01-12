@@ -74,6 +74,7 @@ class CatalogController extends Controller
 
                 return [
                     'id' => $course->id,
+                    'code' => $course->code,
                     'name' => $course->title,
                     'image_url' => $course->thumbnail_path,
                     'category' => $course->category,
@@ -130,17 +131,19 @@ class CatalogController extends Controller
     /**
      * Show full details of a published course.
      */
-    public function show($id): JsonResponse
+    public function show(Course $course): JsonResponse
     {
-        $course = Course::where('id', $id)
-            ->where('status', 'published')
-            ->with(['sessions' => function ($query) {
+        // Ensure course is published
+        if ($course->status !== 'published') {
+            abort(404);
+        }
+
+        $course->load(['sessions' => function ($query) {
                 $query->whereIn('status', ['scheduled', 'ongoing'])
                       ->orderBy('start_at', 'asc');
             }, 'reviews', 'owner'])
-            ->withCount('reviews as reviews_count')
-            ->withAvg('reviews as rating', 'rating')
-            ->firstOrFail();
+            ->loadCount('reviews as reviews_count')
+            ->loadAvg('reviews as rating', 'rating');
 
         // Calculate total trainees
         $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function($q) use ($course) {
@@ -170,6 +173,7 @@ class CatalogController extends Controller
 
         $data = [
             'id' => $course->id,
+            'code' => $course->code,
             'name' => $course->title,
             'description' => $course->description,
             'image_url' => $course->thumbnail_path,

@@ -25,6 +25,54 @@ class CourseController extends Controller
     }
 
     /**
+     * Get courses for the authenticated trainer.
+     * Returns courses created by the trainer (all statuses) and published courses where they are assigned as trainer.
+     */
+    public function trainerCourses(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        // Get courses created by trainer (all statuses) OR published courses where they are assigned
+        $courses = Course::where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                      ->orWhere(function ($q) use ($user) {
+                          $q->where('status', 'published')
+                            ->whereHas('sessions', function ($sessionQuery) use ($user) {
+                                $sessionQuery->where('trainer_id', $user->id);
+                            });
+                      });
+            })
+            ->withCount('sessions')
+            ->latest()
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'code' => $course->code,
+                    'name' => $course->title,
+                    'image_url' => $course->thumbnail_path,
+                    'rating' => null,
+                    'level' => $course->level,
+                    'trainees_count' => 0,
+                    'price' => 'Free',
+                    'date' => $course->created_at?->format('M j, Y'),
+                    'time' => '',
+                    'location' => 'Online',
+                    'category' => $course->category,
+                    'status' => $course->status,
+                    'created_at' => $course->created_at,
+                    'sessions_count' => $course->sessions_count,
+                ];
+            });
+
+        return response()->json(['data' => $courses]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -61,22 +109,46 @@ class CourseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Course $course)
     {
-        $course = Course::withCount('sessions')->findOrFail($id);
-        return response()->json(['data' => $course]);
+        $course->load(['sessions', 'owner'])->loadCount('sessions');
+
+        // Return data in the format expected by the Show page
+        return response()->json([
+            'data' => [
+                'id' => $course->id,
+                'name' => $course->title,
+                'title' => $course->title,
+                'code' => $course->code,
+                'category' => $course->category,
+                'level' => $course->level,
+                'period' => '', // Not in new schema
+                'time' => '', // Not applicable at course level
+                'location' => '', // Not applicable at course level
+                'trainer' => $course->owner?->name ?? '', // Owner is the creator
+                'certificated' => '', // Not in new schema
+                'status' => $course->status,
+                'description' => $course->description,
+                'image_url' => $course->thumbnail_path,
+                'full_description' => $course->description,
+                'learning_outcomes' => $course->learning_outcomes,
+                'target_audience' => $course->target_audience,
+                'prerequisites' => $course->prerequisites,
+                'additional_info' => $course->additional_info,
+                'duration_hours' => 0, // Not in new schema
+                'sessions_count' => $course->sessions_count,
+            ]
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Course $course)
     {
         if (!$request->user()->isRole('admin')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-
-        $course = Course::findOrFail($id);
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
@@ -102,13 +174,12 @@ class CourseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, string $id)
+    public function destroy(Request $request, Course $course)
     {
         if (!$request->user()->isRole('admin')) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $course = Course::findOrFail($id);
         $course->delete();
 
         return response()->json(['message' => 'Course deleted successfully']);

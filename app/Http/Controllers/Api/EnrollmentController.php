@@ -28,12 +28,8 @@ class EnrollmentController extends Controller
             },
         ])->findOrFail($data['session_id']);
 
-        if ($session->approval_status !== 'approved' || $session->status !== 'open') {
+        if ($session->status !== 'scheduled') {
             return response()->json(['message' => 'Cannot enroll: Session is closed or not open for registration.'], 422);
-        }
-
-        if ($session->status === 'completed') {
-            return response()->json(['message' => 'Cannot enroll: Session has already been completed.'], 422);
         }
 
         if ($session->active_enrollments_count >= $session->capacity) {

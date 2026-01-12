@@ -317,7 +317,7 @@ const exportToPDF = () => {
                         v-for="program in filteredPrograms"
                         :key="program.id"
                         :id="program.id"
-                        :href="`/courses/${program.id}`"
+                        :href="`/courses/${program.code}`"
                         :name="program.name || 'Untitled program'"
                         :image_url="program.image_url || ''"
                         :rating="program.rating ?? 4.6"

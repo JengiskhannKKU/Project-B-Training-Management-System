@@ -46,9 +46,9 @@ class CertificateRequestController extends Controller
                 ->exists();
         } else {
             $session = TrainingSession::find($data['session_id']);
-            if (!$session || $session->approval_status !== 'approved') {
+            if (!$session) {
                 return $this->validationErrorResponse([
-                    'session_id' => ['Session must be approved to request certificates.'],
+                    'session_id' => ['Session not found.'],
                 ]);
             }
 
@@ -213,9 +213,9 @@ class CertificateRequestController extends Controller
             }
         } else {
             $session = TrainingSession::find($certificateRequest->session_id);
-            if (!$session || $session->approval_status !== 'approved') {
+            if (!$session) {
                 return $this->validationErrorResponse([
-                    'session_id' => ['Session must be approved to issue certificates.'],
+                    'session_id' => ['Session not found.'],
                 ]);
             }
             if ($session->status !== 'completed') {

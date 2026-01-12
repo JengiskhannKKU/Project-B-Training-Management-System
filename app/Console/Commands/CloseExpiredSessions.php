@@ -29,9 +29,9 @@ class CloseExpiredSessions extends Command
     {
         $this->info('Checking for expired sessions...');
 
-        $count = TrainingSession::where('status', 'open')
-            ->where('end_date', '<', Carbon::today())
-            ->update(['status' => 'closed']);
+        $count = TrainingSession::whereIn('status', ['scheduled', 'ongoing'])
+            ->where('end_at', '<', Carbon::now())
+            ->update(['status' => 'completed']);
 
         if ($count > 0) {
             $this->info("Successfully closed {$count} expired session(s).");

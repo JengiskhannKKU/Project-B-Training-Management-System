@@ -119,13 +119,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/MyCourses');
     })->name('admin.my-courses');
 
-    Route::get('/admin/my-courses/{id}', function ($id) {
-        $course = \App\Models\Course::with('owner')->find($id);
+    Route::get('/admin/my-courses/{code}', function ($code) {
+        $course = \App\Models\Course::with('owner')->where('code', $code)->first();
 
         if (! $course) {
             return Inertia::render('Trainer/Courses/Show', [
                 'program' => [
-                    'id' => $id,
+                    'id' => $code,
                     'name' => '',
                     'category' => '',
                     'level' => '',
@@ -220,10 +220,10 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         ]);
     })->name('trainer.courses.index');
 
-    Route::get('/trainer/courses/{id}', function ($id) {
+    Route::get('/trainer/courses/{code}', function ($code) {
         return Inertia::render('Trainer/Courses/Show', [
             'program' => [
-                'id' => $id,
+                'id' => $code,
                 'name' => '',
                 'category' => '',
                 'level' => '',
@@ -283,8 +283,8 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         ]);
     })->name('sessions.certificates');
 
-    Route::get('/courses/{id}/certificates', function ($id) {
-        $course = \App\Models\Course::findOrFail($id);
+    Route::get('/courses/{code}/certificates', function ($code) {
+        $course = \App\Models\Course::where('code', $code)->firstOrFail();
 
         $user = Auth::user();
         $canView = $user->role->name === 'admin' ||
@@ -320,9 +320,9 @@ Route::middleware(['auth', 'role:trainee'])->group(function () {
     })->name('courses.index');
 });
 
-Route::get('/courses/{id}', function ($id) {
+Route::get('/courses/{code}', function ($code) {
     return Inertia::render('Trainee/Courses/Show', [
-        'programId' => $id,
+        'programId' => $code,
     ]);
 })->name('courses.show');
 

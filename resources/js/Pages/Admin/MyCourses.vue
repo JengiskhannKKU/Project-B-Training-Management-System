@@ -398,6 +398,7 @@ const fetchPrograms = async () => {
 
             return {
                 id: course.id,
+                code: course.code,
                 name: course.title, // Map title to name for CourseCard
                 image_url: course.thumbnail_path || '',
                 rating: 0,
@@ -624,7 +625,7 @@ onMounted(() => {
                             v-for="course in paginatedCourses"
                             :key="course.request_id || course.id"
                             :id="course.id"
-                            :href="`/admin/my-courses/${course.id}`"
+                            :href="`/admin/my-courses/${course.code}`"
                             :name="course.name"
                             :image_url="course.image_url"
                             :rating="course.rating"

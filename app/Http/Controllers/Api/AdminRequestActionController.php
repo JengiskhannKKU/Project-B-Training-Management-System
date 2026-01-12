@@ -50,13 +50,10 @@ class AdminRequestActionController extends Controller
             ]);
         }
 
-        // If this is a session request with a linked session, mark the session as closed/rejected instead of deleting/duplicating
+        // If this is a session request with a linked session, mark the session as cancelled
         if ($adminRequest->target_type === 'session' && $adminRequest->target_id) {
             TrainingSession::where('id', $adminRequest->target_id)->update([
-                'approval_status' => 'rejected',
-                'approved_by' => $request->user()->id,
-                'approved_at' => now(),
-                'status' => 'closed',
+                'status' => 'cancelled',
             ]);
         }
 
@@ -173,8 +170,8 @@ class AdminRequestActionController extends Controller
         }
 
         $statusMap = [
-            'Open' => 'open',
-            'Close' => 'closed',
+            'Open' => 'ongoing',
+            'Close' => 'cancelled',
         ];
 
         $enrollmentLimit = $payload['enrollment_limit'] ?? null;
@@ -183,28 +180,28 @@ class AdminRequestActionController extends Controller
             : (int) ($payload['capacity'] ?? $course->max_participants ?? 20);
 
         $payloadStatus = $payload['status'] ?? null;
-        $normalizedStatus = $statusMap[$payloadStatus] ?? ($payloadStatus ?: 'open');
+        $normalizedStatus = $statusMap[$payloadStatus] ?? ($payloadStatus ?: 'scheduled');
+
+        // Prepare start_at and end_at datetimes
+        $startDate = $payload['date'] ?? now()->toDateString();
+        $endDate = $payload['date'] ?? now()->toDateString();
+        $startTime = $payload['start_time'] ? Carbon::parse($payload['start_time'])->format('H:i:s') : '00:00:00';
+        $endTime = $payload['end_time'] ? Carbon::parse($payload['end_time'])->format('H:i:s') : '23:59:59';
 
         $sessionData = [
             'course_id' => $course->id,
-            'title' => $payload['course'] ?? $payload['title'] ?? 'Session',
-            'start_date' => $payload['date'] ?? now()->toDateString(),
-            'end_date' => $payload['date'] ?? now()->toDateString(),
-            'start_time' => $payload['start_time'] ? Carbon::parse($payload['start_time'])->format('H:i') : null,
-            'end_time' => $payload['end_time'] ? Carbon::parse($payload['end_time'])->format('H:i') : null,
+            'title' => $payload['course'] ?? $payload['title'] ?? null,
+            'start_at' => Carbon::parse("$startDate $startTime"),
+            'end_at' => Carbon::parse("$endDate $endTime"),
+            'min_participants' => $payload['min_participants'] ?? 1,
             'capacity' => $capacityValue,
             'trainer_id' => $payload['trainer_id'] ?? $adminRequest->requester_id,
-            'trainer_name' => $payload['trainer'] ?? $payload['trainer_name'] ?? null,
-            'trainer_photo_url' => $payload['trainer_photo_url'] ?? null,
             'location' => $payload['location'] ?? null,
+            'mode' => $payload['mode'] ?? 'onsite',
             'online_link' => $payload['online_link'] ?? null,
-            'registration_start' => $payload['registration_start'] ?? null,
-            'registration_end' => $payload['registration_end'] ?? null,
+            'registration_start' => $payload['registration_start'] ? Carbon::parse($payload['registration_start']) : null,
+            'registration_end' => $payload['registration_end'] ? Carbon::parse($payload['registration_end']) : null,
             'status' => $normalizedStatus,
-            'approval_status' => 'approved',
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
-            'approval_note' => $adminRequest->admin_note,
         ];
 
         return DB::transaction(function () use ($request, $adminRequest, $sessionData) {
