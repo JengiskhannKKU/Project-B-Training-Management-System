@@ -465,6 +465,7 @@ const selectedCourseName = computed(() => {
                             :image_url="course.image_url"
                             :level="course.level"
                             :sessions_count="course.sessions_count"
+                            :enrolled_count="course.enrolled_count"
                             :max_participants="course.max_participants"
                             @viewSessions="() => handleViewSessions(course)"
                         />

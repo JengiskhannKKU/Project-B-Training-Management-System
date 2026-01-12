@@ -215,18 +215,16 @@ class TrainingSessionController extends Controller
 
                 return [
                     'id' => $course->id,
+                    'code' => $course->code,
                     'request_id' => $adminRequest?->id,
                     'name' => $course->title,
-                    'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
-                    'rating' => 4.5,
-                    'level' => ucfirst($course->level ?? 'Beginner'),
-                    'trainees_count' => $totalEnrolled,
-                    'price' => 'Free', 
-                    'date' => $dateRange,
-                    'time' => $timeRange,
-                    'location' => $mostCommonLocation,
+                    'description' => $course->description,
                     'category' => $course->category,
-                    'duration' => 'N/A',
+                    'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+                    'level' => $course->level,
+                    'sessions_count' => $course->sessions_count,
+                    'enrolled_count' => $totalEnrolled,
+                    'max_participants' => $course->max_participants,
                     'status' => $course->status,
                     'sessions' => $sessions ? $sessions->map(function ($session) {
                         return [

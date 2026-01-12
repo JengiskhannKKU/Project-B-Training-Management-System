@@ -11,6 +11,7 @@ interface CourseCardProps {
     image_url: string;
     level?: string;
     sessions_count?: number;
+    enrolled_count?: number;
     max_participants?: number;
     href?: string;
     showActions?: boolean;
@@ -68,7 +69,7 @@ const getCategoryColor = (category: string) => {
 
 <template>
     <Link
-        :href="href || `/trainer/courses/${id}`"
+        :href="href"
         class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer relative group"
     >
         <!-- Action Buttons (top-right corner, visible on hover) -->
@@ -153,10 +154,10 @@ const getCategoryColor = (category: string) => {
                     </span>
                 </div>
 
-                <!-- Max Participants -->
-                <div v-if="max_participants" class="flex items-center gap-2">
+                <!-- Enrollment Count -->
+                <div class="flex items-center gap-2">
                     <Users :size="16" class="text-[#2F837D] flex-shrink-0" />
-                    <span>Max {{ max_participants }} Participants</span>
+                    <span>{{ enrolled_count || 0 }}/{{ max_participants || 0 }} Participants</span>
                 </div>
             </div>
         </div>

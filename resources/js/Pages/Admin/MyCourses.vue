@@ -405,6 +405,7 @@ const fetchPrograms = async () => {
                 image_url: course.thumbnail_path || '',
                 level: course.level || 'beginner',
                 sessions_count: course.sessions_count || 0,
+                enrolled_count: course.enrolled_count || 0,
                 max_participants: course.max_participants || 20,
                 department: course.category || 'General',
                 status: course.status,
@@ -619,16 +620,16 @@ onMounted(() => {
                             v-for="course in paginatedCourses"
                             :key="course.request_id || course.id"
                             :id="course.id"
+                            :code="course.code"
                             :href="`/admin/my-courses/${course.code}`"
                             :name="course.name"
+                            :description="course.description"
+                            :category="course.category"
                             :image_url="course.image_url"
-                            :rating="course.rating"
                             :level="course.level"
-                            :trainees_count="course.trainees_count"
-                            :price="course.price"
-                            :date="course.date"
-                            :time="course.time"
-                            :location="course.location"
+                            :sessions_count="course.sessions_count"
+                            :enrolled_count="course.enrolled_count"
+                            :max_participants="course.max_participants"
                             :is-incomplete="course.isIncomplete"
                             :status="course.status"
                             :show-actions="true"

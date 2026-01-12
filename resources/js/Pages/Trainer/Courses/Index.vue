@@ -327,6 +327,7 @@ const fetchPrograms = async () => {
                 image_url: program.image_url || '',
                 level: program.level || '',
                 sessions_count: program.sessions_count || 0,
+                enrolled_count: program.enrolled_count || 0,
                 max_participants: program.max_participants || 20,
                 department: program.category || 'General',
                 status: program.status || 'active',
@@ -640,6 +641,7 @@ const mockPrograms = [
                             :image_url="course.image_url"
                             :level="course.level"
                             :sessions_count="course.sessions_count"
+                            :enrolled_count="course.enrolled_count"
                             :max_participants="course.max_participants"
                             :status="course.status"
                         />

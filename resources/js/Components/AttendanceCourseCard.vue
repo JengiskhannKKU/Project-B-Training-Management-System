@@ -10,6 +10,7 @@ interface AdminCourseCardProps {
     image_url: string;
     level?: string;
     sessions_count?: number;
+    enrolled_count?: number;
     max_participants?: number;
 }
 
@@ -107,10 +108,10 @@ const getCategoryColor = (category: string) => {
                     </span>
                 </div>
 
-                <!-- Max Participants -->
-                <div v-if="max_participants" class="flex items-center gap-2">
+                <!-- Enrollment Count -->
+                <div class="flex items-center gap-2">
                     <Users :size="16" class="text-[#2F837D] flex-shrink-0" />
-                    <span>Max {{ max_participants }} Participants</span>
+                    <span>{{ enrolled_count || 0 }}/{{ max_participants || 0 }} Participants</span>
                 </div>
             </div>
 

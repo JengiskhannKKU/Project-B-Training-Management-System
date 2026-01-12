@@ -236,21 +236,66 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     })->name('trainer.courses.index');
 
     Route::get('/trainer/courses/{code}', function ($code) {
+        $course = \App\Models\Course::with(['owner', 'sessions'])
+            ->where('code', $code)
+            ->first();
+
+        if (!$course) {
+            return Inertia::render('Trainer/Courses/Show', [
+                'program' => [
+                    'id' => $code,
+                    'name' => '',
+                    'code' => $code,
+                    'category' => '',
+                    'level' => '',
+                    'period' => '',
+                    'time' => '',
+                    'location' => '',
+                    'trainer' => '',
+                    'certificated' => '',
+                    'status' => '',
+                    'description' => '',
+                    'image_url' => null,
+                    'approval_status' => 'approved',
+                ],
+            ]);
+        }
+
+        // Get instructor/owner information
+        $owner = $course->owner;
+        $trainerName = $owner?->name ?? '';
+        $trainerEmail = $owner?->email ?? '';
+
+        // Count sessions
+        $sessionsCount = $course->sessions()->count();
+
         return Inertia::render('Trainer/Courses/Show', [
             'program' => [
-                'id' => $code,
-                'name' => '',
-                'category' => '',
-                'level' => '',
+                'id' => $course->id,
+                'name' => $course->title,
+                'title' => $course->title,
+                'code' => $course->code,
+                'category' => $course->category,
+                'level' => $course->level ?? 'beginner',
                 'period' => '',
                 'time' => '',
                 'location' => '',
-                'trainer' => '',
+                'trainer' => $trainerName,
+                'trainer_email' => $trainerEmail,
                 'certificated' => '',
-                'status' => '',
-                'description' => '',
-                'image_url' => null,
-            ]
+                'status' => $course->status,
+                'description' => $course->description ?? '',
+                'image_url' => $course->thumbnail_path,
+                'approval_status' => 'approved',
+                'learning_outcomes' => $course->learning_outcomes ?? '',
+                'target_audience' => $course->target_audience ?? '',
+                'prerequisites' => $course->prerequisites ?? '',
+                'additional_info' => $course->additional_info ?? '',
+                'min_participants' => $course->min_participants ?? 1,
+                'max_participants' => $course->max_participants ?? 20,
+                'sessions_count' => $sessionsCount,
+                'created_at' => $course->created_at?->format('M d, Y'),
+            ],
         ]);
     })->name('trainer.courses.show');
 

@@ -325,6 +325,7 @@ const exportToPDF = () => {
                         :image_url="program.image_url || ''"
                         :level="program.level || 'beginner'"
                         :sessions_count="program.sessions_count ?? 0"
+                        :enrolled_count="program.enrolled_count ?? 0"
                         :max_participants="program.max_participants ?? 20"
                         :status="program.status"
                     />
