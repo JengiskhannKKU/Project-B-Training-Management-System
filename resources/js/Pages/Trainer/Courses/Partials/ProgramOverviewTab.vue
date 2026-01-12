@@ -37,7 +37,9 @@ const props = defineProps<{
 const programData = computed(() => ({
     name: props.program?.name || props.program?.title || 'Program',
     description: props.program?.description || 'No description provided.',
-    category: props.program?.category || 'General',
+    category: typeof props.program?.category === 'object' 
+        ? (props.program?.category?.name || 'General')
+        : (props.program?.category || 'General'),
     level: props.program?.level || 'Beginner',
     period: props.program?.period || '—',
     time: props.program?.time || '—',

@@ -282,7 +282,7 @@ const handleEditCourse = (course: any) => {
         id: course.id,
         title: course.title,
         description: course.description,
-        category: course.category,
+        category_id: course.category_id,
         level: course.level,
         learning_outcomes: course.learning_outcomes,
         target_audience: course.target_audience,
@@ -401,19 +401,20 @@ const fetchPrograms = async () => {
                 code: course.code,
                 name: course.title, // Map title to name for CourseCard
                 description: course.description,
-                category: course.category,
+                category: course.category_name || course.category?.name || course.category || 'General',
                 image_url: course.thumbnail_path || '',
                 level: course.level || 'beginner',
                 sessions_count: course.sessions_count || 0,
                 enrolled_count: course.enrolled_count || 0,
                 max_participants: course.max_participants || 20,
-                department: course.category || 'General',
+                department: course.category_name || course.category?.name || course.category || 'General',
                 status: course.status,
                 isIncomplete: isIncomplete,
                 created_by_id: course.owner_id,
                 created_at: course.created_at,
                 // Raw fields for editing
                 title: course.title,
+                category_id: course.category_id,
                 learning_outcomes: course.learning_outcomes,
                 target_audience: course.target_audience,
                 prerequisites: course.prerequisites,
@@ -746,11 +747,11 @@ onMounted(() => {
             
             <!-- Sort Dropdown replaced Modal -->
 
+
             <CourseModal
                 :show="showCreateModal"
                 :course="editingCourse"
                 uploadUrlPrefix="admin"
-                :enable-preview-dialogs="false"
                 @close="handleModalClose"
                 @success="handleCreateProgram"
             />

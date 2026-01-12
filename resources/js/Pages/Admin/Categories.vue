@@ -1,79 +1,47 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Head, router, usePage } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import CategoryCard from "@/Components/CategoryCard.vue";
 import CategoryModal from "@/Components/CategoryModal.vue";
 import { Plus } from "lucide-vue-next";
+import axios from "axios";
+import { useToast } from "vue-toastification";
 
 const page = usePage();
+const toast = useToast();
 
-const categories = ref([
-    {
-        id: 1,
-        name: "Programming",
-        description: "Software development and programming courses",
-        courses: 12,
-        color: "blue",
-        icon: "Code",
-    },
-    {
-        id: 2,
-        name: "Design",
-        description: "UI/UX and graphic design courses",
-        courses: 8,
-        color: "purple",
-        icon: "Palette",
-    },
-    {
-        id: 3,
-        name: "Business",
-        description: "Business management and leadership",
-        courses: 15,
-        color: "green",
-        icon: "Briefcase",
-    },
-    {
-        id: 4,
-        name: "Marketing",
-        description: "Digital marketing and SEO",
-        courses: 6,
-        color: "yellow",
-        icon: "TrendingUp",
-    },
-    {
-        id: 5,
-        name: "Data Science",
-        description: "Analytics, ML, and AI courses",
-        courses: 10,
-        color: "red",
-        icon: "Database",
-    },
-    {
-        id: 6,
-        name: "Photography",
-        description: "Photography and videography courses",
-        courses: 7,
-        color: "cyan",
-        icon: "Camera",
-    },
-    {
-        id: 7,
-        name: "Innovation",
-        description: "Creative thinking and innovation",
-        courses: 5,
-        color: "orange",
-        icon: "Lightbulb",
-    },
-    {
-        id: 8,
-        name: "Technology",
-        description: "General technology courses",
-        courses: 9,
-        color: "indigo",
-        icon: "Laptop",
-    },
-]);
+const categories = ref([]);
+const isLoading = ref(false);
+
+// Fetch categories from API
+const fetchCategories = async () => {
+    isLoading.value = true;
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        const { data } = await axios.get('/api/categories');
+        
+        // Map API response to match component expectations
+        categories.value = (data?.data || data || []).map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            description: '', // Not in current API schema
+            courses: cat.courses_count || 0,
+            color: cat.color || '#6b7280',
+            icon: cat.icon_name || 'Folder',
+        }));
+    } catch (error) {
+        console.error('Failed to fetch categories:', error);
+        toast.error('Failed to load categories');
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Fetch on component mount
+onMounted(() => {
+    fetchCategories();
+});
 
 // Detect modal state from current route
 const currentPath = computed(() => page.url);
@@ -122,37 +90,56 @@ const handleCloseModal = () => {
     });
 };
 
-const handleSaveCategory = (categoryData) => {
-    if (modalMode.value === "add") {
-        // Add new category
-        const newId = Math.max(...categories.value.map((c) => c.id)) + 1;
-        categories.value.push({
-            id: newId,
-            ...categoryData,
-            description: "",
-            courses: 0,
-        });
-    } else {
-        // Edit existing category
-        const index = categories.value.findIndex(
-            (c) => c.id === selectedCategory.value.id
-        );
-        if (index !== -1) {
-            categories.value[index] = {
-                ...categories.value[index],
-                ...categoryData,
-            };
+const handleSaveCategory = async (categoryData) => {
+    try {
+        await axios.get('/sanctum/csrf-cookie');
+        
+        if (modalMode.value === "add") {
+            // Create new category via API
+            const { data } = await axios.post('/api/categories', {
+                name: categoryData.name,
+                icon_name: categoryData.icon,
+                color: categoryData.color,
+            });
+            
+            toast.success('Category created successfully!');
+        } else {
+            // Update existing category via API
+            const { data } = await axios.put(`/api/categories/${selectedCategory.value.id}`, {
+                name: categoryData.name,
+                icon_name: categoryData.icon,
+                color: categoryData.color,
+            });
+            
+            toast.success('Category updated successfully!');
         }
+        
+        // Refresh categories list
+        await fetchCategories();
+        
+        // Close modal after successful save
+        handleCloseModal();
+    } catch (error) {
+        console.error('Failed to save category:', error);
+        const message = error?.response?.data?.message || error?.message || 'Failed to save category';
+        toast.error(message);
     }
-    // Close modal and clear URL after save
-    handleCloseModal();
 };
 
-const handleDeleteCategory = (category) => {
+const handleDeleteCategory = async (category) => {
     if (confirm(`Are you sure you want to delete "${category.name}"?`)) {
-        const index = categories.value.findIndex((c) => c.id === category.id);
-        if (index !== -1) {
-            categories.value.splice(index, 1);
+        try {
+            await axios.get('/sanctum/csrf-cookie');
+            await axios.delete(`/api/categories/${category.id}`);
+            
+            toast.success('Category deleted successfully!');
+            
+            // Refresh categories list
+            await fetchCategories();
+        } catch (error) {
+            console.error('Failed to delete category:', error);
+            const message = error?.response?.data?.message || error?.message || 'Failed to delete category';
+            toast.error(message);
         }
     }
 };

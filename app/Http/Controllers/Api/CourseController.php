@@ -14,14 +14,27 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Course::query()->withCount('sessions');
+        $query = Course::query()
+            ->with('category')
+            ->withCount('sessions');
 
         // Optional filtering can be added here
-        if ($request->has('category')) {
-            $query->where('category', $request->category);
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
         }
 
-        return response()->json($query->latest()->get());
+        $courses = $query->latest()->get();
+
+        // Include category data in response
+        $courses = $courses->map(function ($course) {
+            return array_merge($course->toArray(), [
+                'category_name' => $course->category?->name,
+                'category_icon' => $course->category?->icon_name,
+                'category_color' => $course->category?->color,
+            ]);
+        });
+
+        return response()->json($courses);
     }
 
     /**
@@ -38,6 +51,7 @@ class CourseController extends Controller
 
         // Get all published courses (trainers can see all courses)
         $courses = Course::where('status', 'published')
+            ->with('category')
             ->withCount('sessions')
             ->latest()
             ->get()
@@ -47,7 +61,10 @@ class CourseController extends Controller
                     'code' => $course->code,
                     'name' => $course->title,
                     'description' => $course->description,
-                    'category' => $course->category,
+                    'category' => $course->category?->name,
+                    'category_id' => $course->category_id,
+                    'category_icon' => $course->category?->icon_name,
+                    'category_color' => $course->category?->color,
                     'image_url' => $course->thumbnail_path,
                     'level' => $course->level,
                     'sessions_count' => $course->sessions_count,
@@ -74,7 +91,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:100',
+            'category_id' => 'required|exists:categories,id',
             'level' => 'nullable|string',
             'learning_outcomes' => 'nullable|string',
             'target_audience' => 'nullable|string',
@@ -100,7 +117,7 @@ class CourseController extends Controller
      */
     public function show(Course $course)
     {
-        $course->load(['sessions', 'owner'])->loadCount('sessions');
+        $course->load(['sessions', 'owner', 'category'])->loadCount('sessions');
 
         // Return data in the format expected by the Show page
         return response()->json([
@@ -109,7 +126,8 @@ class CourseController extends Controller
                 'name' => $course->title,
                 'title' => $course->title,
                 'code' => $course->code,
-                'category' => $course->category,
+                'category' => $course->category?->name,
+                'category_id' => $course->category_id,
                 'level' => $course->level,
                 'period' => '', // Not in new schema
                 'time' => '', // Not applicable at course level
@@ -142,7 +160,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'sometimes|required|string|max:100',
+            'category_id' => 'sometimes|required|exists:categories,id',
             'level' => 'nullable|string',
             'learning_outcomes' => 'nullable|string',
             'target_audience' => 'nullable|string',
