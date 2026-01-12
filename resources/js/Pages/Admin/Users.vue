@@ -69,15 +69,34 @@ const fetchUsers = async () => {
 
         // Transform API data to match component structure
         const apiUsers = response.data?.data?.data || response.data?.data || [];
-        users.value = apiUsers.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            contact: user.profile?.phone || user.phone || '-',
-            department: user.profile?.department || user.department || '-',
-            role: user.role?.name ? capitalizeRole(user.role.name) : 'Trainee',
-            status: user.status === 'active' ? 'Active' : 'Inactive',
-        }));
+        users.value = apiUsers.map(user => {
+            const rawRole = user.role?.name || 'trainee';
+            // Check if role is effectively a student/trainee
+            const isStudent = rawRole === 'student' || rawRole === 'trainee';
+
+            return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                contact: user.profile?.phone || user.phone || '-',
+                
+                // Context fields
+                is_student: isStudent,
+                student_id: user.profile?.student_id,
+                faculty: user.profile?.faculty,
+                major: user.profile?.major,
+                job_position: user.profile?.job_position,
+                organization: user.profile?.organization,
+                real_department: user.profile?.department, // Actual department field
+                joined_at: user.created_at,
+
+                // For Filter/Sort compatibility (Polymorphic 'Department' column)
+                department: user.profile?.department || user.profile?.faculty || '-',
+                
+                role: user.role?.name ? capitalizeRole(user.role.name) : 'Trainee',
+                status: user.status === 'active' ? 'Active' : 'Inactive',
+            };
+        });
     } catch (error) {
         console.error('Error fetching users:', error);
         toast.error('Unable to load users');
@@ -152,7 +171,11 @@ const filteredUsers = computed(() => {
                 user.name.toLowerCase().includes(query) ||
                 user.email.toLowerCase().includes(query) ||
                 user.contact.toLowerCase().includes(query) ||
-                user.department.toLowerCase().includes(query)
+                user.department.toLowerCase().includes(query) ||
+                (user.student_id && user.student_id.toLowerCase().includes(query)) ||
+                (user.job_position && user.job_position.toLowerCase().includes(query)) ||
+                (user.major && user.major.toLowerCase().includes(query)) ||
+                (user.organization && user.organization.toLowerCase().includes(query))
         );
     }
 
@@ -716,11 +739,28 @@ onMounted(() => {
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            {{ $t('Department') }}
+                                            {{ activeTab === 'trainees' ? 'Education / Affiliation' : 'Position / Department' }}
                                             <ChevronUp
                                                 v-if="
                                                     sortColumn === 'department'
                                                 "
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
+                                        @click="sort('joined_at')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            {{ $t('Joined') }}
+                                            <ChevronUp
+                                                v-if="sortColumn === 'joined_at'"
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
@@ -793,23 +833,51 @@ onMounted(() => {
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
-                                        <div>
-                                            <div class="font-medium">
-                                                {{ user.email }}
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-12 italic">Email:</span>
+                                                <span class="font-medium truncate max-w-[180px]" :title="user.email">{{ user.email }}</span>
                                             </div>
-                                            <div class="text-gray-500">
-                                                {{
-                                                    formatPhoneNumber(
-                                                        user.contact
-                                                    )
-                                                }}
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-12 italic">Phone:</span>
+                                                <span class="text-gray-600">{{ formatPhoneNumber(user.contact) || '-' }}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span>
-                                            {{ user.department }}
-                                        </span>
+                                        <!-- Trainee / Student View -->
+                                        <div v-if="user.is_student" class="space-y-1">
+                                            <div v-if="user.student_id" class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
+                                                <span class="text-xs font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded leading-none">{{ user.student_id }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Faculty:</span>
+                                                <span class="text-sm text-gray-900">{{ user.faculty || '-' }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Major:</span>
+                                                <span class="text-xs text-gray-500">{{ user.major || '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <!-- Trainer / Admin View -->
+                                        <div v-else class="space-y-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
+                                                <span class="text-sm font-medium text-gray-900">{{ user.job_position || '-' }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Dept:</span>
+                                                <span class="text-xs text-gray-600">{{ user.real_department || user.department || '-' }}</span>
+                                            </div>
+                                            <div v-if="user.organization" class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Org:</span>
+                                                <span class="text-xs text-gray-400">{{ user.organization }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ user.joined_at ? new Date(user.joined_at).toLocaleDateString() : '-' }}
                                     </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap"

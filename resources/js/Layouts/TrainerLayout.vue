@@ -44,11 +44,6 @@ const navigationItems = computed(() => [
         icon: Calendar,
     },
     {
-        name: $t("Attendance"),
-        path: "/trainer/attendance",
-        icon: BookCheck,
-    },
-    {
         name: $t("Feedback"),
         path: "/trainer/feedback",
         icon: MessageSquare,

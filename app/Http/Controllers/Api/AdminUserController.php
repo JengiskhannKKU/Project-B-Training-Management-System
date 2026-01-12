@@ -23,7 +23,7 @@ class AdminUserController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $query = User::with('role')->latest();
+        $query = User::with(['role', 'profile'])->latest();
 
         if (isset($validated['role'])) {
             $query->whereHas('role', function ($q) use ($validated) {
