@@ -327,6 +327,7 @@ const exportToPDF = () => {
                         :date="program.date ?? 'Jan 5-10, 2026'"
                         :time="program.time ?? '09:00 - 16:00'"
                         :location="program.location ?? 'Smart Classroom'"
+                        :status="program.status"
                     />
                 </div>
 

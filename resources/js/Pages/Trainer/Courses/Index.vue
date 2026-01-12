@@ -644,6 +644,7 @@ const mockPrograms = [
                             :date="course.date"
                             :time="course.time"
                             :location="course.location"
+                            :status="course.status"
                         />
                     </div>
 

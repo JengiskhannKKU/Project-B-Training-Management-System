@@ -635,6 +635,7 @@ onMounted(() => {
                             :time="course.time"
                             :location="course.location"
                             :is-incomplete="course.isIncomplete"
+                            :status="course.status"
                             :show-actions="true"
                             @edit="handleEditCourse(course)"
                             @delete="handleDeleteCourse(course.id)"
