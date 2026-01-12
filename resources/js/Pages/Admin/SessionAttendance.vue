@@ -286,52 +286,19 @@ const setAttendanceStatus = (traineeId, status) => {
 
 // Toggle attendance with auto-save
 const toggleAttendance = (traineeId) => {
-    console.log('=== TOGGLE ATTENDANCE DEBUG ===');
-    console.log('Trainee ID:', traineeId);
-    console.log('All trainees:', trainees.value);
-    
     const trainee = trainees.value.find((t) => t.id === traineeId);
-    console.log('Found trainee:', trainee);
-    
     if (trainee) {
-        const previousChecked = trainee.checked;
-        const previousStatus = trainee.status;
-        
         trainee.checked = !trainee.checked;
         trainee.status = trainee.checked ? "present" : "absent";
-        
-        console.log('Previous state:', { checked: previousChecked, status: previousStatus });
-        console.log('New state:', { checked: trainee.checked, status: trainee.status });
-        console.log('Selected day:', selectedDay.value);
-        console.log('Show day tabs:', showDayTabs.value);
-
-        // IMPORTANT: Update attendance matrix immediately for multi-day sessions
-        // This ensures currentDayTrainees computed property reflects the change
-        if (selectedDay.value) {
-            if (!attendanceMatrix.value[trainee.enrollmentId]) {
-                attendanceMatrix.value[trainee.enrollmentId] = {};
-            }
-            attendanceMatrix.value[trainee.enrollmentId][selectedDay.value.id] = {
-                status: trainee.status,
-                checked_at: new Date().toISOString(),
-                note: trainee.note || null,
-            };
-            console.log('Updated attendance matrix immediately:', attendanceMatrix.value[trainee.enrollmentId][selectedDay.value.id]);
-        }
 
         // Trigger auto-save after 500ms debounce
         if (autoSaveTimeout) {
             clearTimeout(autoSaveTimeout);
-            console.log('Cleared previous auto-save timeout');
         }
         autoSaveTimeout = setTimeout(() => {
-            console.log('Triggering auto-save...');
             autoSaveAttendance();
         }, 500);
-    } else {
-        console.error('Trainee not found with ID:', traineeId);
     }
-    console.log('=== END TOGGLE DEBUG ===');
 };
 
 // Sort table column
@@ -514,17 +481,9 @@ const fetchCertificates = async () => {
 
 // Auto-save attendance (silent, no toast on success) - multi-day support
 const autoSaveAttendance = async () => {
-    console.log('=== AUTO-SAVE ATTENDANCE DEBUG ===');
-    console.log('Selected day:', selectedDay.value);
-    
-    if (!selectedDay.value) {
-        console.warn('No selected day, skipping auto-save');
-        return;
-    }
+    if (!selectedDay.value) return;
 
     try {
-        console.log('Current day trainees:', currentDayTrainees.value);
-        
         // Prepare bulk attendance data for the selected day
         const records = currentDayTrainees.value
             .filter(trainee => trainee.status !== 'not_marked')
@@ -534,25 +493,15 @@ const autoSaveAttendance = async () => {
                 note: trainee.note || null,
             }));
 
-        console.log('Records to save:', records);
-        console.log('Number of records:', records.length);
-
         // Check if there's anything to save
         if (records.length === 0) {
-            console.warn('No records to save (all marked as "not_marked")');
             return;
         }
 
-        const apiUrl = `/api/session-days/${selectedDay.value.id}/attendance/bulk`;
-        console.log('API URL:', apiUrl);
-        console.log('Request payload:', { records });
-        
         // Send to per-day API endpoint
-        const response = await axios.post(apiUrl, {
+        await axios.post(`/api/session-days/${selectedDay.value.id}/attendance/bulk`, {
             records
         });
-        
-        console.log('API Response:', response.data);
 
         // Update attendance matrix with saved data
         records.forEach(record => {
@@ -563,25 +512,18 @@ const autoSaveAttendance = async () => {
                     checked_at: new Date().toISOString(),
                     note: record.note,
                 };
-                console.log('Updated attendance matrix for trainee:', trainee.name);
             }
         });
 
         // Update last auto-saved time
         lastAutoSaved.value = new Date();
-        console.log('Auto-save successful at:', lastAutoSaved.value);
 
         // Silently refresh summary only
         await fetchAttendanceSummary();
-        console.log('Attendance summary refreshed');
     } catch (error) {
-        console.error('=== ERROR AUTO-SAVING ATTENDANCE ===');
-        console.error('Error details:', error);
-        console.error('Error response:', error?.response);
-        console.error('Error message:', error?.message);
+        console.error('Error auto-saving attendance:', error);
         toast.error('Failed to auto-save attendance.');
     }
-    console.log('=== END AUTO-SAVE DEBUG ===');
 };
 
 const generateCertificates = async () => {
@@ -1027,7 +969,7 @@ onMounted(() => {
                                         </span>
                                     </td>
                                     <td class="px-4 py-4 whitespace-nowrap">
-                                        <button @click="console.log('Button clicked for trainee:', trainee); toggleAttendance(trainee.id)" :class="[
+                                        <button @click="toggleAttendance(trainee.id)" :class="[
                                             'p-2 rounded-lg transition-all duration-200 hover:scale-110',
                                             trainee.checked
                                                 ? 'text-green-600 bg-green-50'

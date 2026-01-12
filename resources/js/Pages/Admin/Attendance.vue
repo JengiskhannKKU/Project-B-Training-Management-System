@@ -64,14 +64,6 @@ const fetchSessions = async () => {
         currentPage.value = data?.data?.current_page || 1;
         totalResults.value = data?.data?.total || 0;
         itemsPerPage.value = data?.data?.per_page || 10;
-
-        // Debug: Log first session to verify course data is loaded
-        console.log('DEBUG: Sessions loaded:', sessions.value);
-        if (sessions.value.length > 0) {
-            console.log('DEBUG: First session:', sessions.value[0]);
-            console.log('DEBUG: First session.course:', sessions.value[0]?.course);
-            console.log('DEBUG: First session.course.code:', sessions.value[0]?.course?.code);
-        }
     } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to load sessions");
         sessions.value = [];
@@ -317,7 +309,7 @@ onMounted(() => {
                                     <StatusBadge :status="session.status || 'upcoming'" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <Link :href="`/admin/courses/${session.course?.code || session.course_id}/sessions/${session.id}/attendance`"
+                                    <Link :href="`/admin/${session.course_id}/sessions/${session.id}/attendance`"
                                         class="inline-flex items-center gap-1.5 text-[#2f837d] hover:text-[#266a66] p-1 rounded hover:bg-gray-100 transition-colors"
                                         title="Mark Attendance">
                                         <ClipboardCheck class="h-5 w-5" />

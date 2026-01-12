@@ -52,16 +52,6 @@ Route::middleware('auth:sanctum')->group(function () {
         'update' => 'api.courses.update',
         'destroy' => 'api.courses.destroy',
     ]);
-
-    // Categories API routes
-    Route::apiResource('categories', \App\Http\Controllers\Api\CategoryController::class)->names([
-        'index' => 'api.categories.index',
-        'store' => 'api.categories.store',
-        'show' => 'api.categories.show',
-        'update' => 'api.categories.update',
-        'destroy' => 'api.categories.destroy',
-    ]);
-
     Route::apiResource('sessions', TrainingSessionController::class)->names([
         'index' => 'api.sessions.index',
         'store' => 'api.sessions.store',
