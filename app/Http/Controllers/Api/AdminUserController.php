@@ -85,16 +85,64 @@ class AdminUserController extends Controller
             ],
             'role' => ['sometimes', 'required', 'string', Rule::in(['admin', 'trainer', 'trainee'])],
             'status' => ['sometimes', 'required', 'string', Rule::in(['active', 'inactive'])],
+            
+            // Profile fields
+            'prefix' => ['nullable', 'string', 'max:50'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', 'string', 'max:50'],
+            'sub_category' => ['nullable', 'string', 'max:100'],
+            'faculty' => ['nullable', 'string', 'max:255'],
+            'major' => ['nullable', 'string', 'max:255'],
+            'student_id' => ['nullable', 'string', 'max:50'],
+            'degree_level' => ['nullable', 'string', 'max:100'],
+            'year_of_study' => ['nullable', 'string', 'max:50'],
+            'personnel_id' => ['nullable', 'string', 'max:50'],
+            'organization' => ['nullable', 'string', 'max:255'],
+            'department' => ['nullable', 'string', 'max:255'],
+            'job_position' => ['nullable', 'string', 'max:255'],
+            'employment_status' => ['nullable', 'string', 'max:100'],
+            'personnel_type' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100'],
+            'bio' => ['nullable', 'string'],
         ]);
 
+        // Handle Role update
         if (isset($data['role'])) {
             $role = Role::where('name', $data['role'])->firstOrFail();
             $data['role_id'] = $role->id;
             unset($data['role']);
         }
 
-        $user->update($data);
-        $user->load('role');
+        // Separate user and profile data
+        $userFields = ['name', 'email', 'role_id', 'status'];
+        $userData = array_intersect_key($data, array_flip($userFields));
+        
+        $profileFields = [
+            'prefix', 'first_name', 'last_name', 'phone', 'date_of_birth', 
+            'gender', 'sub_category', 'faculty', 'major', 'student_id', 
+            'degree_level', 'year_of_study', 'personnel_id', 'organization', 
+            'department', 'job_position', 'employment_status', 'personnel_type', 
+            'category', 'bio'
+        ];
+        $profileData = array_intersect_key($data, array_flip($profileFields));
+
+        // Update User
+        if (!empty($userData)) {
+            $user->update($userData);
+        }
+
+        // Update Profile
+        if (!empty($profileData)) {
+            $user->profile()->updateOrCreate(
+                ['user_id' => $user->id],
+                $profileData
+            );
+        }
+
+        $user->load(['role', 'profile']);
 
         return $this->successResponse($user, 'User updated successfully');
     }

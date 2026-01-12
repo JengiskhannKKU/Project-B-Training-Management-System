@@ -52,9 +52,29 @@ const editingUser = ref(null);
 const editForm = ref({
     name: "",
     email: "",
-    phone: "",
     role: "",
+    status: "",
+    // Profile Fields
+    prefix: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    date_of_birth: "",
+    gender: "",
+    sub_category: "",
+    faculty: "",
+    major: "",
+    student_id: "",
+    degree_level: "",
+    year_of_study: "",
+    personnel_id: "",
+    organization: "",
     department: "",
+    job_position: "",
+    employment_status: "",
+    personnel_type: "",
+    category: "",
+    bio: "",
 });
 
 // Fetch users from API
@@ -111,6 +131,9 @@ const fetchUsers = async () => {
                 organization: user.profile?.organization,
                 real_department: user.profile?.department, // Actual department field
                 joined_at: user.created_at,
+
+                // Full Profile for Editing
+                profile: user.profile || {},
 
                 // For Filter/Sort compatibility (Polymorphic 'Department' column)
                 department: user.profile?.department || user.profile?.faculty || '-',
@@ -428,16 +451,47 @@ const changeUserStatus = async (userId, newStatus) => {
     }
 };
 
+// Format date for input (YYYY-MM-DD)
+const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    // Handle both ISO string and simple date string
+    return dateString.split('T')[0];
+};
+
 // Open edit modal
 const openEditModal = (user) => {
     editingUser.value = user;
+    
+    // Map user and profile data to edit form
     editForm.value = {
         name: user.name,
         email: user.email,
-        phone: user.contact,
         role: user.role,
-        department: user.department,
+        status: user.status || 'Active', // Ensure status is mapped
+        
+        // Profile fields
+        prefix: user.profile?.prefix || "",
+        first_name: user.profile?.first_name || "",
+        last_name: user.profile?.last_name || "",
+        phone: user.profile?.phone || "",
+        date_of_birth: formatDateForInput(user.profile?.date_of_birth),
+        gender: user.profile?.gender || "",
+        sub_category: user.profile?.sub_category || "",
+        faculty: user.profile?.faculty || "",
+        major: user.profile?.major || "",
+        student_id: user.profile?.student_id || "",
+        degree_level: user.profile?.degree_level || "",
+        year_of_study: user.profile?.year_of_study || "",
+        personnel_id: user.profile?.personnel_id || "",
+        organization: user.profile?.organization || "",
+        department: user.profile?.department || "",
+        job_position: user.profile?.job_position || "",
+        employment_status: user.profile?.employment_status || "",
+        personnel_type: user.profile?.personnel_type || "",
+        category: user.profile?.category || "",
+        bio: user.profile?.bio || "",
     };
+    
     showEditModal.value = true;
     // Update URL without reloading
     router.visit(`/admin/users/${user.id}/edit`, {
@@ -451,12 +505,32 @@ const openEditModal = (user) => {
 const closeEditModal = () => {
     showEditModal.value = false;
     editingUser.value = null;
+    // Reset form
     editForm.value = {
         name: "",
         email: "",
-        phone: "",
         role: "",
+        status: "",
+        prefix: "",
+        first_name: "",
+        last_name: "",
+        phone: "",
+        date_of_birth: "",
+        gender: "",
+        sub_category: "",
+        faculty: "",
+        major: "",
+        student_id: "",
+        degree_level: "",
+        year_of_study: "",
+        personnel_id: "",
+        organization: "",
         department: "",
+        job_position: "",
+        employment_status: "",
+        personnel_type: "",
+        category: "",
+        bio: "",
     };
     // Update URL back to users page
     router.visit("/admin/users", {
@@ -477,24 +551,64 @@ const saveUser = async () => {
             'Trainer': 'trainer',
             'Trainee': 'trainee'
         };
+        
+        const statusMapping = {
+            'Active': 'active',
+            'Inactive': 'inactive'
+        };
 
         const payload = {
-            name: editForm.value.name,
-            email: editForm.value.email,
+            ...editForm.value,
             role: roleMapping[editForm.value.role] || editForm.value.role.toLowerCase(),
+            status: statusMapping[editForm.value.status] || editForm.value.status.toLowerCase(),
         };
 
         // Call API to update user
-        await axios.put(`/api/admin/users/${editingUser.value.id}`, payload);
+        const response = await axios.put(`/api/admin/users/${editingUser.value.id}`, payload);
+        const updatedUser = response.data?.data;
 
         // Update local state after successful API call
-        const user = users.value.find((u) => u.id === editingUser.value.id);
-        if (user) {
-            user.name = editForm.value.name;
-            user.email = editForm.value.email;
-            user.contact = editForm.value.phone;
-            user.role = editForm.value.role;
-            user.department = editForm.value.department;
+        const userIndex = users.value.findIndex((u) => u.id === editingUser.value.id);
+        if (userIndex !== -1 && updatedUser) {
+            // Re-transform the updated user to match the component structure
+            const rawRole = updatedUser.role?.name || 'trainee';
+            const isStudent = rawRole === 'student' || rawRole === 'trainee';
+            let category = updatedUser.profile?.category;
+            let type = 'External';
+            if (category) {
+                if (['Student', 'Personnel'].includes(category)) {
+                    type = 'Internal';
+                } else {
+                    type = 'External';
+                }
+            } else {
+                if (updatedUser.profile?.faculty || updatedUser.profile?.student_id || updatedUser.profile?.personnel_id) {
+                    type = 'Internal';
+                    category = updatedUser.profile?.student_id ? 'Student' : 'Personnel';
+                }
+            }
+
+            users.value[userIndex] = {
+                id: updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                contact: updatedUser.profile?.phone || updatedUser.phone || '-',
+                type: type,
+                category: category || (isStudent ? 'Student' : 'Outsider'),
+                is_student: isStudent,
+                student_id: updatedUser.profile?.student_id,
+                personnel_id: updatedUser.profile?.personnel_id,
+                faculty: updatedUser.profile?.faculty,
+                major: updatedUser.profile?.major,
+                job_position: updatedUser.profile?.job_position,
+                organization: updatedUser.profile?.organization,
+                real_department: updatedUser.profile?.department,
+                joined_at: updatedUser.created_at,
+                profile: updatedUser.profile || {},
+                department: updatedUser.profile?.department || updatedUser.profile?.faculty || '-',
+                role: updatedUser.role?.name ? capitalizeRole(updatedUser.role.name) : 'Trainee',
+                status: updatedUser.status === 'active' ? 'Active' : 'Inactive',
+            };
         }
 
         toast.success('User updated successfully');
@@ -513,15 +627,7 @@ watch(
         if (newId) {
             const user = users.value.find((u) => u.id === parseInt(newId));
             if (user) {
-                editingUser.value = user;
-                editForm.value = {
-                    name: user.name,
-                    email: user.email,
-                    phone: user.contact,
-                    role: user.role,
-                    department: user.department,
-                };
-                showEditModal.value = true;
+                openEditModal(user);
             }
         }
     },
