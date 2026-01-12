@@ -32,7 +32,8 @@ import {
     Clock,
     Eye,
     Upload,
-    Trash2
+    Trash2,
+    Lock
 } from 'lucide-vue-next';
 
 const toast = useToast();
@@ -344,7 +345,7 @@ onUnmounted(() => {
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <nav class="flex flex-col">
                                 <button 
-                                    v-for="tab in ['profile', 'security', 'notifications']" 
+                                    v-for="tab in ['profile', 'security', 'password', 'notifications']" 
                                     :key="tab"
                                     @click="activeTab = tab"
                                     :class="[
@@ -356,19 +357,10 @@ onUnmounted(() => {
                                 >
                                     <User v-if="tab === 'profile'" class="w-5 h-5 mr-3" />
                                     <Shield v-else-if="tab === 'security'" class="w-5 h-5 mr-3" />
+                                    <Lock v-else-if="tab === 'password'" class="w-5 h-5 mr-3" />
                                     <Bell v-else class="w-5 h-5 mr-3" />
                                     <span class="capitalize">{{ tab }}</span>
                                 </button>
-                                
-                                <!-- Admin Extra Tabs -->
-                                <template v-if="roleName === 'admin'">
-                                    <div class="my-2 border-t border-gray-100 mx-4"></div>
-                                    <button 
-                                        @click="activeTab = 'general'"
-                                        :class="['flex items-center px-6 py-4 text-sm font-medium transition-colors border-l-4', activeTab === 'general' ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-transparent text-gray-600 hover:bg-gray-50']">
-                                        <Globe class="w-5 h-5 mr-3" /> Site Settings
-                                    </button>
-                                </template>
                             </nav>
                         </div>
                     </div>
@@ -557,36 +549,18 @@ onUnmounted(() => {
                         <div v-if="activeTab === 'security'" class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                             <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/30">
                                 <h3 class="text-xl font-bold text-gray-900">Security Protocols</h3>
-                                <p class="text-sm text-gray-500">Manage your password and access settings.</p>
+                                <p class="text-sm text-gray-500">Manage your access settings.</p>
                             </div>
                             
                             <div class="p-8">
                                 <!-- Subsection: Account Protection -->
-                                <div class="mb-10">
+                                <div>
                                     <h4 class="flex items-center text-lg font-bold text-gray-900 mb-6 pb-2 border-b border-gray-100">
                                         <Shield class="w-5 h-5 mr-2 text-teal-500" />
                                         Account Protection
                                     </h4>
                                     
                                     <div class="space-y-6 max-w-2xl">
-                                        <!-- 2FA Toggle (Admin Only) -->
-                                        <div v-if="roleName === 'admin'" class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                            <div>
-                                                <p class="font-medium text-gray-900">Two-Factor Authentication</p>
-                                                <p class="text-sm text-gray-500">Add an extra layer of security to your account.</p>
-                                            </div>
-                                            <button 
-                                                @click="adminSettings.maintenanceMode = !adminSettings.maintenanceMode" 
-                                                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
-                                                :class="adminSettings.maintenanceMode ? 'bg-teal-600' : 'bg-gray-200'"
-                                            >
-                                                <span 
-                                                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                                                    :class="adminSettings.maintenanceMode ? 'translate-x-5' : 'translate-x-0'"
-                                                ></span>
-                                            </button>
-                                        </div>
-
                                         <!-- Session Timeout (Mock) -->
                                         <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                                             <div>
@@ -601,44 +575,51 @@ onUnmounted(() => {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Subsection: Password Management -->
-                                <div>
-                                    <h4 class="flex items-center text-lg font-bold text-gray-900 mb-6 pb-2 border-b border-gray-100">
-                                        <Lock class="w-5 h-5 mr-2 text-teal-500" />
-                                        Password Management
-                                    </h4>
+                        <!-- PASSWORD TAB -->
+                        <div v-if="activeTab === 'password'" class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                            <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/30">
+                                <h3 class="text-xl font-bold text-gray-900">Password Management</h3>
+                                <p class="text-sm text-gray-500">Update your account password.</p>
+                            </div>
+                            
+                            <div class="p-8">
+                                <h4 class="flex items-center text-lg font-bold text-gray-900 mb-6 pb-2 border-b border-gray-100">
+                                    <Lock class="w-5 h-5 mr-2 text-teal-500" />
+                                    Change Password
+                                </h4>
 
-                                    <form @submit.prevent="updatePassword" class="space-y-6 max-w-2xl">
+                                <form @submit.prevent="updatePassword" class="space-y-6 max-w-2xl">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Lock class="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input v-model="passwordForm.current_password" type="password" class="pl-10 block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="••••••••" />
+                                        </div>
+                                        <p v-if="passwordForm.errors.current_password" class="text-red-500 text-xs mt-1">{{ passwordForm.errors.current_password }}</p>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                                            <div class="relative">
-                                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <Lock class="h-5 w-5 text-gray-400" />
-                                                </div>
-                                                <input v-model="passwordForm.current_password" type="password" class="pl-10 block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="••••••••" />
-                                            </div>
-                                            <p v-if="passwordForm.errors.current_password" class="text-red-500 text-xs mt-1">{{ passwordForm.errors.current_password }}</p>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                            <input v-model="passwordForm.password" type="password" class="block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="New password" />
+                                            <p v-if="passwordForm.errors.password" class="text-red-500 text-xs mt-1">{{ passwordForm.errors.password }}</p>
                                         </div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                                                <input v-model="passwordForm.password" type="password" class="block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="New password" />
-                                                <p v-if="passwordForm.errors.password" class="text-red-500 text-xs mt-1">{{ passwordForm.errors.password }}</p>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New</label>
-                                                <input v-model="passwordForm.password_confirmation" type="password" class="block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="Confirm password" />
-                                            </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New</label>
+                                            <input v-model="passwordForm.password_confirmation" type="password" class="block w-full rounded-xl border-gray-200 focus:ring-teal-500 focus:border-teal-500 bg-gray-50 focus:bg-white transition-colors" placeholder="Confirm password" />
                                         </div>
-                                        <div class="pt-2 flex justify-end">
-                                            <button type="submit" :disabled="passwordForm.processing" class="flex items-center px-6 py-2.5 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 shadow-lg shadow-gray-900/20 transition-all">
-                                                <Save class="w-4 h-4 mr-2" />
-                                                Update Password
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
+                                    </div>
+                                    <div class="pt-2 flex justify-end">
+                                        <button type="submit" :disabled="passwordForm.processing" class="flex items-center px-6 py-2.5 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 shadow-lg shadow-gray-900/20 transition-all">
+                                            <Save class="w-4 h-4 mr-2" />
+                                            Update Password
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
 
