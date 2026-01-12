@@ -408,9 +408,23 @@ const removeTrainee = () => {
 };
 
 const mapSessionForDisplay = (session: any) => {
-    const start = session.start_time ? session.start_time.slice(0, 5) : '--:--';
-    const end = session.end_time ? session.end_time.slice(0, 5) : '--:--';
-    const capacityTaken = session.active_enrollments_count ?? 0;
+    // Extract time from start_at and end_at datetime fields
+    let start = '--:--';
+    let end = '--:--';
+    let sessionDate = '';
+
+    if (session.start_at) {
+        const startDate = new Date(session.start_at);
+        start = startDate.toTimeString().slice(0, 5);
+        sessionDate = startDate.toISOString().split('T')[0];
+    }
+
+    if (session.end_at) {
+        const endDate = new Date(session.end_at);
+        end = endDate.toTimeString().slice(0, 5);
+    }
+
+    const capacityTaken = session.active_enrollments_count ?? session.enrollments_count ?? 0;
     const capacityTotal = session.capacity ?? 0;
     const capacityTotalNumber = Number(capacityTotal);
     const isUnlimited = !Number.isNaN(capacityTotalNumber) && capacityTotalNumber >= 9999;
@@ -419,7 +433,7 @@ const mapSessionForDisplay = (session: any) => {
     return {
         id: session.id,
         display_id: session.display_id || `Se-${String(session.id).padStart(3, '0')}`,
-        date: session.start_date || '',
+        date: sessionDate,
         time: `${start} - ${end}`,
         session: session.title || 'Session',
         location: session.location || '',

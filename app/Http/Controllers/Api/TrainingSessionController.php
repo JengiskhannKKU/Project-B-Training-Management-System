@@ -18,7 +18,7 @@ class TrainingSessionController extends Controller
     {
         $query = TrainingSession::query()
             ->with(['course', 'trainer'])
-            ->withCount('enrollments')
+            ->withCount(['enrollments', 'activeEnrollments'])
             ->latest();
         $user = $request->user();
 
@@ -172,7 +172,7 @@ class TrainingSessionController extends Controller
                       });
             })
             ->with(['sessions' => function ($query) {
-                $query->withCount('enrollments')
+                $query->withCount(['enrollments', 'activeEnrollments'])
                     ->orderBy('start_at', 'desc');
             }])
             ->get()
@@ -267,7 +267,7 @@ class TrainingSessionController extends Controller
         // Get all approved courses
         $courses = Course::where('status', 'published')
             ->with(['sessions' => function ($query) {
-                $query->withCount('enrollments')
+                $query->withCount(['enrollments', 'activeEnrollments'])
                     ->orderBy('start_at', 'desc');
             }])
             ->get()

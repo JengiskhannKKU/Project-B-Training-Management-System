@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, ListFilter, ArrowDownNarrowWide, Share, Award, ExternalLink } from 'lucide-vue-next';
+import { Search, ListFilter, ArrowDownNarrowWide, Share, Award } from 'lucide-vue-next';
 import { formatDate, formatTime } from '@/utils/dateFormatter';
 import { Link } from '@inertiajs/vue3';
 
@@ -130,19 +130,8 @@ const getStatusBadgeClass = (status: string) => {
                         <td class="px-4 py-3 text-sm text-gray-600">{{ formatTime(session.time) }}</td>
                         <td class="px-4 py-3 text-sm text-gray-900 font-medium">{{ session.session }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">
-                            <div class="flex items-center gap-1">
-                                <span v-if="session.location">{{ session.location }}</span>
-                                <a 
-                                    v-if="session.online_link" 
-                                    :href="session.online_link" 
-                                    target="_blank" 
-                                    class="text-teal-600 hover:text-teal-800"
-                                    title="Join Online Session"
-                                >
-                                    <ExternalLink :size="14" />
-                                </a>
-                                <span v-if="!session.location && !session.online_link" class="text-gray-400">—</span>
-                            </div>
+                            <span v-if="session.location">{{ session.location }}</span>
+                            <span v-if="!session.location" class="text-gray-400">—</span>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600">
                             {{ session.trainer_name || '—' }}

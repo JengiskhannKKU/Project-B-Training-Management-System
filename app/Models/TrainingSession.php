@@ -52,6 +52,12 @@ class TrainingSession extends Model
         return $this->hasMany(Enrollment::class, 'session_id');
     }
 
+    public function activeEnrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class, 'session_id')
+            ->whereIn('status', ['pending', 'confirmed', 'completed']);
+    }
+
     public function certificateRequests(): HasMany
     {
         return $this->hasMany(CertificateRequest::class, 'session_id');
