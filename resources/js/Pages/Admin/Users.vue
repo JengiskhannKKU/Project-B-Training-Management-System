@@ -74,6 +74,25 @@ const fetchUsers = async () => {
             // Check if role is effectively a student/trainee
             const isStudent = rawRole === 'student' || rawRole === 'trainee';
 
+            // Determine Category and Type
+            let category = user.profile?.category;
+            let type = 'External'; // Default
+
+            // If category is set in DB
+            if (category) {
+                if (['Student', 'Personnel'].includes(category)) {
+                    type = 'Internal';
+                } else {
+                    type = 'External';
+                }
+            } else {
+                // Fallback inference
+                if (user.profile?.faculty || user.profile?.student_id || user.profile?.personnel_id) {
+                    type = 'Internal';
+                    category = user.profile?.student_id ? 'Student' : 'Personnel';
+                }
+            }
+
             return {
                 id: user.id,
                 name: user.name,
@@ -81,8 +100,11 @@ const fetchUsers = async () => {
                 contact: user.profile?.phone || user.phone || '-',
                 
                 // Context fields
+                type: type,
+                category: category || (isStudent ? 'Student' : 'Outsider'),
                 is_student: isStudent,
                 student_id: user.profile?.student_id,
+                personnel_id: user.profile?.personnel_id,
                 faculty: user.profile?.faculty,
                 major: user.profile?.major,
                 job_position: user.profile?.job_position,
@@ -281,12 +303,13 @@ const handleSort = ({ column, direction }) => {
 
 // Export to CSV
 const exportToCSV = () => {
-    const headers = ["ID", "Name", "Email", "Contact", "Department", "Status"];
+    const headers = ["ID", "Name", "Email", "Contact", "Type", "Department", "Status"];
     const csvData = filteredUsers.value.map((user) => [
         user.id,
         user.name,
         user.email,
         user.contact,
+        user.type,
         user.department,
         user.status,
     ]);
@@ -320,12 +343,13 @@ const exportToPDF = () => {
         doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
         // Prepare table data with null-safe values
-        const headers = [["ID", "Name", "Email", "Contact", "Department", "Status"]];
+        const headers = [["ID", "Name", "Email", "Contact", "Type", "Department", "Status"]];
         const data = filteredUsers.value.map((user) => [
             user.id ?? '',
             user.name ?? '',
             user.email ?? '',
             user.contact ?? '',
+            user.type ?? '',
             user.department ?? '',
             user.status ?? '',
         ]);
@@ -735,6 +759,23 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th
+                                        @click="sort('type')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            {{ $t('Type') }}
+                                            <ChevronUp
+                                                v-if="sortColumn === 'type'"
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
                                         @click="sort('department')"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
@@ -845,34 +886,56 @@ onMounted(() => {
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <!-- Trainee / Student View -->
-                                        <div v-if="user.is_student" class="space-y-1">
-                                            <div v-if="user.student_id" class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
-                                                <span class="text-xs font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded leading-none">{{ user.student_id }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Faculty:</span>
-                                                <span class="text-sm text-gray-900">{{ user.faculty || '-' }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Major:</span>
-                                                <span class="text-xs text-gray-500">{{ user.major || '-' }}</span>
-                                            </div>
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                            :class="user.type === 'Internal' ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800'"
+                                        >
+                                            {{ user.type }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <!-- Internal User View -->
+                                        <div v-if="user.type === 'Internal'" class="space-y-1">
+                                            <!-- Student -->
+                                            <template v-if="user.category === 'Student'">
+                                                <div v-if="user.student_id" class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
+                                                    <span class="text-xs font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded leading-none">{{ user.student_id }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Faculty:</span>
+                                                    <span class="text-sm text-gray-900">{{ user.faculty || '-' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Major:</span>
+                                                    <span class="text-xs text-gray-500">{{ user.major || '-' }}</span>
+                                                </div>
+                                            </template>
+                                            <!-- Personnel -->
+                                            <template v-else>
+                                                 <div v-if="user.personnel_id" class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
+                                                    <span class="text-xs font-mono bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded leading-none">{{ user.personnel_id }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Dept:</span>
+                                                    <span class="text-sm text-gray-900">{{ user.real_department || '-' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
+                                                    <span class="text-xs text-gray-500">{{ user.job_position || '-' }}</span>
+                                                </div>
+                                            </template>
                                         </div>
-                                        <!-- Trainer / Admin View -->
+                                        <!-- External User View -->
                                         <div v-else class="space-y-1">
                                             <div class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
-                                                <span class="text-sm font-medium text-gray-900">{{ user.job_position || '-' }}</span>
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Org:</span>
+                                                <span class="text-sm font-medium text-gray-900">{{ user.organization || '-' }}</span>
                                             </div>
                                             <div class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Dept:</span>
-                                                <span class="text-xs text-gray-600">{{ user.real_department || user.department || '-' }}</span>
-                                            </div>
-                                            <div v-if="user.organization" class="flex items-center gap-1.5">
-                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Org:</span>
-                                                <span class="text-xs text-gray-400">{{ user.organization }}</span>
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
+                                                <span class="text-xs text-gray-600">{{ user.job_position || '-' }}</span>
                                             </div>
                                         </div>
                                     </td>
