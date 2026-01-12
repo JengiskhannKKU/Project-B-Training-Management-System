@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
 use App\Models\User;
+use App\Services\SessionDayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -57,10 +58,13 @@ class AdminSessionController extends Controller
             'status' => $status,
         ]);
 
+        // Generate session days for multi-day attendance tracking
+        app(SessionDayService::class)->generateSessionDays($session);
+
         return response()->json([
             'success' => true,
             'message' => 'Session created successfully',
-            'data' => $session,
+            'data' => $session->load('sessionDays'),
         ], 201);
     }
 
@@ -91,10 +95,24 @@ class AdminSessionController extends Controller
 
         $session->update($validated);
 
+        // Regenerate session days if dates changed
+        if ($request->has(['start_at']) || $request->has(['end_at'])) {
+            try {
+                app(SessionDayService::class)->updateSessionDays($session);
+            } catch (\RuntimeException $e) {
+                // Attendance exists, cannot auto-regenerate
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'error' => 'Cannot regenerate session days with existing attendance',
+                ], 422);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Session updated successfully',
-            'data' => $session->fresh(),
+            'data' => $session->fresh()->load('sessionDays'),
         ]);
     }
 }

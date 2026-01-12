@@ -83,4 +83,48 @@ class TrainingSession extends Model
     {
         return $this->hasMany(Review::class, 'session_id');
     }
+
+    public function sessionDays(): HasMany
+    {
+        return $this->hasMany(SessionDay::class, 'session_id')->orderBy('day_number');
+    }
+
+    /**
+     * Check if this session spans multiple days
+     */
+    public function isMultiDay(): bool
+    {
+        if (!$this->start_at || !$this->end_at) {
+            return false;
+        }
+
+        return $this->start_at->diffInDays($this->end_at) > 0;
+    }
+
+    /**
+     * Get the total number of session days
+     */
+    public function getTotalDaysAttribute(): int
+    {
+        $sessionDaysCount = $this->sessionDays()->count();
+
+        // Return count from session_days if exists, otherwise calculate from dates
+        if ($sessionDaysCount > 0) {
+            return $sessionDaysCount;
+        }
+
+        // Fallback calculation if session_days not populated
+        if (!$this->start_at || !$this->end_at) {
+            return 1;
+        }
+
+        $start = $this->start_at->startOfDay();
+        $end = $this->end_at->startOfDay();
+
+        if ($end->lessThan($start)) {
+            return 1;
+        }
+
+        return $start->diffInDays($end) + 1;
+    }
 }

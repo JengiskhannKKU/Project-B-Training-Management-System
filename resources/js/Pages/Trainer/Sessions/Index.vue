@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from "vue";
 import { useForm, Link, router } from "@inertiajs/vue3";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
-import Pagination from "@/Components/SimplePagination.vue";
+import LinksPagination from "@/Components/LinksPagination.vue";
 import { useToast } from "vue-toastification";
 import axios from "axios";
 import {
@@ -229,8 +229,8 @@ onMounted(() => {
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <Link 
-                                            :href="`/trainer/${session.course_id}/sessions/${session.id}/attendance`"
+                                        <Link
+                                            :href="`/trainer/courses/${session.course?.code}/sessions/${session.id}/attendance`"
                                             class="p-2 hover:bg-teal-50 text-teal-600 rounded-lg transition-colors"
                                             title="Attendance"
                                         >
@@ -248,7 +248,7 @@ onMounted(() => {
                         </tbody>
                     </table>
                 </div>
-                <Pagination :links="sessions.links" />
+                <LinksPagination :links="sessions" />
             </div>
         </div>
     </TrainerLayout>
