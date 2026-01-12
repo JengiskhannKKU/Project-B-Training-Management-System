@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\CertificateTemplateController;
 use App\Http\Controllers\Api\AdminSessionController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\SessionDayController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -85,6 +86,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('session-days/{sessionDay}/attendance', [AttendanceController::class, 'storeByDay']);
         Route::post('session-days/{sessionDay}/attendance/bulk', [AttendanceController::class, 'bulkStoreByDay']);
 
+        // Session Day CRUD routes
+        Route::get('sessions/{session}/session-days', [SessionDayController::class, 'index']);
+        Route::post('sessions/{session}/session-days', [SessionDayController::class, 'store']);
+        Route::get('sessions/{session}/session-days/{dayId}', [SessionDayController::class, 'show']);
+        Route::put('sessions/{session}/session-days/{dayId}', [SessionDayController::class, 'update']);
+        Route::delete('sessions/{session}/session-days/{dayId}', [SessionDayController::class, 'destroy']);
+        Route::post('sessions/{session}/session-days/reorder', [SessionDayController::class, 'reorder']);
+        Route::put('sessions/{session}/session-days/{dayId}/status', [SessionDayController::class, 'updateStatus']);
+
         // Sessions for attendance (session-first view)
         Route::get('admin/attendance/sessions', [TrainingSessionController::class, 'sessionsForAttendance']);
         Route::get('trainer/attendance/sessions', [TrainingSessionController::class, 'sessionsForAttendance']);
@@ -125,5 +135,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('admin/sessions', [AdminSessionController::class, 'store']);
         Route::put('admin/sessions/{session}', [AdminSessionController::class, 'update']);
+
+        // Admin request action routes
+        Route::get('admin/requests', [AdminRequestActionController::class, 'index']);
+        Route::get('admin/requests/pending-count', [AdminRequestActionController::class, 'getPendingCount']);
+        Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
+        Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
     });
 });

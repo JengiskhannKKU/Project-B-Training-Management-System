@@ -18,6 +18,7 @@ class SessionDay extends Model
         'start_time',
         'end_time',
         'day_number',
+        'status',
     ];
 
     protected $casts = [

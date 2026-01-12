@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, ListFilter, ArrowDownNarrowWide, Share, ChevronDown } from 'lucide-vue-next';
+import { Search, ListFilter, ArrowDownNarrowWide, Share, CheckCircle, XCircle } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -11,7 +11,7 @@ const props = defineProps<{
         enrolled_date: string;
         department: string;
         role: string;
-        certificate_status: string;
+        attendance_percent?: number;
         avatar: string;
         session_id?: number | string;
     }>;
@@ -22,25 +22,29 @@ const props = defineProps<{
         time: string;
         display_id?: string;
     }>;
-    getCertificateSelectColor: (status: string) => string;
     isAdmin: boolean;
 }>();
 
 const emit = defineEmits<{
     'add-trainee': [];
     'remove-trainee': [trainee: any];
-    'update-certificate': [trainee: any];
 }>();
+
+// Check if trainee is eligible for certificate (80%+ attendance)
+const isEligibleForCertificate = (attendancePercent: number | undefined) => {
+    return (attendancePercent || 0) >= 80;
+};
+
+const getEligibilityBadgeClass = (attendancePercent: number | undefined) => {
+    return isEligibleForCertificate(attendancePercent)
+        ? 'bg-green-100 text-green-700 border-green-200'
+        : 'bg-red-100 text-red-700 border-red-200';
+};
 
 const groupedTrainees = computed(() => {
     const groups: Record<string, { session: any, trainees: typeof props.trainees }> = {};
-    
-    // Initialize groups for all sessions to ensure empty sessions are visible (optional, but good for completeness)
-    // Or maybe we only want to show sessions that have trainees? 
-    // "For the Trainee tab, it should display which trainees are enrolled in each session, grouped by session."
-    // Usually implies showing the session header.
-    
-    // Let's populate groups based on available sessions first
+
+    // Initialize groups for all sessions to ensure empty sessions are visible
     if (props.sessions) {
         props.sessions.forEach(session => {
             groups[session.id] = {
@@ -50,35 +54,27 @@ const groupedTrainees = computed(() => {
         });
     }
 
-    // Distribute trainees
+    // Distribute trainees to their respective sessions
+    // Only include trainees that have a valid session_id matching an existing session
     props.trainees.forEach(trainee => {
         const sessionId = trainee.session_id;
         if (sessionId && groups[sessionId]) {
             groups[sessionId].trainees.push(trainee);
-        } else {
-            // Handle unassigned or unknown session
-            if (!groups['unassigned']) {
-                groups['unassigned'] = {
-                    session: { session: 'Unassigned', display_id: '-', date: '', time: '' },
-                    trainees: []
-                };
-            }
-            groups['unassigned'].trainees.push(trainee);
         }
+        // Note: Trainees without a valid session_id are NOT added to any group
+        // This prevents showing "Unassigned" trainees
     });
 
-    // Filter out sessions with no trainees if desired?
-    // User said "display which trainees are enrolled in each session". 
-    // If a session has no trainees, maybe we shouldn't show it?
-    // But "review and manage trainee information" might imply seeing empty sessions too.
-    // I'll filter out empty groups to reduce clutter, or keep them?
-    // Let's keep only groups that have trainees for now, or maybe all?
-    // Let's filter out empty groups for better UI, unless the user specifically wants to see empty buckets.
-    // Actually, seeing empty sessions tells you "no one is here". That's useful. I'll keep them.
-    
-    // BUT, the mock data has `session_id` 1, 2, 3, 4.
-    // I need to make sure `sessions` prop has matching IDs.
-    
+    // Optional: Filter out sessions with no trainees for cleaner UI
+    // Uncomment the following lines to only show sessions that have trainees
+    // const filteredGroups: Record<string, { session: any, trainees: typeof props.trainees }> = {};
+    // Object.entries(groups).forEach(([id, group]) => {
+    //     if (group.trainees.length > 0) {
+    //         filteredGroups[id] = group;
+    //     }
+    // });
+    // return filteredGroups;
+
     return groups;
 });
 </script>
@@ -187,17 +183,15 @@ const groupedTrainees = computed(() => {
                                 </div>
 
                                 <div class="text-xs sm:text-sm">
-                                    <div class="text-gray-500 mb-1">Certificates</div>
-                                    <div v-if="isAdmin" class="relative">
-                                        <ChevronDown class="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none z-10" />
-                                        <select v-model="trainee.certificate_status" @change="emit('update-certificate', trainee)" :class="['rounded-lg border pl-6 sm:pl-7 pr-2 sm:pr-3 py-1 sm:py-1.5 text-xs font-medium text-center focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none', getCertificateSelectColor(trainee.certificate_status)]" style="background-image: none;">
-                                            <option value="Approved">Approved</option>
-                                            <option value="Pending">Pending</option>
-                                            <option value="Not Eligible">Not Eligible</option>
-                                        </select>
-                                    </div>
-                                    <div v-else :class="['rounded-lg border px-3 py-1.5 text-xs font-medium text-center', getCertificateSelectColor(trainee.certificate_status)]">
-                                        {{ trainee.certificate_status }}
+                                    <div class="text-gray-500 mb-1">Attendance</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold" :class="trainee.attendance_percent && trainee.attendance_percent >= 80 ? 'text-green-600' : 'text-red-600'">
+                                            {{ trainee.attendance_percent || 0 }}%
+                                        </span>
+                                        <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border', getEligibilityBadgeClass(trainee.attendance_percent)]">
+                                            <component :is="isEligibleForCertificate(trainee.attendance_percent) ? CheckCircle : XCircle" :size="12" />
+                                            {{ isEligibleForCertificate(trainee.attendance_percent) ? 'Eligible' : 'Not Eligible' }}
+                                        </span>
                                     </div>
                                 </div>
 

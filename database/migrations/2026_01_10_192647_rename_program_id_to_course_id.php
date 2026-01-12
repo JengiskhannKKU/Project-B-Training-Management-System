@@ -37,15 +37,7 @@ return new class extends Migration
             $table->foreign('course_id')->references('id')->on('courses')->cascadeOnDelete();
         });
 
-        // 3. Session Reviews
-        Schema::table('session_reviews', function (Blueprint $table) {
-            $table->dropForeign(['program_id']);
-            $table->renameColumn('program_id', 'course_id');
-        });
-
-        Schema::table('session_reviews', function (Blueprint $table) {
-            $table->foreign('course_id')->references('id')->on('courses')->cascadeOnDelete();
-        });
+        // 3. Session Reviews - Skip: already created with course_id in 2026_01_09_000000_create_session_reviews_table
 
         // 4. Certificate Templates
         Schema::table('certificate_templates', function (Blueprint $table) {
@@ -76,10 +68,7 @@ return new class extends Migration
             $table->renameColumn('course_id', 'program_id');
         });
 
-        Schema::table('session_reviews', function (Blueprint $table) {
-            $table->dropForeign(['course_id']);
-            $table->renameColumn('course_id', 'program_id');
-        });
+        // Skip session_reviews - it was created with course_id from the start
 
         Schema::table('certificate_templates', function (Blueprint $table) {
             $table->dropForeign(['course_id']);

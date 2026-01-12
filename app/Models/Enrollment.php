@@ -16,6 +16,7 @@ class Enrollment extends Model
         'user_id',
         'session_id',
         'status',
+        'attendance_percent',
         'enrolled_at',
         'completed_at',
     ];

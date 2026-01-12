@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Attendance;
 use App\Models\Enrollment;
+use App\Models\SessionDay;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -14,39 +15,93 @@ class AttendanceSeeder extends Seeder
         // Find enrollments in completed sessions
         $enrollments = Enrollment::whereHas('session', function ($q) {
             $q->where('status', 'completed');
-        })->with('session')->get();
+        })->where('status', 'completed')
+            ->with(['session', 'session.sessionDays'])
+            ->get();
 
-        // Create attendance records for completed sessions
+        $attendanceCount = 0;
+        $enrollmentAttendancePercent = [];
+
+        // Create attendance records for each session day
         foreach ($enrollments as $enrollment) {
-            // Randomly present/absent/late
-            $rand = rand(0, 10);
-            if ($rand > 2) {
-                $status = 'present';
-                $note = null;
-            } elseif ($rand > 1) {
-                $status = 'late';
-                $note = 'Arrived 15 minutes late';
-            } else {
-                $status = 'absent';
-                $note = 'Excused absence';
+            $sessionDays = $enrollment->session->sessionDays;
+
+            // If no session days, skip
+            if ($sessionDays->isEmpty()) {
+                continue;
             }
 
-            Attendance::updateOrCreate(
-                [
-                    'enrollment_id' => $enrollment->id,
-                ],
-                [
-                    'session_id' => $enrollment->session_id,
-                    'checked_at' => $enrollment->session->start_at
-                        ? Carbon::parse($enrollment->session->start_at)->addHours(2)
-                        : Carbon::now(),
-                    'status' => $status,
-                    'checked_by' => $enrollment->session->trainer_id,
-                    'note' => $note,
-                ]
-            );
+            $presentDays = 0;
+            $totalDays = 0;
+
+            // Create attendance for each session day
+            foreach ($sessionDays as $sessionDay) {
+                // Skip cancelled session days
+                if ($sessionDay->status === 'cancelled') {
+                    continue;
+                }
+
+                $totalDays++;
+
+                // Randomly determine attendance status (80% present, 15% late, 5% absent)
+                $rand = rand(0, 100);
+                if ($rand < 80) {
+                    $status = 'present';
+                    $note = null;
+                    $presentDays++;
+                } elseif ($rand < 95) {
+                    $status = 'late';
+                    $note = 'Arrived ' . rand(5, 30) . ' minutes late';
+                    $presentDays++; // Late counts as present for attendance calculation
+                } else {
+                    $status = 'absent';
+                    $notes = [
+                        'Sick leave',
+                        'Personal emergency',
+                        'Excused absence',
+                        'No notification',
+                    ];
+                    $note = $notes[array_rand($notes)];
+                }
+
+                // Create attendance with session day reference
+                $checkedAt = Carbon::parse($sessionDay->date)
+                    ->setTimeFromTimeString($sessionDay->start_time)
+                    ->addMinutes(rand(0, 30));
+
+                Attendance::updateOrCreate(
+                    [
+                        'enrollment_id' => $enrollment->id,
+                        'session_day_id' => $sessionDay->id,
+                    ],
+                    [
+                        'session_id' => $enrollment->session_id,
+                        'user_id' => $enrollment->user_id,
+                        'checked_at' => $checkedAt,
+                        'status' => $status,
+                        'checked_by' => $enrollment->session->trainer_id,
+                        'note' => $note,
+                    ]
+                );
+
+                $attendanceCount++;
+            }
+
+            // Calculate attendance percentage
+            if ($totalDays > 0) {
+                $attendancePercent = ($presentDays / $totalDays) * 100;
+                $enrollmentAttendancePercent[$enrollment->id] = round($attendancePercent, 2);
+            }
         }
 
-        $this->command->info('Attendance records seeded: ' . $enrollments->count());
+        // Update enrollment attendance percentages
+        foreach ($enrollmentAttendancePercent as $enrollmentId => $attendancePercent) {
+            Enrollment::where('id', $enrollmentId)->update([
+                'attendance_percent' => $attendancePercent
+            ]);
+        }
+
+        $this->command->info('Attendance records seeded: ' . $attendanceCount);
+        $this->command->info('Updated attendance percent for ' . count($enrollmentAttendancePercent) . ' enrollments');
     }
 }

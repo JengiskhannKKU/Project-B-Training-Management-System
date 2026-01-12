@@ -22,7 +22,7 @@ class AttendanceController extends Controller
     {
         $enrollments = $session->enrollments()
             ->whereIn('status', ['pending', 'confirmed'])
-            ->with(['user', 'attendances'])
+            ->with(['user.profile', 'user.role', 'attendances'])
             ->get();
 
         return $this->successResponse($enrollments, 'Enrollments retrieved successfully');
@@ -187,7 +187,11 @@ class AttendanceController extends Controller
         $enrollments = $session->enrollments()
             ->where('status', 'completed')
             ->with(['user', 'session.course'])
-            ->get();
+            ->get()
+            ->filter(function ($enrollment) {
+                // Only include enrollments with 80% or higher attendance
+                return $enrollment->attendance_percent >= 80;
+            });
 
         return $this->successResponse($enrollments, 'Eligible enrollments retrieved successfully');
     }
@@ -219,6 +223,7 @@ class AttendanceController extends Controller
                     'start_time' => $day->start_time,
                     'end_time' => $day->end_time,
                     'day_number' => $day->day_number,
+                    'status' => $day->status ?? 'active',
                     'has_occurred' => $day->hasOccurred(),
                     'is_today' => $day->isToday(),
                     'attendance_count' => $day->attendances->count(),
@@ -229,20 +234,33 @@ class AttendanceController extends Controller
         $enrollments = $session->enrollments()
             ->whereIn('status', ['pending', 'confirmed'])
             ->with('user')
-            ->get();
+            ->get()
+            ->map(function ($enrollment) {
+                return [
+                    'id' => $enrollment->id,
+                    'user_id' => $enrollment->user_id,
+                    'session_id' => $enrollment->session_id,
+                    'status' => $enrollment->status,
+                    'attendance_percent' => $enrollment->attendance_percent ?? 0,
+                    'user' => $enrollment->user,
+                ];
+            });
 
         // Build attendance matrix: [enrollment_id][session_day_id] = attendance data
         $attendanceMatrix = [];
         foreach ($enrollments as $enrollment) {
-            $attendanceMatrix[$enrollment->id] = [];
+            // Access as array since enrollments were mapped to arrays
+            $enrollmentId = is_array($enrollment) ? $enrollment['id'] : $enrollment->id;
+            $userId = is_array($enrollment) ? $enrollment['user_id'] : $enrollment->user_id;
+            $attendanceMatrix[$enrollmentId] = [];
 
             foreach ($sessionDays as $day) {
                 // Find attendance for this user and day
                 $attendance = Attendance::where('session_day_id', $day['id'])
-                    ->where('user_id', $enrollment->user_id)
+                    ->where('user_id', $userId)
                     ->first();
 
-                $attendanceMatrix[$enrollment->id][$day['id']] = [
+                $attendanceMatrix[$enrollmentId][$day['id']] = [
                     'status' => $attendance ? $attendance->status : 'not_marked',
                     'checked_at' => $attendance ? $attendance->checked_at : null,
                     'note' => $attendance ? $attendance->note : null,

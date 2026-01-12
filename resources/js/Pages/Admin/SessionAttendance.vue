@@ -34,8 +34,8 @@ import "jspdf-autotable";
 
 // Props from route
 const props = defineProps({
-    courseId: {
-        type: [Number, String],
+    courseCode: {
+        type: String,
         required: true
     },
     sessionId: {
@@ -211,6 +211,18 @@ const canGenerateCertificates = computed(() => {
     }
     return sessionInfo.value?.trainer_id === user.id;
 });
+
+// Check if trainee is eligible for certificate (80% attendance)
+const isEligibleForCertificate = (trainee) => {
+    return trainee.attendancePercent >= 80;
+};
+
+// Get eligibility badge class
+const eligibilityBadgeClass = (trainee) => {
+    return isEligibleForCertificate(trainee)
+        ? 'bg-green-100 text-green-700'
+        : 'bg-red-100 text-red-700';
+};
 
 const sessionStatus = computed(() => (sessionInfo.value?.status || 'unknown').toLowerCase());
 const sessionStatusBadgeClass = computed(() => {
@@ -435,6 +447,7 @@ const fetchAttendanceData = async () => {
                 department: enrollment.user?.department || 'N/A',
                 status: 'not_marked',
                 checked: false,
+                attendancePercent: enrollment.attendance_percent || 0,
             };
         });
 
@@ -829,7 +842,7 @@ onMounted(() => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th @click="sort('id')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             ID
                                             <ChevronUp v-if="sortColumn === 'id'" class="h-4 w-4" :class="{
@@ -839,7 +852,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('name')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Name
                                             <ChevronUp v-if="sortColumn === 'name'" class="h-4 w-4" :class="{
@@ -849,7 +862,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('contact')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Contact
                                             <ChevronUp v-if="sortColumn === 'contact'" class="h-4 w-4" :class="{
@@ -859,7 +872,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('department')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Department
                                             <ChevronUp v-if="sortColumn === 'department'" class="h-4 w-4" :class="{
@@ -868,8 +881,14 @@ onMounted(() => {
                                             }" />
                                         </div>
                                     </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Attendance %
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Eligibility
+                                    </th>
                                     <th @click="sort('status')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Status
                                             <ChevronUp v-if="sortColumn === 'status'" class="h-4 w-4" :class="{
@@ -879,7 +898,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Check
                                     </th>
                                 </tr>
@@ -890,10 +909,10 @@ onMounted(() => {
                                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                                     'hover:bg-gray-100'
                                 ]">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ trainee.id }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div
                                                 class="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -909,15 +928,35 @@ onMounted(() => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ formatPhoneNumber(trainee.contact) }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <span>
                                             {{ trainee.department }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span :class="[
+                                                'font-semibold',
+                                                trainee.attendancePercent >= 80 ? 'text-green-600' : 'text-red-600'
+                                            ]">
+                                                {{ trainee.attendancePercent }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span :class="[
+                                            'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                            eligibilityBadgeClass(trainee)
+                                        ]">
+                                            <component :is="isEligibleForCertificate(trainee) ? CheckCircle : XCircle"
+                                                :size="14" />
+                                            {{ isEligibleForCertificate(trainee) ? 'Eligible' : 'Not Eligible' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <span :class="[
                                             'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
                                             trainee.status === 'present'
@@ -929,7 +968,7 @@ onMounted(() => {
                                             {{ trainee.status === 'present' ? 'Present' : 'Absent' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <button @click="toggleAttendance(trainee.id)" :class="[
                                             'p-2 rounded-lg transition-all duration-200 hover:scale-110',
                                             trainee.checked

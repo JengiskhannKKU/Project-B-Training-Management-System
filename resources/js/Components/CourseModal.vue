@@ -59,6 +59,14 @@ const form = useForm({
 
 const isEditMode = computed(() => !!props.course?.id);
 
+// Optimized character counters using computed properties
+const titleLength = computed(() => form.title?.length || 0);
+const descriptionLength = computed(() => form.description?.length || 0);
+const learningOutcomesLength = computed(() => form.learning_outcomes?.length || 0);
+const targetAudienceLength = computed(() => form.target_audience?.length || 0);
+const prerequisitesLength = computed(() => form.prerequisites?.length || 0);
+const additionalInfoLength = computed(() => form.additional_info?.length || 0);
+
 // Watch for course prop changes to update form if modal is reused
 watch(() => props.course, (newCourse) => {
     if (newCourse) {
@@ -205,8 +213,9 @@ const triggerFileInput = () => fileInputRef.value?.click();
 </script>
 
 <template>
-    <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity" @click.self="handleClose">
-        <div class="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl flex flex-col">
+    <Teleport to="body">
+        <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity" @click.self="handleClose">
+            <div class="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl flex flex-col" style="will-change: transform; contain: layout style paint;" @click.stop>
             
             <!-- Sticky Header -->
             <div class="sticky top-0 z-20 border-b border-gray-100 bg-white/95 px-8 py-5 backdrop-blur flex items-center justify-between">
@@ -219,7 +228,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                 </button>
             </div>
 
-            <form @submit.prevent="handleSubmit" class="p-8 space-y-8 flex-1">
+            <form @submit.prevent="handleSubmit" class="p-8 space-y-8 flex-1" style="content-visibility: auto;">
                 
                 <!-- Main Info Section -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -296,7 +305,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
                                 <InputLabel value="Course Title" required />
-                                <span class="text-xs text-gray-400">{{ form.title.length }}/50 chars</span>
+                                <span class="text-xs text-gray-400">{{ titleLength }}/50 chars</span>
                             </div>
                             <TextInput 
                                 v-model="form.title" 
@@ -312,7 +321,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
                                 <InputLabel value="Short Description" />
-                                <span class="text-xs text-gray-400">{{ form.description.length }}/100 chars</span>
+                                <span class="text-xs text-gray-400">{{ descriptionLength }}/100 chars</span>
                             </div>
                             <textarea 
                                 v-model="form.description" 
@@ -353,7 +362,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                 </div>
 
                 <!-- Full Description Section -->
-                <div class="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 space-y-6">
+                <div class="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 space-y-6" style="content-visibility: auto; contain-intrinsic-size: 0 500px;">
                     <div class="flex items-center gap-2 pb-4 border-b border-gray-200">
                         <BookOpen :size="20" class="text-teal-600" />
                         <h3 class="text-lg font-bold text-gray-900">Full Description & Syllabus</h3>
@@ -364,7 +373,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
                                 <InputLabel value="Learning Outcomes" />
-                                <span class="text-xs text-gray-400">{{ form.learning_outcomes.length }}/500 chars</span>
+                                <span class="text-xs text-gray-400">{{ learningOutcomesLength }}/500 chars</span>
                             </div>
                             <textarea
                                 v-model="form.learning_outcomes"
@@ -381,7 +390,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
                                     <InputLabel value="Target Audience" />
-                                    <span class="text-xs text-gray-400">{{ form.target_audience.length }}/500 chars</span>
+                                    <span class="text-xs text-gray-400">{{ targetAudienceLength }}/500 chars</span>
                                 </div>
                                 <textarea
                                     v-model="form.target_audience"
@@ -397,7 +406,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
                                     <InputLabel value="Prerequisites" />
-                                    <span class="text-xs text-gray-400">{{ form.prerequisites.length }}/500 chars</span>
+                                    <span class="text-xs text-gray-400">{{ prerequisitesLength }}/500 chars</span>
                                 </div>
                                 <textarea
                                     v-model="form.prerequisites"
@@ -414,7 +423,7 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
                                 <InputLabel value="Additional Information" />
-                                <span class="text-xs text-gray-400">{{ form.additional_info.length }}/500 chars</span>
+                                <span class="text-xs text-gray-400">{{ additionalInfoLength }}/500 chars</span>
                             </div>
                             <textarea
                                 v-model="form.additional_info"
@@ -435,9 +444,9 @@ const triggerFileInput = () => fileInputRef.value?.click();
                 <SecondaryButton @click="handleClose">
                     Cancel
                 </SecondaryButton>
-                <PrimaryButton 
-                    @click="handleSubmit" 
-                    :class="{ 'opacity-25': form.processing }" 
+                <PrimaryButton
+                    @click="handleSubmit"
+                    :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                     class="bg-[#2f837d] hover:bg-[#26685f]"
                 >
@@ -446,4 +455,5 @@ const triggerFileInput = () => fileInputRef.value?.click();
             </div>
         </div>
     </div>
+    </Teleport>
 </template>
