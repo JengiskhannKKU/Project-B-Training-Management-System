@@ -38,13 +38,14 @@ const availableColors = [
     { name: "Blue", value: "blue", hex: "#3B82F6" },
     { name: "Purple", value: "purple", hex: "#A855F7" },
     { name: "Green", value: "green", hex: "#10B981" },
-    { name: "Yellow", value: "yellow", hex: "#F59E0B" },
+    { name: "Amber", value: "amber", hex: "#F59E0B" },
     { name: "Red", value: "red", hex: "#EF4444" },
     { name: "Pink", value: "pink", hex: "#EC4899" },
     { name: "Indigo", value: "indigo", hex: "#6366F1" },
     { name: "Teal", value: "teal", hex: "#14B8A6" },
     { name: "Orange", value: "orange", hex: "#F97316" },
     { name: "Cyan", value: "cyan", hex: "#06B6D4" },
+    { name: "Yellow", value: "yellow", hex: "#EAB308" },
 ];
 
 const formData = ref({

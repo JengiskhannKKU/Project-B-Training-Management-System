@@ -804,7 +804,7 @@ const resubmitProgram = async () => {
                             {{ displayProgram.name || 'Program' }}
                         </h1>
                         <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 w-fit">
-                            {{ displayProgram.category || 'General' }}
+                            {{ typeof displayProgram.category === 'object' ? displayProgram.category?.name : (displayProgram.category || 'General') }}
                         </span>
                     </div>
                     <p class="mb-4 text-sm sm:text-base text-gray-600">
