@@ -127,6 +127,10 @@ const trainersCount = computed(() => {
     return users.value.filter((user) => user.role === "Trainer").length;
 });
 
+const adminsCount = computed(() => {
+    return users.value.filter((user) => user.role === "Admin").length;
+});
+
 // Filtered and sorted users
 const filteredUsers = computed(() => {
     let result = users.value;
@@ -136,6 +140,8 @@ const filteredUsers = computed(() => {
         result = result.filter((user) => user.role === "Trainee");
     } else if (activeTab.value === "trainers") {
         result = result.filter((user) => user.role === "Trainer");
+    } else if (activeTab.value === "admins") {
+        result = result.filter((user) => user.role === "Admin");
     }
 
     // Filter by search query
@@ -505,8 +511,8 @@ onMounted(() => {
                     <div
                         class="absolute top-1 bottom-1 bg-white rounded-[10px] shadow-sm transition-all duration-300 ease-in-out"
                         :style="{
-                            left: activeTab === 'trainees' ? '4px' : '50%',
-                            right: activeTab === 'trainees' ? '50%' : '4px',
+                            left: activeTab === 'trainees' ? '4px' : activeTab === 'trainers' ? '33.33%' : '66.66%',
+                            width: activeTab === 'trainees' || activeTab === 'trainers' || activeTab === 'admins' ? '33.33%' : '33.33%',
                         }"
                     ></div>
 
@@ -533,6 +539,17 @@ onMounted(() => {
                     >
                         {{ $t('Trainers') }}
                     </button>
+                    <button
+                        :class="[
+                            'px-6 py-2 rounded-md font-medium transition-colors duration-300 relative z-10 flex-1',
+                            activeTab === 'admins'
+                                ? 'text-[#2f837d]'
+                                : 'text-[#64748b] hover:text-gray-900',
+                        ]"
+                        @click="activeTab = 'admins'"
+                    >
+                        {{ $t('Admins') }}
+                    </button>
                 </div>
             </div>
 
@@ -546,8 +563,11 @@ onMounted(() => {
                         <template v-if="activeTab === 'trainees'">
                             Trainees ({{ traineesCount }})
                         </template>
-                        <template v-else>
+                        <template v-else-if="activeTab === 'trainers'">
                             Trainers ({{ trainersCount }})
+                        </template>
+                        <template v-else>
+                            Admins ({{ adminsCount }})
                         </template>
                     </h2>
                 </div>
