@@ -105,6 +105,8 @@ class CatalogController extends Controller
                 'end_at',
                 'capacity',
                 'trainer_id',
+                'trainer_name',
+                'trainer_photo_url',
                 'location',
                 'online_link',
                 'status',
