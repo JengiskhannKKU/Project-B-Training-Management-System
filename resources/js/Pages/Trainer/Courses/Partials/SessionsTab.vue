@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, ListFilter, ArrowDownNarrowWide, Share, Award } from 'lucide-vue-next';
+import { Search, ListFilter, ArrowDownNarrowWide, Share, Award, ExternalLink } from 'lucide-vue-next';
 import { formatDate, formatTime } from '@/utils/dateFormatter';
 import { Link } from '@inertiajs/vue3';
 
@@ -11,16 +11,18 @@ defineProps<{
         time: string;
         session: string;
         location: string;
+        online_link?: string;
+        trainer_name?: string;
         capacity: string;
         status: string;
     }>;
     isAdmin: boolean;
+    programId: number;
 }>();
 
 const emit = defineEmits<{
     'add-session': [];
     'edit-session': [session: any];
-    'delete-session': [session: any];
 }>();
 
 /**
@@ -107,6 +109,7 @@ const getStatusBadgeClass = (status: string) => {
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Time</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Session</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Location</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Trainer</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Capacity</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                         <th v-if="isAdmin" class="px-4 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
@@ -125,8 +128,25 @@ const getStatusBadgeClass = (status: string) => {
                         <td class="px-4 py-3 text-sm text-gray-900">{{ session.display_id || session.id }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(session.date) }}</td>
                         <td class="px-4 py-3 text-sm text-gray-600">{{ formatTime(session.time) }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-900">{{ session.session }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-600">{{ session.location }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-900 font-medium">{{ session.session }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            <div class="flex items-center gap-1">
+                                <span v-if="session.location">{{ session.location }}</span>
+                                <a 
+                                    v-if="session.online_link" 
+                                    :href="session.online_link" 
+                                    target="_blank" 
+                                    class="text-teal-600 hover:text-teal-800"
+                                    title="Join Online Session"
+                                >
+                                    <ExternalLink :size="14" />
+                                </a>
+                                <span v-if="!session.location && !session.online_link" class="text-gray-400">—</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            {{ session.trainer_name || '—' }}
+                        </td>
                         <td class="px-4 py-3 text-sm">
                             <span :class="[
                                 'rounded-full px-2 py-1 text-xs font-medium',
@@ -153,11 +173,6 @@ const getStatusBadgeClass = (status: string) => {
                         </td>
                         <td v-if="isAdmin" class="px-4 py-3">
                             <div class="flex gap-2">
-                                <button @click="emit('delete-session', session)" class="text-gray-400 hover:text-red-600">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
                                 <Link :href="`/admin/sessions?edit_session=true&session_id=${session.id}`" class="text-gray-400 hover:text-teal-600">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>

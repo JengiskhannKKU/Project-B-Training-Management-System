@@ -16,7 +16,7 @@ const props = defineProps({
         type: Object,
         default: null
     },
-    programs: {
+    courses: {
         type: Array,
         default: () => []
     }
@@ -184,7 +184,7 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                         </label>
                         <SearchableSelect
                             v-model="form.course_id"
-                            :options="programs"
+                            :options="courses"
                             label-key="title"
                             value-key="id"
                             placeholder="Select a course"

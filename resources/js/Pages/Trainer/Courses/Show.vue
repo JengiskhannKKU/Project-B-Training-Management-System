@@ -469,6 +469,7 @@ const mapSessionForDisplay = (session: any) => {
         session: session.title || 'Session',
         location: session.location || '',
         online_link: session.online_link || '',
+        trainer_name: session.trainer?.name || session.trainer_name || '',
         capacity: `${capacityTaken}/${capacityLabel || 0}`,
         status: session.status ? session.status.charAt(0).toUpperCase() + session.status.slice(1) : 'Open',
         trainer_photo_url: session.trainer_photo_url || '',
@@ -869,14 +870,15 @@ const getCertificateStatusColor = (status: string) => {
             <SessionsTab
                 v-if="activeTab === 'sessions'"
                 :sessions="sessions"
+                :program-id="displayProgram.id"
                 :is-admin="isAdmin"
                 @add-session="handleAddSession"
                 @edit-session="handleEditSession"
-                @delete-session="handleDeleteSession"
             />
             <TraineesTab
                 v-if="activeTab === 'trainees'"
                 :trainees="trainees"
+                :sessions="sessions"
                 :is-admin="isAdmin"
                 :get-certificate-select-color="getCertificateSelectColor"
                 @add-trainee="handleAddTrainee"
