@@ -32,6 +32,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['admin']->id ?? 1,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(2),
             ],
             [
                 'name' => 'Trainer User',
@@ -40,6 +42,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainer']->id ?? 2,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(4),
             ],
             [
                 'name' => 'Trainee User',
@@ -48,6 +52,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'th',
+                'last_login_at' => $now->subMinutes(30),
             ],
         ];
 
@@ -75,6 +81,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['admin']->id ?? 1,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subDays(1),
             ],
             [
                 'name' => 'System Manager',
@@ -83,23 +91,20 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['admin']->id ?? 1,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(12),
             ],
 
             // Trainers
             [
-                'name' => 'John Trainer', // Duplicate name of 'Trainer User'? No, Trainer User is 'Trainer User'.
-                // Actually in original seeder 'trainer@example.com' was 'Trainer User'.
-                // Creating 'John Trainer' with 'trainer@example.com' would conflict if I didn't separate them.
-                // Wait, in my previous edit I put 'John Trainer' with 'trainer@example.com'.
-                // The 'Trainer User' had email 'trainer@example.com'.
-                // So "John Trainer" should probably have a different email or I should rename "Trainer User" to "John Trainer".
-                // But the USER said "Keep trainer@example.com". 
-                // I will create NEW trainers for testing to avoid touching 'trainer@example.com'.
-                'email' => 'john.trainer@example.com', // Changed email to avoid conflict
+                'name' => 'John Trainer',
+                'email' => 'john.trainer@example.com',
                 'password' => $commonPassword,
                 'role_id' => $roles['trainer']->id ?? 2,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(6),
             ],
             [
                 'name' => 'Sarah Tech',
@@ -108,6 +113,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainer']->id ?? 2,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(8),
             ],
             [
                 'name' => 'Mike Security',
@@ -116,6 +123,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainer']->id ?? 2,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subDays(2),
             ],
             [
                 'name' => 'David Cloud',
@@ -124,6 +133,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainer']->id ?? 2,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subDays(3),
             ],
 
             // Students
@@ -134,6 +145,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'th',
+                'last_login_at' => $now->subHours(1),
             ],
             [
                 'name' => 'Bob Builder',
@@ -142,6 +155,8 @@ class AuthLoginSeeder extends Seeder
                 'role_id' => $roles['trainee']->id ?? 3,
                 'email_verified_at' => $now,
                 'status' => 'active',
+                'locale' => 'en',
+                'last_login_at' => $now->subHours(5),
             ],
         ];
 
