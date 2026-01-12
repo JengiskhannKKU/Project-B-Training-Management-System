@@ -16,7 +16,7 @@ class Course extends Model
         'code',
         'title',
         'description',
-        'category_id',
+        'category',
         'level',
         'learning_outcomes',
         'target_audience',
@@ -68,11 +68,6 @@ class Course extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-
     public function sessions(): HasMany
     {
         return $this->hasMany(TrainingSession::class);
@@ -101,11 +96,9 @@ class Course extends Model
     public function getEnrolledCountAttribute(): int
     {
         return $this->sessions()
-            ->withCount([
-                'enrollments' => function ($query) {
-                    $query->whereIn('status', ['pending', 'confirmed', 'completed']);
-                }
-            ])
+            ->withCount(['enrollments' => function ($query) {
+                $query->whereIn('status', ['pending', 'confirmed', 'completed']);
+            }])
             ->get()
             ->sum('enrollments_count');
     }
