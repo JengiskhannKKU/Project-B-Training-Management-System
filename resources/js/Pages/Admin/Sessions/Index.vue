@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import Pagination from "@/Components/SimplePagination.vue";
+import LinksPagination from "@/Components/LinksPagination.vue";
 import { useToast } from "vue-toastification";
 import axios from "axios";
 import {
@@ -312,21 +312,21 @@ onMounted(() => {
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
-                                            <Link 
-                                                :href="`/admin/${session.course_id}/sessions/${session.id}/attendance`"
+                                            <Link
+                                                :href="`/admin/courses/${session.course?.code}/sessions/${session.id}/attendance`"
                                                 class="p-2 hover:bg-teal-50 text-teal-600 rounded-lg transition-colors"
                                                 title="Attendance"
                                             >
                                                 <UserCheck class="w-4 h-4" />
                                             </Link>
-                                            <button 
+                                            <button
                                                 @click="openEditModal(session)"
                                                 class="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
                                                 title="Edit"
                                             >
                                                 Edit
                                             </button>
-                                            <button 
+                                            <button
                                                 @click="openDeleteModal(session)"
                                                 class="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
                                                 title="Delete"
@@ -344,7 +344,7 @@ onMounted(() => {
                             </tbody>
                         </table>
                     </div>
-                    <Pagination :links="sessions.links" />
+                    <LinksPagination :links="sessions" />
                 </div>
             </div>
         </div>

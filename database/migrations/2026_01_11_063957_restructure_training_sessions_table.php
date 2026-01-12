@@ -12,64 +12,79 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Add new columns
-        Schema::table('training_sessions', function (Blueprint $table) {
-            if (!Schema::hasColumn('training_sessions', 'start_at')) {
-                $table->dateTime('start_at')->nullable()->after('title');
-            }
-            if (!Schema::hasColumn('training_sessions', 'end_at')) {
-                $table->dateTime('end_at')->nullable()->after('start_at');
-            }
-        });
+        // Check if we need to migrate data (old columns exist)
+        $hasOldColumns = Schema::hasColumn('training_sessions', 'start_date');
 
-        // 2. Migrate data (only if source columns exist)
-        if (Schema::hasColumn('training_sessions', 'start_date')) {
-             DB::statement("
-                UPDATE training_sessions 
-                SET start_at = CAST(CONCAT(start_date, ' ', COALESCE(start_time, '00:00:00')) AS DATETIME), 
-                    end_at = CAST(CONCAT(end_date, ' ', COALESCE(end_time, '23:59:59')) AS DATETIME)
-            ");
+        // For SQLite, we need to recreate the table entirely
+        // First, get all existing data
+        $sessionsData = [];
+        if ($hasOldColumns) {
+            $sessionsData = DB::table('training_sessions')->get();
         }
 
-        // 3. Drop old columns and rename/modify
-        Schema::table('training_sessions', function (Blueprint $table) {
-            $columnsToDrop = [];
-            $candidates = [
-                'start_date', 'end_date', 'start_time', 'end_time',
-                'trainer_name', 'trainer_photo_url',
-                'approval_status', 'approved_by', 'approved_at', 'approval_note'
-            ];
+        // Drop the old table
+        Schema::dropIfExists('training_sessions');
 
-            foreach ($candidates as $col) {
-                if (Schema::hasColumn('training_sessions', $col)) {
-                    $columnsToDrop[] = $col;
+        // Create the new table with correct structure
+        Schema::create('training_sessions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('course_id')->constrained()->onDelete('cascade');
+            $table->string('title')->nullable();
+            $table->dateTime('start_at')->nullable();
+            $table->dateTime('end_at')->nullable();
+            $table->integer('min_participants')->default(1);
+            $table->integer('capacity')->nullable();
+            $table->dateTime('registration_start')->nullable();
+            $table->dateTime('registration_end')->nullable();
+            $table->enum('mode', ['onsite', 'online', 'hybrid'])->default('onsite');
+            $table->string('online_link')->nullable();
+            $table->foreignId('trainer_id')->constrained('users')->onDelete('cascade');
+            $table->string('location')->nullable();
+            $table->enum('status', ['scheduled', 'ongoing', 'completed', 'cancelled'])->default('scheduled');
+            $table->timestamps();
+        });
+
+        // Re-insert data, migrating from old format to new format
+        if (!empty($sessionsData)) {
+            foreach ($sessionsData as $session) {
+                $startAt = null;
+                $endAt = null;
+
+                if (isset($session->start_date) && $session->start_date) {
+                    $time = $session->start_time ?? '00:00:00';
+                    $startAt = $session->start_date . ' ' . $time;
                 }
-            }
+                if (isset($session->end_date) && $session->end_date) {
+                    $time = $session->end_time ?? '23:59:59';
+                    $endAt = $session->end_date . ' ' . $time;
+                }
 
-            if (!empty($columnsToDrop)) {
-                $table->dropColumn($columnsToDrop);
-            }
-            
-            if (Schema::hasColumn('training_sessions', 'max_participants') && !Schema::hasColumn('training_sessions', 'capacity')) {
-                $table->renameColumn('max_participants', 'capacity');
-            }
-        });
+                // Map old status values to new ones
+                $status = $session->status ?? 'scheduled';
+                if ($status === 'upcoming') $status = 'scheduled';
+                elseif ($status === 'open') $status = 'ongoing';
+                elseif ($status === 'closed') $status = 'completed';
 
-        // 4. Update Status Enum
-        DB::statement("UPDATE training_sessions SET status = 'scheduled' WHERE status = 'upcoming'");
-        DB::statement("UPDATE training_sessions SET status = 'ongoing' WHERE status = 'open'");
-        DB::statement("UPDATE training_sessions SET status = 'completed' WHERE status = 'closed'");
-        
-        Schema::table('training_sessions', function (Blueprint $table) {
-             $table->enum('status', ['scheduled', 'ongoing', 'completed', 'cancelled'])
-                   ->default('scheduled')
-                   ->change();
-        });
-        
-        // 5. Make title optional (nullable)
-        Schema::table('training_sessions', function (Blueprint $table) {
-            $table->string('title')->nullable()->change();
-        });
+                DB::table('training_sessions')->insert([
+                    'id' => $session->id,
+                    'course_id' => $session->course_id,
+                    'title' => $session->title ?? null,
+                    'start_at' => $startAt,
+                    'end_at' => $endAt,
+                    'min_participants' => $session->min_participants ?? 1,
+                    'capacity' => $session->max_participants ?? null,
+                    'registration_start' => $session->registration_start ?? null,
+                    'registration_end' => $session->registration_end ?? null,
+                    'mode' => $session->mode ?? 'onsite',
+                    'online_link' => $session->online_link ?? null,
+                    'trainer_id' => $session->trainer_id,
+                    'location' => $session->location ?? null,
+                    'status' => $status,
+                    'created_at' => $session->created_at ?? now(),
+                    'updated_at' => $session->updated_at ?? now(),
+                ]);
+            }
+        }
     }
 
     /**
@@ -77,6 +92,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // ... (Simplified down for now, as reversing a partial fail is hard)
+        // Reverting is complex, would need to recreate old table structure
+        // For now, this is a simplified down migration
+        Schema::dropIfExists('training_sessions');
     }
 };

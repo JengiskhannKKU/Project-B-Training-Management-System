@@ -1,10 +1,10 @@
 <?php
 
-
 namespace Database\Seeders;
 
 use App\Models\Attendance;
 use App\Models\Enrollment;
+use App\Models\SessionDay;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -14,43 +14,94 @@ class AttendanceSeeder extends Seeder
     {
         // Find enrollments in completed sessions
         $enrollments = Enrollment::whereHas('session', function ($q) {
-            $q->where('status', 'completed')
-                ->orWhere('status', 'upcoming'); // Maybe some upcoming sessions already had a class? Assuming 'training_sessions' are the whole course, not individual classes.
-            // Actually, if TrainingSession is the Course Session (e.g. Spring 2025), attendance usually implies daily attendance.
-            // But 'attendances' table might link to TrainingSession directly?
-        })->with('session')->get();
+            $q->where('status', 'completed');
+        })->where('status', 'completed')
+            ->with(['session', 'session.sessionDays'])
+            ->get();
 
-        // Check Attendance model structure or migration to see if it's per session or per day.
-        // Migration: create_attendances_table.php
-        // Schema::create('attendances', function (Blueprint $table) { ... $table->foreignId('session_id')... $table->date('date')? ... })
-        // Let's assume simplest case: One attendance record per trainee per session (like "Completed course" or "Present on final exam").
-        // Or if it's daily, I should create multiple.
+        $attendanceCount = 0;
+        $enrollmentAttendancePercent = [];
 
-        // Looking at previous AttendanceSeeder, it had 'checked_at'.
-        // It seems to be single record per session? Or maybe multiple.
-        // Previous had: 'session_id' => 3, 'enrollment_id' => 6...
-
-        // If it's daily, I'd need a loop. If it's "summary" attendance, just one.
-        // Given 'checked_at', it looks like a specific check-in.
-        // I will create ONE attendance record per trainee for the session, assuming it's a "class" or "workshop" type single event, OR just one sample record.
-
+        // Create attendance records for each session day
         foreach ($enrollments as $enrollment) {
-            // Randomly present/absent
-            $status = rand(0, 10) > 1 ? 'present' : (rand(0, 1) ? 'late' : 'absent');
+            $sessionDays = $enrollment->session->sessionDays;
 
-            Attendance::updateOrCreate(
-                [
-                    'enrollment_id' => $enrollment->id,
-                    'session_id' => $enrollment->session_id,
-                ],
-                [
-                    'checked_at' => $enrollment->session->start_date ? Carbon::parse($enrollment->session->start_date)->addHours(2) : Carbon::now(),
-                    'status' => $status,
-                    'checked_by' => $enrollment->session->trainer_id, // Trainer checks
-                    'note' => $status === 'late' ? 'Arrived late' : null,
-                ]
-            );
+            // If no session days, skip
+            if ($sessionDays->isEmpty()) {
+                continue;
+            }
+
+            $presentDays = 0;
+            $totalDays = 0;
+
+            // Create attendance for each session day
+            foreach ($sessionDays as $sessionDay) {
+                // Skip cancelled session days
+                if ($sessionDay->status === 'cancelled') {
+                    continue;
+                }
+
+                $totalDays++;
+
+                // Randomly determine attendance status (80% present, 15% late, 5% absent)
+                $rand = rand(0, 100);
+                if ($rand < 80) {
+                    $status = 'present';
+                    $note = null;
+                    $presentDays++;
+                } elseif ($rand < 95) {
+                    $status = 'late';
+                    $note = 'Arrived ' . rand(5, 30) . ' minutes late';
+                    $presentDays++; // Late counts as present for attendance calculation
+                } else {
+                    $status = 'absent';
+                    $notes = [
+                        'Sick leave',
+                        'Personal emergency',
+                        'Excused absence',
+                        'No notification',
+                    ];
+                    $note = $notes[array_rand($notes)];
+                }
+
+                // Create attendance with session day reference
+                $checkedAt = Carbon::parse($sessionDay->date)
+                    ->setTimeFromTimeString($sessionDay->start_time)
+                    ->addMinutes(rand(0, 30));
+
+                Attendance::updateOrCreate(
+                    [
+                        'enrollment_id' => $enrollment->id,
+                        'session_day_id' => $sessionDay->id,
+                    ],
+                    [
+                        'session_id' => $enrollment->session_id,
+                        'user_id' => $enrollment->user_id,
+                        'checked_at' => $checkedAt,
+                        'status' => $status,
+                        'checked_by' => $enrollment->session->trainer_id,
+                        'note' => $note,
+                    ]
+                );
+
+                $attendanceCount++;
+            }
+
+            // Calculate attendance percentage
+            if ($totalDays > 0) {
+                $attendancePercent = ($presentDays / $totalDays) * 100;
+                $enrollmentAttendancePercent[$enrollment->id] = round($attendancePercent, 2);
+            }
         }
+
+        // Update enrollment attendance percentages
+        foreach ($enrollmentAttendancePercent as $enrollmentId => $attendancePercent) {
+            Enrollment::where('id', $enrollmentId)->update([
+                'attendance_percent' => $attendancePercent
+            ]);
+        }
+
+        $this->command->info('Attendance records seeded: ' . $attendanceCount);
+        $this->command->info('Updated attendance percent for ' . count($enrollmentAttendancePercent) . ' enrollments');
     }
 }
-

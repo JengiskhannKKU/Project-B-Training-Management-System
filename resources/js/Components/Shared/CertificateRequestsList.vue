@@ -131,7 +131,13 @@ const getSessionOrProgramName = (request) => {
 };
 
 const getDetailsUrl = (requestId) => {
-    return route(props.detailsRoute, requestId);
+    // Build URL manually since route() helper might not be available
+    // For admin certificate requests: /admin/certificate-requests/{id}
+    // For trainer certificate requests: /trainer/certificate-requests/{id}
+    if (props.detailsRoute.includes('admin')) {
+        return `/admin/certificate-requests/${requestId}`;
+    }
+    return `/trainer/certificate-requests/${requestId}`;
 };
 
 onMounted(fetchRequests);

@@ -78,8 +78,8 @@ private const ATTENDED_STATUSES = ['present', 'late'];
 ### 2.2 Attendance Recording
 
 - Managed by Admin/Trainer via session attendance pages
-- Route Pattern: `/admin/{courseId}/sessions/{sessionId}/attendance`
-- Route Pattern: `/trainer/{courseId}/sessions/{sessionId}/attendance`
+- Route Pattern: `/admin/courses/{courseCode}/sessions/{sessionId}/attendance`
+- Route Pattern: `/trainer/courses/{courseCode}/sessions/{sessionId}/attendance`
 - Each student receives one attendance record per session day
 
 ---

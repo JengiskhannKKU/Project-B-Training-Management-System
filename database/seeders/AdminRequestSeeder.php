@@ -32,11 +32,12 @@ class AdminRequestSeeder extends Seeder
             'target_id' => null, // New course
             'payload' => [
                 'title' => 'New Angular Course',
-                'description' => 'Comprehensive Angular guide.',
+                'description' => 'Comprehensive Angular guide covering components, services, and routing.',
                 'category' => 'Programming',
                 'level' => 'intermediate',
-                'min_participants' => 10,
-                'max_participants' => 30,
+                'learning_outcomes' => '• Master Angular Components\n• Services and Dependency Injection\n• Routing and Navigation',
+                'target_audience' => 'Web developers familiar with JavaScript.',
+                'prerequisites' => 'Basic JavaScript and TypeScript knowledge.',
             ],
             'status' => 'pending',
             'admin_note' => null,
@@ -51,9 +52,12 @@ class AdminRequestSeeder extends Seeder
             'payload' => [
                 'course_id' => $course?->id ?? 1,
                 'title' => 'Angular Batch 1',
-                'start_date' => now()->addMonth()->toDateString(),
-                'end_date' => now()->addMonth()->addDays(5)->toDateString(),
-                'capacity' => 20,
+                'start_at' => now()->addMonth()->toDateTimeString(),
+                'end_at' => now()->addMonth()->addDays(5)->toDateTimeString(),
+                'min_participants' => 10,
+                'capacity' => 25,
+                'mode' => 'online',
+                'location' => 'Online',
             ],
             'status' => 'pending',
         ]);
@@ -65,13 +69,37 @@ class AdminRequestSeeder extends Seeder
             'action' => 'update',
             'target_id' => $course?->id,
             'payload' => [
-                'title' => 'Updated Web Dev',
-                'min_participants' => 50, // Unreasonable change
+                'title' => 'Updated Web Dev - Advanced Edition',
+                'description' => 'Major update to include modern frameworks.',
             ],
             'status' => 'rejected',
-            'admin_note' => 'Capacity change not approved. Please submit a new course instead.',
-            'resolved_by' => $admin->id,
+            'admin_note' => 'Please create a new course instead of significantly modifying existing content.',
+            'resolved_by' => $admin?->id,
             'resolved_at' => now(),
         ]);
+
+        // 4. Approved Session Creation Request
+        AdminRequest::create([
+            'requester_id' => $trainer->id,
+            'target_type' => 'session',
+            'action' => 'create',
+            'target_id' => null,
+            'payload' => [
+                'course_id' => $course?->id ?? 1,
+                'title' => 'Web Dev Intensive Bootcamp',
+                'start_at' => now()->addDays(60)->toDateTimeString(),
+                'end_at' => now()->addDays(67)->toDateTimeString(),
+                'min_participants' => 5,
+                'capacity' => 15,
+                'mode' => 'onsite',
+                'location' => 'Training Center B',
+            ],
+            'status' => 'approved',
+            'admin_note' => 'Approved. Please ensure proper room reservation.',
+            'resolved_by' => $admin?->id,
+            'resolved_at' => now()->subDays(5),
+        ]);
+
+        $this->command->info('Admin requests seeded: 4');
     }
 }

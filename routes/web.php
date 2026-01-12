@@ -120,13 +120,16 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.my-courses');
 
     Route::get('/admin/my-courses/{code}', function ($code) {
-        $course = \App\Models\Course::with('owner')->where('code', $code)->first();
+        $course = \App\Models\Course::with(['owner', 'sessions'])
+            ->where('code', $code)
+            ->first();
 
-        if (! $course) {
+        if (!$course) {
             return Inertia::render('Trainer/Courses/Show', [
                 'program' => [
                     'id' => $code,
                     'name' => '',
+                    'code' => $code,
                     'category' => '',
                     'level' => '',
                     'period' => '',
@@ -137,22 +140,32 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                     'status' => '',
                     'description' => '',
                     'image_url' => null,
-                    'approval_status' => 'approved', // Admin created courses are auto-approved
+                    'approval_status' => 'approved',
                 ],
             ]);
         }
+
+        // Get instructor/owner information
+        $owner = $course->owner;
+        $trainerName = $owner?->name ?? '';
+        $trainerEmail = $owner?->email ?? '';
+
+        // Count sessions
+        $sessionsCount = $course->sessions()->count();
 
         return Inertia::render('Trainer/Courses/Show', [
             'program' => [
                 'id' => $course->id,
                 'name' => $course->title,
                 'title' => $course->title,
+                'code' => $course->code,
                 'category' => $course->category,
                 'level' => $course->level ?? 'beginner',
                 'period' => '',
                 'time' => '',
                 'location' => '',
-                'trainer' => $course->owner?->name ?? '',
+                'trainer' => $trainerName,
+                'trainer_email' => $trainerEmail,
                 'certificated' => '',
                 'status' => $course->status,
                 'description' => $course->description ?? '',
@@ -164,6 +177,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                 'additional_info' => $course->additional_info ?? '',
                 'min_participants' => $course->min_participants ?? 1,
                 'max_participants' => $course->max_participants ?? 20,
+                'sessions_count' => $sessionsCount,
+                'created_at' => $course->created_at?->format('M d, Y'),
             ],
         ]);
     })->name('admin.my-courses.show');
@@ -172,9 +187,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return Inertia::render('Admin/Attendance');
     })->name('admin.attendance');
 
-    Route::get('/admin/{courseId}/sessions/{sessionId}/attendance', function ($courseId, $sessionId) {
+    Route::get('/admin/courses/{courseCode}/sessions/{sessionId}/attendance', function ($courseCode, $sessionId) {
         return Inertia::render('Admin/SessionAttendance', [
-            'courseId' => $courseId,
+            'courseCode' => $courseCode,
             'sessionId' => $sessionId
         ]);
     })->name('admin.attendance.session');
@@ -243,9 +258,9 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         return Inertia::render('Trainer/Attendance');
     })->name('trainer.attendance');
 
-    Route::get('/trainer/{courseId}/sessions/{sessionId}/attendance', function ($courseId, $sessionId) {
+    Route::get('/trainer/courses/{courseCode}/sessions/{sessionId}/attendance', function ($courseCode, $sessionId) {
         return Inertia::render('Trainer/SessionAttendance', [
-            'courseId' => $courseId,
+            'courseCode' => $courseCode,
             'sessionId' => $sessionId
         ]);
     })->name('trainer.attendance.session');

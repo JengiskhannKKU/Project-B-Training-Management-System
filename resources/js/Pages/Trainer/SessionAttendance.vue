@@ -32,8 +32,8 @@ import "jspdf-autotable";
 
 // Props from route
 const props = defineProps({
-    courseId: {
-        type: [Number, String],
+    courseCode: {
+        type: String,
         required: true
     },
     sessionId: {
