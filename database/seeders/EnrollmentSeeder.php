@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Database\Seeders;
 
 use App\Models\Enrollment;
@@ -15,26 +14,30 @@ class EnrollmentSeeder extends Seeder
     {
         $traineeMain = User::firstWhere('email', 'trainee@example.com');
         $allTrainees = User::whereHas('role', function ($q) {
-            $q->where('name', 'trainee'); })->get();
+            $q->where('name', 'trainee');
+        })->get();
 
         // Safety check
-        if ($allTrainees->isEmpty())
+        if ($allTrainees->isEmpty()) {
             return;
+        }
 
-        // Get sessions by some characteristic or just all
-        $webSpring = TrainingSession::where('title', 'like', '%Web Development%Spring%')->first();
-        $reactQ1 = TrainingSession::where('title', 'like', '%React%Q1%')->first();
-        $dsWinter = TrainingSession::where('title', 'like', '%Data Science%Winter 2025%')->first(); // Completed
-        $secFeb = TrainingSession::where('title', 'like', '%Cybersecurity%February%')->first(); // Upcoming
-        $cloudMar = TrainingSession::where('title', 'like', '%Cloud%March%')->first(); // Pending/Upcoming
-        $webWinterOld = TrainingSession::where('title', 'like', '%Web Development%Winter 2024%')->first(); // Old Completed
+        // Get sessions by title (matching TrainingSessionSeeder)
+        $webSpring = TrainingSession::where('title', 'Web Development Spring 2025')->first();
+        $webWinter = TrainingSession::where('title', 'Web Development Winter 2024')->first();
+        $reactQ1 = TrainingSession::where('title', 'Advanced React Q1 2025')->first();
+        $dsWinter = TrainingSession::where('title', 'Data Science Winter 2025')->first();
+        $secFeb = TrainingSession::where('title', 'Cybersecurity February 2025')->first();
+        $cloudMar = TrainingSession::where('title', 'Cloud Computing March 2025')->first();
+        $devOpsApril = TrainingSession::where('title', 'DevOps April 2025')->first();
+        $devOpsFall = TrainingSession::where('title', 'DevOps Completed Fall 2024')->first();
 
         $enrollments = [];
 
         // 1. Enroll Main Trainee in variety
         if ($traineeMain) {
-            // Enrolled in Active (Web Spring)
-            if ($webSpring)
+            // Scheduled/Active (Web Spring)
+            if ($webSpring) {
                 $enrollments[] = [
                     'user_id' => $traineeMain->id,
                     'session_id' => $webSpring->id,
@@ -42,17 +45,21 @@ class EnrollmentSeeder extends Seeder
                     'enrolled_at' => Carbon::now()->subDays(5),
                     'completed_at' => null,
                 ];
+            }
+
             // Completed (Data Science)
-            if ($dsWinter)
+            if ($dsWinter) {
                 $enrollments[] = [
                     'user_id' => $traineeMain->id,
                     'session_id' => $dsWinter->id,
                     'status' => 'completed',
-                    'enrolled_at' => Carbon::now()->subDays(40),
-                    'completed_at' => Carbon::now()->subDays(10),
+                    'enrolled_at' => Carbon::now()->subDays(60),
+                    'completed_at' => Carbon::now()->subDays(35),
                 ];
+            }
+
             // Pending (Cloud)
-            if ($cloudMar)
+            if ($cloudMar) {
                 $enrollments[] = [
                     'user_id' => $traineeMain->id,
                     'session_id' => $cloudMar->id,
@@ -60,24 +67,42 @@ class EnrollmentSeeder extends Seeder
                     'enrolled_at' => Carbon::now()->subDays(1),
                     'completed_at' => null,
                 ];
+            }
+
             // Completed Old (Web Winter)
-            if ($webWinterOld)
+            if ($webWinter) {
                 $enrollments[] = [
                     'user_id' => $traineeMain->id,
-                    'session_id' => $webWinterOld->id,
+                    'session_id' => $webWinter->id,
                     'status' => 'completed',
-                    'enrolled_at' => Carbon::now()->subDays(70),
-                    'completed_at' => Carbon::now()->subDays(50),
+                    'enrolled_at' => Carbon::now()->subDays(100),
+                    'completed_at' => Carbon::now()->subDays(70),
                 ];
+            }
+
+            // Confirmed (DevOps Fall - completed)
+            if ($devOpsFall) {
+                $enrollments[] = [
+                    'user_id' => $traineeMain->id,
+                    'session_id' => $devOpsFall->id,
+                    'status' => 'completed',
+                    'enrolled_at' => Carbon::now()->subDays(140),
+                    'completed_at' => Carbon::now()->subDays(110),
+                ];
+            }
         }
 
         // 2. Enroll other trainees randomly
         foreach ($allTrainees as $trainee) {
-            if ($trainee->id === $traineeMain?->id)
+            if ($trainee->id === $traineeMain?->id) {
                 continue;
+            }
 
-            // Randomly enroll in sessions
-            $sessionsToEnroll = collect([$webSpring, $reactQ1, $dsWinter, $secFeb, $webWinterOld])->filter()->random(2);
+            // Available sessions
+            $availableSessions = collect([$webSpring, $reactQ1, $dsWinter, $secFeb, $cloudMar, $devOpsApril, $webWinter, $devOpsFall])->filter();
+
+            // Randomly enroll in 2-4 sessions
+            $sessionsToEnroll = $availableSessions->random(rand(2, min(4, $availableSessions->count())));
 
             foreach ($sessionsToEnroll as $session) {
                 $status = 'confirmed';
@@ -85,9 +110,15 @@ class EnrollmentSeeder extends Seeder
 
                 if ($session->status === 'completed') {
                     $status = 'completed';
-                    $completedAt = $session->end_date;
-                } elseif ($session->status === 'cancelled') {
-                    $status = 'cancelled';
+                    $completedAt = Carbon::parse($session->end_at)->addDay();
+                } elseif ($session->status === 'scheduled') {
+                    // Randomly assign pending, confirmed, or cancelled for scheduled sessions
+                    $rand = rand(0, 10);
+                    if ($rand < 2) {
+                        $status = 'pending';
+                    } elseif ($rand < 3) {
+                        $status = 'cancelled';
+                    }
                 }
 
                 $enrollments[] = [
@@ -100,12 +131,14 @@ class EnrollmentSeeder extends Seeder
             }
         }
 
+        // Insert enrollments
         foreach ($enrollments as $enrollment) {
             Enrollment::updateOrCreate(
                 ['user_id' => $enrollment['user_id'], 'session_id' => $enrollment['session_id']],
                 $enrollment
             );
         }
+
+        $this->command->info('Enrollments seeded: ' . count($enrollments));
     }
 }
-

@@ -26,8 +26,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'Beginners wanting to start web development.',
                 'prerequisites' => 'Basic computer skills.',
                 'status' => 'published',
-                'min_participants' => 5,
-                'max_participants' => 30,
                 'owner_id' => $trainer->id,
             ],
             [
@@ -39,8 +37,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'Experienced React developers.',
                 'prerequisites' => 'Solid understanding of React basics.',
                 'status' => 'published',
-                'min_participants' => 5,
-                'max_participants' => 20,
                 'owner_id' => $trainer->id,
             ],
             [
@@ -52,8 +48,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'Aspiring data scientists.',
                 'prerequisites' => 'Basic Python knowledge.',
                 'status' => 'published',
-                'min_participants' => 10,
-                'max_participants' => 50,
                 'owner_id' => $trainer->id,
             ],
             [
@@ -65,8 +59,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'IT professionals.',
                 'prerequisites' => 'Networking basics.',
                 'status' => 'published',
-                'min_participants' => 5,
-                'max_participants' => 25,
                 'owner_id' => $trainer->id,
             ],
             [
@@ -78,8 +70,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'DevOps engineers.',
                 'prerequisites' => 'Linux basics.',
                 'status' => 'published',
-                'min_participants' => 5,
-                'max_participants' => 40,
                 'owner_id' => $trainer->id,
             ],
             [
@@ -91,8 +81,6 @@ class CourseSeeder extends Seeder
                 'target_audience' => 'Developers and Ops professionals.',
                 'prerequisites' => 'Software development lifecycle knowledge.',
                 'status' => 'published',
-                'min_participants' => 5,
-                'max_participants' => 30,
                 'owner_id' => $trainer->id,
             ],
         ];

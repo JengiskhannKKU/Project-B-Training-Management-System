@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AuthLoginSeeder::class,
+            UserCategorySeeder::class,
+            ProfileChangeSeeder::class,
             CourseSeeder::class,
             TrainingSessionSeeder::class,
             EnrollmentSeeder::class,
@@ -27,6 +29,6 @@ class DatabaseSeeder extends Seeder
             AdminRequestSeeder::class,
         ]);
 
-        $this->command->info('Database seeded successfully with comprehensive test data.');
+        $this->command->info('Database seeded successfully with RBAC-compliant test data.');
     }
 }
