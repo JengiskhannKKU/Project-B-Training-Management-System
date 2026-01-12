@@ -322,14 +322,12 @@ const fetchPrograms = async () => {
                 id: program.id,
                 code: program.code,
                 name: program.name,
+                description: program.description,
+                category: program.category || 'General',
                 image_url: program.image_url || '',
-                rating: program.rating || null,
                 level: program.level || '',
-                trainees_count: program.trainees_count || 0,
-                price: program.price || 'Free',
-                date: program.date || program.registration_start || '',
-                time: program.time || '',
-                location: program.location || '',
+                sessions_count: program.sessions_count || 0,
+                max_participants: program.max_participants || 20,
                 department: program.category || 'General',
                 status: program.status || 'active',
                 created_at: program.created_at
@@ -634,16 +632,15 @@ const mockPrograms = [
                             v-for="course in paginatedCourses"
                             :key="course.id"
                             :id="course.id"
+                            :code="course.code"
                             :href="`/trainer/courses/${course.code}`"
                             :name="course.name"
+                            :description="course.description"
+                            :category="course.category"
                             :image_url="course.image_url"
-                            :rating="course.rating"
                             :level="course.level"
-                            :trainees_count="course.trainees_count"
-                            :price="course.price"
-                            :date="course.date"
-                            :time="course.time"
-                            :location="course.location"
+                            :sessions_count="course.sessions_count"
+                            :max_participants="course.max_participants"
                             :status="course.status"
                         />
                     </div>
