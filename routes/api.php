@@ -80,6 +80,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('attendances', [AttendanceController::class, 'store']);
         Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
 
+        // Multi-day attendance routes
+        Route::get('sessions/{session}/attendance-days', [AttendanceController::class, 'getSessionAttendanceDays']);
+        Route::post('session-days/{sessionDay}/attendance', [AttendanceController::class, 'storeByDay']);
+        Route::post('session-days/{sessionDay}/attendance/bulk', [AttendanceController::class, 'bulkStoreByDay']);
+
         // Sessions for attendance (session-first view)
         Route::get('admin/attendance/sessions', [TrainingSessionController::class, 'sessionsForAttendance']);
         Route::get('trainer/attendance/sessions', [TrainingSessionController::class, 'sessionsForAttendance']);

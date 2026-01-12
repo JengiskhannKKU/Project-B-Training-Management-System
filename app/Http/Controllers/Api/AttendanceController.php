@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Enrollment;
+use App\Models\SessionDay;
 use App\Models\TrainingSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -189,5 +190,181 @@ class AttendanceController extends Controller
             ->get();
 
         return $this->successResponse($enrollments, 'Eligible enrollments retrieved successfully');
+    }
+
+    /**
+     * Get attendance data for all days of a session (multi-day support)
+     * Returns: session info, session_days, enrollments, attendance_matrix
+     */
+    public function getSessionAttendanceDays(TrainingSession $session)
+    {
+        $user = request()->user();
+
+        // Authorization: only admin or session trainer
+        if (!$user->isRole('admin') && $session->trainer_id !== $user->id) {
+            return $this->forbiddenResponse('You can only view attendance for your own sessions.');
+        }
+
+        // Load session with related data
+        $session->load('course');
+
+        // Get all session days
+        $sessionDays = $session->sessionDays()
+            ->with(['attendances'])
+            ->get()
+            ->map(function ($day) {
+                return [
+                    'id' => $day->id,
+                    'date' => $day->date->toDateString(),
+                    'start_time' => $day->start_time,
+                    'end_time' => $day->end_time,
+                    'day_number' => $day->day_number,
+                    'has_occurred' => $day->hasOccurred(),
+                    'is_today' => $day->isToday(),
+                    'attendance_count' => $day->attendances->count(),
+                ];
+            });
+
+        // Get enrollments for attendance marking (pending or confirmed)
+        $enrollments = $session->enrollments()
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->with('user')
+            ->get();
+
+        // Build attendance matrix: [enrollment_id][session_day_id] = attendance data
+        $attendanceMatrix = [];
+        foreach ($enrollments as $enrollment) {
+            $attendanceMatrix[$enrollment->id] = [];
+
+            foreach ($sessionDays as $day) {
+                // Find attendance for this user and day
+                $attendance = Attendance::where('session_day_id', $day['id'])
+                    ->where('user_id', $enrollment->user_id)
+                    ->first();
+
+                $attendanceMatrix[$enrollment->id][$day['id']] = [
+                    'status' => $attendance ? $attendance->status : 'not_marked',
+                    'checked_at' => $attendance ? $attendance->checked_at : null,
+                    'note' => $attendance ? $attendance->note : null,
+                ];
+            }
+        }
+
+        return $this->successResponse([
+            'session' => $session,
+            'session_days' => $sessionDays,
+            'enrollments' => $enrollments,
+            'attendance_matrix' => $attendanceMatrix,
+        ], 'Attendance data retrieved successfully');
+    }
+
+    /**
+     * Store attendance for a specific day (single record)
+     */
+    public function storeByDay(Request $request, SessionDay $sessionDay)
+    {
+        $session = $sessionDay->session;
+
+        // Authorization: only admin or session trainer
+        if (!$request->user()->isRole('admin') && $session->trainer_id !== $request->user()->id) {
+            return $this->forbiddenResponse('You can only record attendance for your own sessions.');
+        }
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'status' => ['required', Rule::in($this->statusOptions())],
+            'note' => ['nullable', 'string'],
+        ]);
+
+        // Verify user is enrolled in this session
+        $enrollment = Enrollment::where('session_id', $session->id)
+            ->where('user_id', $data['user_id'])
+            ->first();
+
+        if (!$enrollment) {
+            return $this->validationErrorResponse([
+                'user_id' => ['User is not enrolled in this session.'],
+            ]);
+        }
+
+        $attendance = Attendance::updateOrCreate(
+            [
+                'session_day_id' => $sessionDay->id,
+                'user_id' => $data['user_id'],
+            ],
+            [
+                'session_id' => $session->id,
+                'enrollment_id' => $enrollment->id,
+                'status' => $data['status'],
+                'checked_at' => now(),
+                'checked_by' => $request->user()->id,
+                'note' => $data['note'] ?? null,
+            ]
+        );
+
+        return $this->createdResponse($attendance->fresh(), 'Attendance recorded successfully');
+    }
+
+    /**
+     * Bulk store attendance for a specific day
+     */
+    public function bulkStoreByDay(Request $request, SessionDay $sessionDay)
+    {
+        $session = $sessionDay->session;
+
+        // Authorization: only admin or session trainer
+        if (!$request->user()->isRole('admin') && $session->trainer_id !== $request->user()->id) {
+            return $this->forbiddenResponse('You can only record attendance for your own sessions.');
+        }
+
+        $data = $request->validate([
+            'records' => ['required', 'array', 'min:1'],
+            'records.*.user_id' => ['required', 'integer', 'exists:users,id'],
+            'records.*.status' => ['required', Rule::in($this->statusOptions())],
+            'records.*.note' => ['nullable', 'string'],
+        ]);
+
+        $userIds = collect($data['records'])->pluck('user_id')->unique();
+
+        // Verify all users are enrolled in this session
+        $enrollments = Enrollment::where('session_id', $session->id)
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $invalidUsers = $userIds->diff($enrollments->keys());
+        if ($invalidUsers->isNotEmpty()) {
+            return $this->validationErrorResponse([
+                'user_id' => ['Some users are not enrolled in this session.'],
+            ]);
+        }
+
+        $now = now();
+        $checkedBy = $request->user()->id;
+
+        DB::transaction(function () use ($data, $sessionDay, $session, $enrollments, $now, $checkedBy) {
+            foreach ($data['records'] as $record) {
+                $enrollment = $enrollments[$record['user_id']];
+
+                Attendance::updateOrCreate(
+                    [
+                        'session_day_id' => $sessionDay->id,
+                        'user_id' => $record['user_id'],
+                    ],
+                    [
+                        'session_id' => $session->id,
+                        'enrollment_id' => $enrollment->id,
+                        'status' => $record['status'],
+                        'checked_at' => $now,
+                        'checked_by' => $checkedBy,
+                        'note' => $record['note'] ?? null,
+                    ]
+                );
+            }
+        });
+
+        return $this->successResponse([
+            'count' => count($data['records']),
+        ], 'Bulk attendance recorded successfully');
     }
 }

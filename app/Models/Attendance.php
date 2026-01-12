@@ -12,7 +12,9 @@ class Attendance extends Model
 
     protected $fillable = [
         'session_id',
+        'session_day_id',
         'enrollment_id',
+        'user_id',
         'checked_at',
         'status',
         'checked_by',
@@ -36,5 +38,15 @@ class Attendance extends Model
     public function checker(): BelongsTo
     {
         return $this->belongsTo(User::class, 'checked_by');
+    }
+
+    public function sessionDay(): BelongsTo
+    {
+        return $this->belongsTo(SessionDay::class, 'session_day_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

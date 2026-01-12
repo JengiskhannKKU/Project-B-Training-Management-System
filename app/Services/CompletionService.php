@@ -13,7 +13,7 @@ class CompletionService
 
     public function evaluateEnrollmentCompletion(int $enrollmentId): bool
     {
-        $enrollment = Enrollment::with(['session', 'attendances'])
+        $enrollment = Enrollment::with(['session.sessionDays', 'attendances'])
             ->findOrFail($enrollmentId);
 
         if (!$enrollment->session) {
@@ -25,11 +25,31 @@ class CompletionService
         }
 
         $session = $enrollment->session;
-        $attendanceCount = $enrollment->attendances()
-            ->whereIn('status', self::ATTENDED_STATUSES)
-            ->count();
 
-        $totalDays = $this->getSessionDayCount($session);
+        // Get total days from session_days if exists, otherwise fall back to calculation
+        $totalDays = $session->sessionDays()->count();
+        if ($totalDays === 0) {
+            $totalDays = $this->getSessionDayCount($session);
+        }
+
+        // Count attended days (present or late)
+        // For multi-day sessions with session_day_id: count distinct session_day_id
+        $attendedDaysWithSessionDay = $enrollment->attendances()
+            ->whereIn('status', self::ATTENDED_STATUSES)
+            ->whereNotNull('session_day_id')
+            ->distinct('session_day_id')
+            ->count('session_day_id');
+
+        // For backward compatibility: if no session_day_id attendance exists, use legacy count
+        if ($attendedDaysWithSessionDay === 0) {
+            $attendanceCount = $enrollment->attendances()
+                ->whereIn('status', self::ATTENDED_STATUSES)
+                ->whereNull('session_day_id')
+                ->count();
+        } else {
+            $attendanceCount = $attendedDaysWithSessionDay;
+        }
+
         $requiredCount = $totalDays <= 1
             ? 1
             : (int) ceil($totalDays * self::MULTI_DAY_THRESHOLD);
@@ -72,17 +92,63 @@ class CompletionService
 
     private function getSessionDayCount(TrainingSession $session): int
     {
-        if (!$session->start_date || !$session->end_date) {
+        if (!$session->start_at || !$session->end_at) {
             return 1;
         }
 
-        $start = Carbon::parse($session->start_date)->startOfDay();
-        $end = Carbon::parse($session->end_date)->startOfDay();
+        $start = Carbon::parse($session->start_at)->startOfDay();
+        $end = Carbon::parse($session->end_at)->startOfDay();
 
         if ($end->lessThan($start)) {
             return 1;
         }
 
         return $start->diffInDays($end) + 1;
+    }
+
+    /**
+     * Get the attendance percentage for an enrollment
+     *
+     * @param int $enrollmentId
+     * @return float
+     */
+    public function getAttendancePercentage(int $enrollmentId): float
+    {
+        $enrollment = Enrollment::with(['session.sessionDays'])->findOrFail($enrollmentId);
+
+        if (!$enrollment->session) {
+            return 0.0;
+        }
+
+        $session = $enrollment->session;
+
+        // Get total days
+        $totalDays = $session->sessionDays()->count();
+        if ($totalDays === 0) {
+            $totalDays = $this->getSessionDayCount($session);
+        }
+
+        if ($totalDays === 0) {
+            return 0.0;
+        }
+
+        // Count attended days
+        $attendedDaysWithSessionDay = $enrollment->attendances()
+            ->whereIn('status', self::ATTENDED_STATUSES)
+            ->whereNotNull('session_day_id')
+            ->distinct('session_day_id')
+            ->count('session_day_id');
+
+        // Backward compatibility
+        if ($attendedDaysWithSessionDay === 0) {
+            $attendanceCount = $enrollment->attendances()
+                ->whereIn('status', self::ATTENDED_STATUSES)
+                ->whereNull('session_day_id')
+                ->count();
+        } else {
+            $attendanceCount = $attendedDaysWithSessionDay;
+        }
+
+        return ($attendanceCount / $totalDays) * 100;
     }
 }
