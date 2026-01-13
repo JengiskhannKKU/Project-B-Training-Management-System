@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { Plus, User, Calendar, MapPin, Clock, Users, BookOpen, AlertCircle } from 'lucide-vue-next';
 
 const props = defineProps<{
     program: {
@@ -14,6 +15,7 @@ const props = defineProps<{
         time?: string;
         location?: string;
         trainer?: string;
+        trainer_email?: string;
         certificated?: string;
         status?: string;
         description?: string;
@@ -26,6 +28,7 @@ const props = defineProps<{
         min_participants?: number;
         max_participants?: number;
         sessions_count?: number;
+        created_at?: string;
     };
     sessionsCount?: number;
     isAdmin?: boolean;
@@ -40,6 +43,7 @@ const programData = computed(() => ({
     time: props.program?.time || '—',
     location: props.program?.location || '—',
     trainer: props.program?.trainer || '—',
+    trainer_email: props.program?.trainer_email || '',
     certificated: props.program?.certificated || '—',
     status: props.program?.status || 'pending',
     approval_status: props.program?.approval_status || 'pending',
@@ -90,8 +94,8 @@ const getLevelBadgeClass = computed(() => {
 
 <template>
     <div class="space-y-6">
-        <!-- Incomplete Course Banner -->
-        <div v-if="isIncomplete" class="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
+        <!-- Incomplete Course Banner (Admin Only) -->
+        <div v-if="isIncomplete && isAdmin" class="rounded-xl border-2 border-amber-200 bg-amber-50 p-6">
             <div class="flex items-start gap-4">
                 <div class="rounded-full bg-amber-100 p-3">
                     <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,164 +107,228 @@ const getLevelBadgeClass = computed(() => {
                     <p class="text-sm text-amber-700 mb-4">
                         This course is published but has no sessions yet. It will not be visible to trainees until at least one session is created. Please create your first session to make this course available.
                     </p>
-                            <Link
-                                :href="`/admin/sessions?create_session=true&course_id=${program.id}`"
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
-                            >
-                                <Plus class="w-4 h-4 mr-2" />
-                                <span>Create First Session</span>
-                            </Link>
+                    <Link
+                        :href="`/admin/sessions?create_session=true&course_id=${program.id}`"
+                        class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <Plus class="w-4 h-4 mr-2" />
+                        <span>Create First Session</span>
+                    </Link>
                 </div>
             </div>
         </div>
 
         <div :class="['grid gap-4 sm:gap-6', 'lg:grid-cols-3']">
             <!-- Main Content -->
-            <div class="lg:col-span-2">
-                <div class="rounded-lg bg-white p-6 shadow-sm">
-                    <!-- Learning Outcomes -->
-                    <div v-if="learningOutcomesArray.length > 0">
-                        <h3 class="mb-3 font-semibold text-gray-900">What You'll Learn</h3>
-                        <ul class="space-y-2 text-gray-600">
-                            <li v-for="(outcome, index) in learningOutcomesArray" :key="index" class="flex items-start gap-2">
-                                <span class="text-teal-600 mt-1">•</span>
-                                <span>{{ outcome }}</span>
-                            </li>
-                        </ul>
-                    </div>
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Learning Outcomes -->
+                <div v-if="learningOutcomesArray.length > 0" class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        What You'll Learn
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li v-for="(outcome, index) in learningOutcomesArray" :key="index" class="flex items-start gap-3">
+                            <div class="mt-0.5 flex-shrink-0">
+                                <div class="h-5 w-5 rounded-full bg-teal-100 flex items-center justify-center">
+                                    <svg class="h-3 w-3 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="flex-1">{{ outcome }}</span>
+                        </li>
+                    </ul>
+                </div>
 
-                    <!-- Target Audience -->
-                    <div v-if="targetAudienceArray.length > 0" class="mt-6">
-                        <h3 class="mb-3 font-semibold text-gray-900">Who Should Attend</h3>
-                        <ul class="space-y-2 text-gray-600">
-                            <li v-for="(audience, index) in targetAudienceArray" :key="index" class="flex items-start gap-2">
-                                <span class="text-teal-600 mt-1">•</span>
-                                <span>{{ audience }}</span>
-                            </li>
-                        </ul>
-                    </div>
+                <!-- Target Audience -->
+                <div v-if="targetAudienceArray.length > 0" class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Users class="h-5 w-5 text-teal-600" />
+                        Who Should Attend
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li v-for="(audience, index) in targetAudienceArray" :key="index" class="flex items-start gap-3">
+                            <div class="mt-0.5 flex-shrink-0">
+                                <div class="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <svg class="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <span class="flex-1">{{ audience }}</span>
+                        </li>
+                    </ul>
+                </div>
 
-                    <!-- Prerequisites -->
-                    <div v-if="programData.prerequisites" class="mt-6">
-                        <h3 class="mb-3 font-semibold text-gray-900">Prerequisites</h3>
-                        <p class="text-gray-600 whitespace-pre-wrap">{{ programData.prerequisites }}</p>
+                <!-- Prerequisites -->
+                <div v-if="programData.prerequisites" class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Prerequisites
+                    </h3>
+                    <div class="rounded-lg bg-amber-50 border border-amber-100 p-4">
+                        <p class="text-gray-700 whitespace-pre-wrap">{{ programData.prerequisites }}</p>
                     </div>
+                </div>
 
-                    <!-- Additional Information -->
-                    <div v-if="programData.additional_info" class="mt-6">
-                        <h3 class="mb-3 font-semibold text-gray-900">Additional Information</h3>
-                        <p class="text-gray-600 whitespace-pre-wrap">{{ programData.additional_info }}</p>
+                <!-- Additional Information -->
+                <div v-if="programData.additional_info" class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Additional Information
+                    </h3>
+                    <p class="text-gray-700 whitespace-pre-wrap leading-relaxed">{{ programData.additional_info }}</p>
+                </div>
+
+                <!-- No Content Fallback -->
+                <div v-if="learningOutcomesArray.length === 0 && targetAudienceArray.length === 0 && !programData.prerequisites && !programData.additional_info" class="rounded-xl bg-white p-8 shadow-sm border border-gray-100 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                        <BookOpen class="h-8 w-8 text-gray-400" />
                     </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">No Details Available</h3>
+                    <p class="text-gray-500">This course doesn't have additional details yet.</p>
                 </div>
             </div>
 
         <!-- Sidebar -->
         <div class="space-y-6">
             <!-- Course Information -->
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="font-semibold text-gray-900">Course Information</h3>
-                    <button class="text-teal-600 hover:text-teal-700">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                    </button>
+            <div class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                <div class="mb-5 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <BookOpen class="h-5 w-5 text-teal-600" />
+                        Course Information
+                    </h3>
                 </div>
 
-                <div class="space-y-3 text-sm">
-                    <div>
-                        <div class="text-gray-500">Category:</div>
-                        <div class="font-medium text-gray-900">{{ programData.category }}</div>
+                <div class="space-y-4 text-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Category</div>
+                            <div class="font-semibold text-gray-900 mt-0.5">{{ programData.category }}</div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-gray-500">Level:</div>
-                        <span :class="['rounded px-2 py-1 text-xs font-medium', getLevelBadgeClass]">{{ programData.level }}</span>
+
+                    <div class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Level</div>
+                            <div class="mt-0.5">
+                                <span :class="['inline-block rounded-lg px-3 py-1 text-xs font-semibold', getLevelBadgeClass]">{{ programData.level }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-gray-500">Class Capacity:</div>
-                        <div class="font-medium text-gray-900">{{ programData.min_participants }} - {{ programData.max_participants }} participants</div>
+
+                    <div class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <Users class="h-4 w-4 text-gray-500" />
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Class Capacity</div>
+                            <div class="font-semibold text-gray-900 mt-0.5">{{ programData.min_participants }} - {{ programData.max_participants }} participants</div>
+                        </div>
                     </div>
-                    <div v-if="programData.period && programData.period !== '—'">
-                        <div class="text-gray-500">Period:</div>
-                        <div class="font-medium text-gray-900">{{ programData.period }}</div>
+
+                    <div v-if="programData.period && programData.period !== '—'" class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <Calendar class="h-4 w-4 text-gray-500" />
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Period</div>
+                            <div class="font-semibold text-gray-900 mt-0.5">{{ programData.period }}</div>
+                        </div>
                     </div>
-                    <div v-if="programData.time && programData.time !== '—'">
-                        <div class="text-gray-500">Time:</div>
-                        <div class="font-medium text-gray-900">{{ programData.time }}</div>
+
+                    <div v-if="programData.time && programData.time !== '—'" class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <Clock class="h-4 w-4 text-gray-500" />
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Time</div>
+                            <div class="font-semibold text-gray-900 mt-0.5">{{ programData.time }}</div>
+                        </div>
                     </div>
-                    <div v-if="programData.location && programData.location !== '—'">
-                        <div class="text-gray-500">Location:</div>
-                        <div class="font-medium text-gray-900">{{ programData.location }}</div>
+
+                    <div v-if="programData.location && programData.location !== '—'" class="flex items-start gap-3">
+                        <div class="rounded-lg bg-gray-50 p-2">
+                            <MapPin class="h-4 w-4 text-gray-500" />
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Location</div>
+                            <div class="font-semibold text-gray-900 mt-0.5">{{ programData.location }}</div>
+                        </div>
                     </div>
-                    <div v-if="programData.trainer && programData.trainer !== '—'">
-                        <div class="text-gray-500">Trainer:</div>
-                        <div class="font-medium text-gray-900">{{ programData.trainer }}</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-500">Status:</div>
-                        <div class="flex items-center gap-1">
-                            <div :class="['h-2 w-2 rounded-full', statusStyles.dot]"></div>
-                            <span :class="['font-medium', statusStyles.class]">{{ statusStyles.text }}</span>
+
+                    <div class="flex items-start gap-3">
+                        <div class="rounded-lg p-2" :class="statusStyles.dot.replace('bg-', 'bg-opacity-20 bg-').replace('-500', '-100')">
+                            <div :class="['h-4 w-4 rounded-full', statusStyles.dot]"></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-gray-500 text-xs uppercase tracking-wide">Status</div>
+                            <div class="font-semibold mt-0.5" :class="statusStyles.class">{{ statusStyles.text }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Instructor -->
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <h3 class="mb-4 font-semibold text-gray-900">Instructor</h3>
+            <div class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <User class="h-5 w-5 text-teal-600" />
+                    Instructor
+                </h3>
 
-                <div class="flex items-start gap-3">
-                    <img src="https://ui-avatars.com/api/?name=สบาย+โจ๊ก&background=0D8ABC&color=fff" alt="Instructor" class="h-16 w-16 rounded-full" />
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-900">สบาย โจ๊ก</div>
-                        <div class="mb-2 flex items-center gap-1">
-                            <span class="text-lg font-semibold text-gray-900">4.8</span>
-                            <svg class="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                            </svg>
+                <div v-if="programData.trainer && programData.trainer !== '—'" class="space-y-4">
+                    <div class="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100">
+                        <img :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(programData.trainer)}&background=0D8ABC&color=fff&size=128`" :alt="programData.trainer" class="h-14 w-14 rounded-full shadow-sm" />
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-gray-900 truncate">{{ programData.trainer }}</div>
+                            <div v-if="programData.trainer_email" class="text-sm text-gray-600 truncate">{{ programData.trainer_email }}</div>
                         </div>
-                        <div class="text-xs text-gray-500">(16,124 reviews)</div>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
-                        <span class="text-sm font-semibold text-teal-700">85%</span>
                     </div>
                 </div>
-                <div class="mt-2 text-xs text-gray-500">Positive</div>
+                <div v-else class="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div class="rounded-full bg-gray-200 p-2">
+                        <User class="h-4 w-4 text-gray-400" />
+                    </div>
+                    <span class="text-sm text-gray-500">No instructor assigned</span>
+                </div>
             </div>
 
-            <!-- Course URL -->
-            <div class="rounded-lg bg-white p-6 shadow-sm">
-                <h3 class="mb-4 font-semibold text-gray-900">Course URL</h3>
+            <!-- Course Details -->
+            <div class="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Course Details
+                </h3>
 
-                <div class="mb-4 flex items-center gap-2 rounded-lg bg-gray-50 p-3">
-                    <input type="text" value="https://example.com/courses/ux*de" readonly class="flex-1 border-0 bg-transparent text-sm text-gray-600 focus:ring-0" />
-                    <button class="text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3">
-                    <button class="flex flex-col items-center gap-1 rounded-lg border border-gray-200 p-3 hover:bg-gray-50">
-                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                        </svg>
-                        <span class="text-xs text-gray-600">Share</span>
-                    </button>
-                    <button class="flex flex-col items-center gap-1 rounded-lg border border-gray-200 p-3 hover:bg-gray-50">
-                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                        <span class="text-xs text-gray-600">Email</span>
-                    </button>
-                    <button class="flex flex-col items-center gap-1 rounded-lg border border-gray-200 p-3 hover:bg-gray-50">
-                        <svg class="h-5 w-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                        </svg>
-                        <span class="text-xs text-gray-600">QR Code</span>
-                    </button>
+                <div class="space-y-3 text-sm">
+                    <div v-if="props.program?.code" class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <span class="text-gray-500">Course Code</span>
+                        <span class="font-mono font-semibold text-gray-900">{{ props.program.code }}</span>
+                    </div>
+                    <div v-if="props.program?.created_at" class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <span class="text-gray-500">Created</span>
+                        <span class="font-semibold text-gray-900">{{ props.program.created_at }}</span>
+                    </div>
                 </div>
             </div>
         </div>

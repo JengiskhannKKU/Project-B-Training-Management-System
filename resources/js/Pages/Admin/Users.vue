@@ -52,9 +52,29 @@ const editingUser = ref(null);
 const editForm = ref({
     name: "",
     email: "",
-    phone: "",
     role: "",
+    status: "",
+    // Profile Fields
+    prefix: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    date_of_birth: "",
+    gender: "",
+    sub_category: "",
+    faculty: "",
+    major: "",
+    student_id: "",
+    degree_level: "",
+    year_of_study: "",
+    personnel_id: "",
+    organization: "",
     department: "",
+    job_position: "",
+    employment_status: "",
+    personnel_type: "",
+    category: "",
+    bio: "",
 });
 
 // Fetch users from API
@@ -69,15 +89,59 @@ const fetchUsers = async () => {
 
         // Transform API data to match component structure
         const apiUsers = response.data?.data?.data || response.data?.data || [];
-        users.value = apiUsers.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            contact: user.profile?.phone || user.phone || '-',
-            department: user.profile?.department || user.department || '-',
-            role: user.role?.name ? capitalizeRole(user.role.name) : 'Trainee',
-            status: user.status === 'active' ? 'Active' : 'Inactive',
-        }));
+        users.value = apiUsers.map(user => {
+            const rawRole = user.role?.name || 'trainee';
+            // Check if role is effectively a student/trainee
+            const isStudent = rawRole === 'student' || rawRole === 'trainee';
+
+            // Determine Category and Type
+            let category = user.profile?.category;
+            let type = 'External'; // Default
+
+            // If category is set in DB
+            if (category) {
+                if (['Student', 'Personnel'].includes(category)) {
+                    type = 'Internal';
+                } else {
+                    type = 'External';
+                }
+            } else {
+                // Fallback inference
+                if (user.profile?.faculty || user.profile?.student_id || user.profile?.personnel_id) {
+                    type = 'Internal';
+                    category = user.profile?.student_id ? 'Student' : 'Personnel';
+                }
+            }
+
+            return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                contact: user.profile?.phone || user.phone || '-',
+                
+                // Context fields
+                type: type,
+                category: category || (isStudent ? 'Student' : 'Outsider'),
+                is_student: isStudent,
+                student_id: user.profile?.student_id,
+                personnel_id: user.profile?.personnel_id,
+                faculty: user.profile?.faculty,
+                major: user.profile?.major,
+                job_position: user.profile?.job_position,
+                organization: user.profile?.organization,
+                real_department: user.profile?.department, // Actual department field
+                joined_at: user.created_at,
+
+                // Full Profile for Editing
+                profile: user.profile || {},
+
+                // For Filter/Sort compatibility (Polymorphic 'Department' column)
+                department: user.profile?.department || user.profile?.faculty || '-',
+                
+                role: user.role?.name ? capitalizeRole(user.role.name) : 'Trainee',
+                status: user.status === 'active' ? 'Active' : 'Inactive',
+            };
+        });
     } catch (error) {
         console.error('Error fetching users:', error);
         toast.error('Unable to load users');
@@ -127,6 +191,10 @@ const trainersCount = computed(() => {
     return users.value.filter((user) => user.role === "Trainer").length;
 });
 
+const adminsCount = computed(() => {
+    return users.value.filter((user) => user.role === "Admin").length;
+});
+
 // Filtered and sorted users
 const filteredUsers = computed(() => {
     let result = users.value;
@@ -136,6 +204,8 @@ const filteredUsers = computed(() => {
         result = result.filter((user) => user.role === "Trainee");
     } else if (activeTab.value === "trainers") {
         result = result.filter((user) => user.role === "Trainer");
+    } else if (activeTab.value === "admins") {
+        result = result.filter((user) => user.role === "Admin");
     }
 
     // Filter by search query
@@ -146,7 +216,11 @@ const filteredUsers = computed(() => {
                 user.name.toLowerCase().includes(query) ||
                 user.email.toLowerCase().includes(query) ||
                 user.contact.toLowerCase().includes(query) ||
-                user.department.toLowerCase().includes(query)
+                user.department.toLowerCase().includes(query) ||
+                (user.student_id && user.student_id.toLowerCase().includes(query)) ||
+                (user.job_position && user.job_position.toLowerCase().includes(query)) ||
+                (user.major && user.major.toLowerCase().includes(query)) ||
+                (user.organization && user.organization.toLowerCase().includes(query))
         );
     }
 
@@ -252,12 +326,13 @@ const handleSort = ({ column, direction }) => {
 
 // Export to CSV
 const exportToCSV = () => {
-    const headers = ["ID", "Name", "Email", "Contact", "Department", "Status"];
+    const headers = ["ID", "Name", "Email", "Contact", "Type", "Department", "Status"];
     const csvData = filteredUsers.value.map((user) => [
         user.id,
         user.name,
         user.email,
         user.contact,
+        user.type,
         user.department,
         user.status,
     ]);
@@ -291,12 +366,13 @@ const exportToPDF = () => {
         doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
         // Prepare table data with null-safe values
-        const headers = [["ID", "Name", "Email", "Contact", "Department", "Status"]];
+        const headers = [["ID", "Name", "Email", "Contact", "Type", "Department", "Status"]];
         const data = filteredUsers.value.map((user) => [
             user.id ?? '',
             user.name ?? '',
             user.email ?? '',
             user.contact ?? '',
+            user.type ?? '',
             user.department ?? '',
             user.status ?? '',
         ]);
@@ -375,16 +451,47 @@ const changeUserStatus = async (userId, newStatus) => {
     }
 };
 
+// Format date for input (YYYY-MM-DD)
+const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    // Handle both ISO string and simple date string
+    return dateString.split('T')[0];
+};
+
 // Open edit modal
 const openEditModal = (user) => {
     editingUser.value = user;
+    
+    // Map user and profile data to edit form
     editForm.value = {
         name: user.name,
         email: user.email,
-        phone: user.contact,
         role: user.role,
-        department: user.department,
+        status: user.status || 'Active', // Ensure status is mapped
+        
+        // Profile fields
+        prefix: user.profile?.prefix || "",
+        first_name: user.profile?.first_name || "",
+        last_name: user.profile?.last_name || "",
+        phone: user.profile?.phone || "",
+        date_of_birth: formatDateForInput(user.profile?.date_of_birth),
+        gender: user.profile?.gender || "",
+        sub_category: user.profile?.sub_category || "",
+        faculty: user.profile?.faculty || "",
+        major: user.profile?.major || "",
+        student_id: user.profile?.student_id || "",
+        degree_level: user.profile?.degree_level || "",
+        year_of_study: user.profile?.year_of_study || "",
+        personnel_id: user.profile?.personnel_id || "",
+        organization: user.profile?.organization || "",
+        department: user.profile?.department || "",
+        job_position: user.profile?.job_position || "",
+        employment_status: user.profile?.employment_status || "",
+        personnel_type: user.profile?.personnel_type || "",
+        category: user.profile?.category || "",
+        bio: user.profile?.bio || "",
     };
+    
     showEditModal.value = true;
     // Update URL without reloading
     router.visit(`/admin/users/${user.id}/edit`, {
@@ -398,12 +505,32 @@ const openEditModal = (user) => {
 const closeEditModal = () => {
     showEditModal.value = false;
     editingUser.value = null;
+    // Reset form
     editForm.value = {
         name: "",
         email: "",
-        phone: "",
         role: "",
+        status: "",
+        prefix: "",
+        first_name: "",
+        last_name: "",
+        phone: "",
+        date_of_birth: "",
+        gender: "",
+        sub_category: "",
+        faculty: "",
+        major: "",
+        student_id: "",
+        degree_level: "",
+        year_of_study: "",
+        personnel_id: "",
+        organization: "",
         department: "",
+        job_position: "",
+        employment_status: "",
+        personnel_type: "",
+        category: "",
+        bio: "",
     };
     // Update URL back to users page
     router.visit("/admin/users", {
@@ -424,24 +551,64 @@ const saveUser = async () => {
             'Trainer': 'trainer',
             'Trainee': 'trainee'
         };
+        
+        const statusMapping = {
+            'Active': 'active',
+            'Inactive': 'inactive'
+        };
 
         const payload = {
-            name: editForm.value.name,
-            email: editForm.value.email,
+            ...editForm.value,
             role: roleMapping[editForm.value.role] || editForm.value.role.toLowerCase(),
+            status: statusMapping[editForm.value.status] || editForm.value.status.toLowerCase(),
         };
 
         // Call API to update user
-        await axios.put(`/api/admin/users/${editingUser.value.id}`, payload);
+        const response = await axios.put(`/api/admin/users/${editingUser.value.id}`, payload);
+        const updatedUser = response.data?.data;
 
         // Update local state after successful API call
-        const user = users.value.find((u) => u.id === editingUser.value.id);
-        if (user) {
-            user.name = editForm.value.name;
-            user.email = editForm.value.email;
-            user.contact = editForm.value.phone;
-            user.role = editForm.value.role;
-            user.department = editForm.value.department;
+        const userIndex = users.value.findIndex((u) => u.id === editingUser.value.id);
+        if (userIndex !== -1 && updatedUser) {
+            // Re-transform the updated user to match the component structure
+            const rawRole = updatedUser.role?.name || 'trainee';
+            const isStudent = rawRole === 'student' || rawRole === 'trainee';
+            let category = updatedUser.profile?.category;
+            let type = 'External';
+            if (category) {
+                if (['Student', 'Personnel'].includes(category)) {
+                    type = 'Internal';
+                } else {
+                    type = 'External';
+                }
+            } else {
+                if (updatedUser.profile?.faculty || updatedUser.profile?.student_id || updatedUser.profile?.personnel_id) {
+                    type = 'Internal';
+                    category = updatedUser.profile?.student_id ? 'Student' : 'Personnel';
+                }
+            }
+
+            users.value[userIndex] = {
+                id: updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                contact: updatedUser.profile?.phone || updatedUser.phone || '-',
+                type: type,
+                category: category || (isStudent ? 'Student' : 'Outsider'),
+                is_student: isStudent,
+                student_id: updatedUser.profile?.student_id,
+                personnel_id: updatedUser.profile?.personnel_id,
+                faculty: updatedUser.profile?.faculty,
+                major: updatedUser.profile?.major,
+                job_position: updatedUser.profile?.job_position,
+                organization: updatedUser.profile?.organization,
+                real_department: updatedUser.profile?.department,
+                joined_at: updatedUser.created_at,
+                profile: updatedUser.profile || {},
+                department: updatedUser.profile?.department || updatedUser.profile?.faculty || '-',
+                role: updatedUser.role?.name ? capitalizeRole(updatedUser.role.name) : 'Trainee',
+                status: updatedUser.status === 'active' ? 'Active' : 'Inactive',
+            };
         }
 
         toast.success('User updated successfully');
@@ -460,15 +627,7 @@ watch(
         if (newId) {
             const user = users.value.find((u) => u.id === parseInt(newId));
             if (user) {
-                editingUser.value = user;
-                editForm.value = {
-                    name: user.name,
-                    email: user.email,
-                    phone: user.contact,
-                    role: user.role,
-                    department: user.department,
-                };
-                showEditModal.value = true;
+                openEditModal(user);
             }
         }
     },
@@ -505,8 +664,8 @@ onMounted(() => {
                     <div
                         class="absolute top-1 bottom-1 bg-white rounded-[10px] shadow-sm transition-all duration-300 ease-in-out"
                         :style="{
-                            left: activeTab === 'trainees' ? '4px' : '50%',
-                            right: activeTab === 'trainees' ? '50%' : '4px',
+                            left: activeTab === 'trainees' ? '4px' : activeTab === 'trainers' ? '33.33%' : '66.66%',
+                            width: activeTab === 'trainees' || activeTab === 'trainers' || activeTab === 'admins' ? '33.33%' : '33.33%',
                         }"
                     ></div>
 
@@ -533,6 +692,17 @@ onMounted(() => {
                     >
                         {{ $t('Trainers') }}
                     </button>
+                    <button
+                        :class="[
+                            'px-6 py-2 rounded-md font-medium transition-colors duration-300 relative z-10 flex-1',
+                            activeTab === 'admins'
+                                ? 'text-[#2f837d]'
+                                : 'text-[#64748b] hover:text-gray-900',
+                        ]"
+                        @click="activeTab = 'admins'"
+                    >
+                        {{ $t('Admins') }}
+                    </button>
                 </div>
             </div>
 
@@ -546,8 +716,11 @@ onMounted(() => {
                         <template v-if="activeTab === 'trainees'">
                             Trainees ({{ traineesCount }})
                         </template>
-                        <template v-else>
+                        <template v-else-if="activeTab === 'trainers'">
                             Trainers ({{ trainersCount }})
+                        </template>
+                        <template v-else>
+                            Admins ({{ adminsCount }})
                         </template>
                     </h2>
                 </div>
@@ -692,15 +865,49 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th
+                                        @click="sort('type')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            {{ $t('Type') }}
+                                            <ChevronUp
+                                                v-if="sortColumn === 'type'"
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
                                         @click="sort('department')"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                                     >
                                         <div class="flex items-center gap-2">
-                                            {{ $t('Department') }}
+                                            {{ activeTab === 'trainees' ? 'Education / Affiliation' : 'Position / Department' }}
                                             <ChevronUp
                                                 v-if="
                                                     sortColumn === 'department'
                                                 "
+                                                class="h-4 w-4"
+                                                :class="{
+                                                    'rotate-180':
+                                                        sortDirection ===
+                                                        'desc',
+                                                }"
+                                            />
+                                        </div>
+                                    </th>
+                                    <th
+                                        @click="sort('joined_at')"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            {{ $t('Joined') }}
+                                            <ChevronUp
+                                                v-if="sortColumn === 'joined_at'"
                                                 class="h-4 w-4"
                                                 :class="{
                                                     'rotate-180':
@@ -773,23 +980,73 @@ onMounted(() => {
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                                     >
-                                        <div>
-                                            <div class="font-medium">
-                                                {{ user.email }}
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-12 italic">Email:</span>
+                                                <span class="font-medium truncate max-w-[180px]" :title="user.email">{{ user.email }}</span>
                                             </div>
-                                            <div class="text-gray-500">
-                                                {{
-                                                    formatPhoneNumber(
-                                                        user.contact
-                                                    )
-                                                }}
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-12 italic">Phone:</span>
+                                                <span class="text-gray-600">{{ formatPhoneNumber(user.contact) || '-' }}</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span>
-                                            {{ user.department }}
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                            :class="user.type === 'Internal' ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800'"
+                                        >
+                                            {{ user.type }}
                                         </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <!-- Internal User View -->
+                                        <div v-if="user.type === 'Internal'" class="space-y-1">
+                                            <!-- Student -->
+                                            <template v-if="user.category === 'Student'">
+                                                <div v-if="user.student_id" class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
+                                                    <span class="text-xs font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded leading-none">{{ user.student_id }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Faculty:</span>
+                                                    <span class="text-sm text-gray-900">{{ user.faculty || '-' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Major:</span>
+                                                    <span class="text-xs text-gray-500">{{ user.major || '-' }}</span>
+                                                </div>
+                                            </template>
+                                            <!-- Personnel -->
+                                            <template v-else>
+                                                 <div v-if="user.personnel_id" class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">ID:</span>
+                                                    <span class="text-xs font-mono bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded leading-none">{{ user.personnel_id }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Dept:</span>
+                                                    <span class="text-sm text-gray-900">{{ user.real_department || '-' }}</span>
+                                                </div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
+                                                    <span class="text-xs text-gray-500">{{ user.job_position || '-' }}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <!-- External User View -->
+                                        <div v-else class="space-y-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Org:</span>
+                                                <span class="text-sm font-medium text-gray-900">{{ user.organization || '-' }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-bold text-gray-400 uppercase w-14 italic">Position:</span>
+                                                <span class="text-xs text-gray-600">{{ user.job_position || '-' }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ user.joined_at ? new Date(user.joined_at).toLocaleDateString() : '-' }}
                                     </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap"

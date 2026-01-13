@@ -27,7 +27,7 @@ class Course extends Model
         'owner_id',
     ];
 
-    protected $appends = ['is_complete', 'is_incomplete'];
+    protected $appends = ['is_complete', 'is_incomplete', 'sessions_count', 'enrolled_count'];
 
     /**
      * Get the route key for the model.
@@ -86,5 +86,20 @@ class Course extends Model
     public function getIsIncompleteAttribute(): bool
     {
         return !$this->is_complete;
+    }
+
+    public function getSessionsCountAttribute(): int
+    {
+        return $this->sessions()->count();
+    }
+
+    public function getEnrolledCountAttribute(): int
+    {
+        return $this->sessions()
+            ->withCount(['enrollments' => function ($query) {
+                $query->whereIn('status', ['pending', 'confirmed', 'completed']);
+            }])
+            ->get()
+            ->sum('enrollments_count');
     }
 }

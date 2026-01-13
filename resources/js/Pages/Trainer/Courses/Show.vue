@@ -24,12 +24,15 @@ const props = defineProps<{
         time: string;
         location: string;
         trainer: string;
+        trainer_email?: string;
         certificated: string;
         status: string;
         description: string;
         image_url: string | null;
         approval_status?: string;
         duration_hours?: number;
+        sessions_count?: number;
+        created_at?: string;
     };
 }>();
 type ProgramData = typeof props.program & { approval_status?: string; duration_hours?: number };
@@ -127,57 +130,9 @@ const categories = ['Design', 'Development', 'Marketing', 'Business'];
 // Sessions data
 const sessions = ref<Array<any>>([]);
 
-// Mock trainees data
-const trainees = ref([
-    {
-        id: 1,
-        name: 'Natthiya Chakasw',
-        email: 'Natthiya.c@kumail.com',
-        employee_id: 'TRN-001',
-        enrolled_date: 'May 15',
-        department: 'Computer Engineering',
-        role: 'Students',
-        certificate_status: 'Approved',
-        avatar: 'https://ui-avatars.com/api/?name=Natthiya+Chakasw&background=0D8ABC&color=fff',
-        session_id: 1,
-    },
-    {
-        id: 2,
-        name: 'Manee LoveU',
-        email: 'Natthiya.c@kumail.com',
-        employee_id: 'TRN-002',
-        enrolled_date: 'May 12',
-        department: 'Computer Engineering',
-        role: 'Students',
-        certificate_status: 'Pending',
-        avatar: 'https://ui-avatars.com/api/?name=Manee+LoveU&background=0D8ABC&color=fff',
-        session_id: 2,
-    },
-    {
-        id: 3,
-        name: 'Hardtosay yes',
-        email: 'Kewsee@kumail.com',
-        employee_id: 'TRN-003',
-        enrolled_date: 'May 13',
-        department: 'Computer Engineering',
-        role: 'Students',
-        certificate_status: 'Not Eligible',
-        avatar: 'https://ui-avatars.com/api/?name=Hardtosay+yes&background=0D8ABC&color=fff',
-        session_id: 3,
-    },
-    {
-        id: 4,
-        name: 'Someone like you',
-        email: 'Kewsee@kumail.com',
-        employee_id: 'TRN-004',
-        enrolled_date: 'May 14',
-        department: 'Computer Engineering',
-        role: 'Students',
-        certificate_status: 'Pending',
-        avatar: 'https://ui-avatars.com/api/?name=Someone+like+you&background=0D8ABC&color=fff',
-        session_id: 4,
-    },
-]);
+// Trainees data - fetched from API
+const trainees = ref<Array<any>>([]);
+const isLoadingTrainees = ref(false);
 
 // Create course data for the modal
 const courseDataForModal = computed(() => ({
@@ -453,9 +408,23 @@ const removeTrainee = () => {
 };
 
 const mapSessionForDisplay = (session: any) => {
-    const start = session.start_time ? session.start_time.slice(0, 5) : '--:--';
-    const end = session.end_time ? session.end_time.slice(0, 5) : '--:--';
-    const capacityTaken = session.active_enrollments_count ?? 0;
+    // Extract time from start_at and end_at datetime fields
+    let start = '--:--';
+    let end = '--:--';
+    let sessionDate = '';
+
+    if (session.start_at) {
+        const startDate = new Date(session.start_at);
+        start = startDate.toTimeString().slice(0, 5);
+        sessionDate = startDate.toISOString().split('T')[0];
+    }
+
+    if (session.end_at) {
+        const endDate = new Date(session.end_at);
+        end = endDate.toTimeString().slice(0, 5);
+    }
+
+    const capacityTaken = session.active_enrollments_count ?? session.enrollments_count ?? 0;
     const capacityTotal = session.capacity ?? 0;
     const capacityTotalNumber = Number(capacityTotal);
     const isUnlimited = !Number.isNaN(capacityTotalNumber) && capacityTotalNumber >= 9999;
@@ -464,7 +433,7 @@ const mapSessionForDisplay = (session: any) => {
     return {
         id: session.id,
         display_id: session.display_id || `Se-${String(session.id).padStart(3, '0')}`,
-        date: session.start_date || '',
+        date: sessionDate,
         time: `${start} - ${end}`,
         session: session.title || 'Session',
         location: session.location || '',
@@ -560,10 +529,65 @@ const fetchSessions = async () => {
             ...apiSessions.map(mapSessionForDisplay),
             ...sessionRequestRows.value,
         ];
+        // Fetch enrollments after sessions are loaded
+        await fetchEnrollments();
     } catch (error) {
         handleApiError(error, 'Unable to load sessions.');
     } finally {
         isLoadingSessions.value = false;
+    }
+};
+
+// Fetch enrollments for all sessions of this course
+const fetchEnrollments = async () => {
+    if (sessions.value.length === 0) {
+        trainees.value = [];
+        return;
+    }
+
+    isLoadingTrainees.value = true;
+    try {
+        // Fetch enrollments for each session in parallel
+        const enrollmentPromises = sessions.value
+            .filter(session => session.id && typeof session.id === 'number') // Only fetch for actual sessions (not pending session requests)
+            .map(async (session) => {
+                try {
+                    const { data } = await axios.get(`/api/sessions/${session.id}/enrollments-for-attendance`);
+                    const enrollments = data?.data || data || [];
+                    // Transform API data to match trainee structure
+                    return enrollments.map((enrollment: any) => {
+                        const user = enrollment.user || {};
+                        const profile = user.profile || {};
+                        // Use student_id for students, personnel_id for staff, or fallback to user ID
+                        const employeeId = profile.student_id || profile.personnel_id || `USR-${user.id}`;
+
+                        return {
+                            id: enrollment.id,
+                            name: user.name || 'Unknown',
+                            email: user.email || '',
+                            employee_id: employeeId,
+                            enrolled_date: enrollment.enrolled_at ? new Date(enrollment.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+                            department: profile.department || profile.organization || '—',
+                            role: user.role?.name || 'Student',
+                            attendance_percent: enrollment.attendance_percent || 0,
+                            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Unknown')}&background=0D8ABC&color=fff`,
+                            session_id: session.id,
+                            enrollment_id: enrollment.id,
+                        };
+                    });
+                } catch (error) {
+                    console.log(`[DEBUG] Failed to fetch enrollments for session ${session.id}:`, error);
+                    return [];
+                }
+            });
+
+        const allTrainees = await Promise.all(enrollmentPromises);
+        trainees.value = allTrainees.flat();
+    } catch (error) {
+        handleApiError(error, 'Unable to load trainees.');
+        trainees.value = [];
+    } finally {
+        isLoadingTrainees.value = false;
     }
 };
 
@@ -638,7 +662,7 @@ const fetchProgram = async () => {
         // If not, try to load from courses table as a fallback (in case URL has actual course ID)
         if (!program.value && !requestFallback.value) {
             try {
-                const { data } = await axios.get(`/api/courses/${props.program.id}`);
+                const { data } = await axios.get(`/api/courses/${props.program.code}`);
                 program.value = (data?.data || data || props.program) as ProgramData;
             } catch (error: any) {
                 // Course not found - this is expected for pending requests
@@ -680,12 +704,15 @@ const displayProgram = computed<ProgramData>(() => {
             time: payload.time || '',
             location: payload.location || '',
             trainer: payload.trainer || '',
+            trainer_email: payload.trainer_email || '',
             certificated: payload.certificated || '',
             status: payload.status || 'pending',
             description: payload.description || payload.full_description || '',
             image_url: payload.image_url || null,
             approval_status: requestFallback.value.status || 'pending',
             duration_hours: payload.duration_hours || 0,
+            sessions_count: payload.sessions_count || 0,
+            created_at: payload.created_at || '',
         } as ProgramData;
     }
     return (props.program || {}) as ProgramData;
@@ -722,30 +749,6 @@ const resubmitProgram = async () => {
     } catch (error) {
         handleApiError(error, 'Unable to resubmit program.');
     }
-};
-
-
-const getCertificateSelectColor = (status: string) => {
-    const colors: Record<string, string> = {
-        'Approved': 'bg-teal-50 text-teal-700 border-teal-300',
-        'Pending': 'bg-gray-50 text-gray-700 border-gray-300',
-        'Not Eligible': 'bg-red-50 text-red-700 border-red-300',
-    };
-    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-300';
-};
-
-const updateCertificateStatus = (trainee: any) => {
-    // Show success toast
-    toast.success(`Certificate status updated to ${trainee.certificate_status}!`);
-};
-
-const getCertificateStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-        'Approved': 'bg-teal-100 text-teal-700 border-teal-200',
-        'Pending': 'bg-gray-100 text-gray-700 border-gray-200',
-        'Not Eligible': 'bg-red-100 text-red-700 border-red-200',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
 };
 </script>
 
@@ -880,10 +883,8 @@ const getCertificateStatusColor = (status: string) => {
                 :trainees="trainees"
                 :sessions="sessions"
                 :is-admin="isAdmin"
-                :get-certificate-select-color="getCertificateSelectColor"
                 @add-trainee="handleAddTrainee"
                 @remove-trainee="handleRemoveTrainee"
-                @update-certificate="updateCertificateStatus"
             />
         </div>
     </div>

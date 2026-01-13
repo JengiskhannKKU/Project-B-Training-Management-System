@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Star, GraduationCap, Gem, CalendarClock, Clock, MapPin, Pencil, Trash2 } from 'lucide-vue-next';
-import { formatDate, formatTime } from '@/utils/dateFormatter';
+import { GraduationCap, BookOpen, Users, Pencil, Trash2 } from 'lucide-vue-next';
 
 interface CourseCardProps {
     id: number;
+    code?: string;
     name: string;
+    description?: string;
+    category?: string;
     image_url: string;
-    rating?: number;
     level?: string;
-    trainees_count?: number;
-    price?: string;
-    date?: string;
-    time?: string;
-    location?: string;
+    sessions_count?: number;
+    enrolled_count?: number;
+    max_participants?: number;
     href?: string;
     showActions?: boolean;
     isIncomplete?: boolean;
@@ -45,7 +44,7 @@ const formatLevel = (level: string) => {
 };
 
 const getLevelColor = (level: string) => {
-    const normalized = level.toLowerCase();
+    const normalized = level?.toLowerCase() || 'beginner';
     const colors = {
         beginner: 'bg-emerald-100 text-emerald-700',
         intermediate: 'bg-amber-100 text-amber-700',
@@ -54,19 +53,23 @@ const getLevelColor = (level: string) => {
     return colors[normalized as keyof typeof colors] || 'bg-gray-100 text-gray-700';
 };
 
-const getStarType = (index: number, rating: number) => {
-    if (rating >= index) {
-        return 'fill'; // Filled star
-    } else if (rating > index - 1) {
-        return 'half'; // Partial star
-    }
-    return 'empty'; // Empty star
+const getCategoryColor = (category: string) => {
+    const normalized = category?.toLowerCase() || '';
+    const colors = {
+        it: 'bg-blue-100 text-blue-700',
+        management: 'bg-purple-100 text-purple-700',
+        design: 'bg-pink-100 text-pink-700',
+        marketing: 'bg-orange-100 text-orange-700',
+        business: 'bg-indigo-100 text-indigo-700',
+        'professional development': 'bg-teal-100 text-teal-700',
+    };
+    return colors[normalized as keyof typeof colors] || 'bg-gray-100 text-gray-700';
 };
 </script>
 
 <template>
     <Link
-        :href="href || `/trainer/courses/${id}`"
+        :href="href"
         class="flex flex-col h-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md cursor-pointer relative group"
     >
         <!-- Action Buttons (top-right corner, visible on hover) -->
@@ -87,6 +90,7 @@ const getStarType = (index: number, rating: number) => {
             </button>
         </div>
 
+        <!-- Thumbnail Image -->
         <div class="aspect-video w-full overflow-hidden flex-shrink-0 relative">
             <!-- Status Badges (top-left corner) -->
             <div v-if="isIncomplete || status === 'draft'" class="absolute top-2 left-2 z-10 flex gap-2">
@@ -113,57 +117,47 @@ const getStarType = (index: number, rating: number) => {
             </div>
         </div>
 
+        <!-- Course Information -->
         <div class="flex flex-col flex-grow p-4">
-            <div class="mb-2 flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-1">
-                    <div v-for="i in 5" :key="i" class="relative inline-block" style="width: 16px; height: 16px;">
-                        <Star
-                            :size="16"
-                            :class="getStarType(i, rating || 0) === 'empty' ? 'text-gray-300' : 'text-yellow-400'"
-                            class="absolute top-0 left-0"
-                        />
-                        <Star
-                            v-if="getStarType(i, rating || 0) !== 'empty'"
-                            :size="16"
-                            class="text-yellow-400 fill-yellow-400 absolute top-0 left-0"
-                            :style="getStarType(i, rating || 0) === 'half' ? 'clip-path: inset(0 50% 0 0);' : ''"
-                        />
-                    </div>
-                    <span class="ml-1 text-sm text-gray-600">({{ rating }})</span>
-                </div>
+            <!-- Course Code -->
+            <div v-if="code" class="mb-2">
+                <span class="text-xs font-mono text-gray-500">{{ code }}</span>
+            </div>
+
+            <!-- Category and Level Badges -->
+            <div class="mb-3 flex items-center gap-2 flex-wrap">
+                <span v-if="category" :class="getCategoryColor(category)" class="rounded px-2 py-1 text-xs font-medium">
+                    {{ category }}
+                </span>
                 <span :class="getLevelColor(level || 'Beginner')" class="rounded px-2 py-1 text-xs font-medium">
                     {{ formatLevel(level || 'Beginner') }}
                 </span>
             </div>
 
-            <h3 class="mb-3 text-lg font-semibold text-gray-900 line-clamp-2">
+            <!-- Course Title -->
+            <h3 class="mb-2 text-lg font-semibold text-gray-900 line-clamp-2">
                 {{ name }}
             </h3>
 
-            <div class="space-y-2 text-sm text-gray-600 mb-4 flex-grow">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <GraduationCap :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ trainees_count || 0 }} students</span>
-                    </div>
-                    <div class="flex items-center gap-2 min-w-0">
-                        <Gem :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ price || 'Free' }}</span>
-                    </div>
+            <!-- Description Preview -->
+            <p v-if="description" class="mb-4 text-sm text-gray-600 line-clamp-2">
+                {{ description }}
+            </p>
+
+            <!-- Course Stats -->
+            <div class="mt-auto space-y-2 text-sm text-gray-600">
+                <!-- Sessions Count -->
+                <div class="flex items-center gap-2">
+                    <BookOpen :size="16" class="text-[#2F837D] flex-shrink-0" />
+                    <span>
+                        {{ sessions_count || 0 }} {{ (sessions_count || 0) === 1 ? 'Session' : 'Sessions' }} Available
+                    </span>
                 </div>
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div v-if="date" class="flex items-center gap-2 min-w-0">
-                        <CalendarClock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatDate(date) || 'No date' }}</span>
-                    </div>
-                    <div v-if="time" class="flex items-center gap-2 min-w-0">
-                        <Clock :size="16" class="text-[#2F837D] flex-shrink-0" />
-                        <span class="truncate">{{ formatTime(time) || 'No time' }}</span>
-                    </div>
-                </div>
-                <div v-if="location" class="flex items-center gap-2">
-                    <MapPin :size="16" class="text-[#2F837D] flex-shrink-0" />
-                    <span class="truncate">{{ location || 'Online' }}</span>
+
+                <!-- Enrollment Count -->
+                <div class="flex items-center gap-2">
+                    <Users :size="16" class="text-[#2F837D] flex-shrink-0" />
+                    <span>{{ enrolled_count || 0 }}/{{ max_participants || 0 }} Participants</span>
                 </div>
             </div>
         </div>

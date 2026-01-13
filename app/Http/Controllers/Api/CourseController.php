@@ -26,7 +26,7 @@ class CourseController extends Controller
 
     /**
      * Get courses for the authenticated trainer.
-     * Returns courses created by the trainer (all statuses) and published courses where they are assigned as trainer.
+     * Returns all published courses (trainers can view all courses in the system).
      */
     public function trainerCourses(Request $request)
     {
@@ -36,16 +36,8 @@ class CourseController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Get courses created by trainer (all statuses) OR published courses where they are assigned
-        $courses = Course::where(function ($query) use ($user) {
-                $query->where('owner_id', $user->id)
-                      ->orWhere(function ($q) use ($user) {
-                          $q->where('status', 'published')
-                            ->whereHas('sessions', function ($sessionQuery) use ($user) {
-                                $sessionQuery->where('trainer_id', $user->id);
-                            });
-                      });
-            })
+        // Get all published courses (trainers can see all courses)
+        $courses = Course::where('status', 'published')
             ->withCount('sessions')
             ->latest()
             ->get()
@@ -54,18 +46,15 @@ class CourseController extends Controller
                     'id' => $course->id,
                     'code' => $course->code,
                     'name' => $course->title,
-                    'image_url' => $course->thumbnail_path,
-                    'rating' => null,
-                    'level' => $course->level,
-                    'trainees_count' => 0,
-                    'price' => 'Free',
-                    'date' => $course->created_at?->format('M j, Y'),
-                    'time' => '',
-                    'location' => 'Online',
+                    'description' => $course->description,
                     'category' => $course->category,
+                    'image_url' => $course->thumbnail_path,
+                    'level' => $course->level,
+                    'sessions_count' => $course->sessions_count,
+                    'enrolled_count' => $course->enrolled_count,
+                    'max_participants' => $course->max_participants,
                     'status' => $course->status,
                     'created_at' => $course->created_at,
-                    'sessions_count' => $course->sessions_count,
                 ];
             });
 
@@ -153,7 +142,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'sometimes|required|string|max:100',
+            'category' => 'nullable|string|max:100',
             'level' => 'nullable|string',
             'learning_outcomes' => 'nullable|string',
             'target_audience' => 'nullable|string',

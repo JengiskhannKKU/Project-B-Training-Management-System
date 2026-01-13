@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,8 +12,18 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // For SQLite: Temporarily disable foreign key constraints
+        $driver = Schema::getConnection()->getDriverName();
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
+        }
+
         // Drop old table if exists
         Schema::dropIfExists('programs');
+
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON');
+        }
 
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
@@ -29,9 +40,9 @@ return new class extends Migration
             $table->enum('status', ['draft', 'published', 'archived'])->default('published');
             $table->integer('min_participants')->default(1);
             $table->integer('max_participants')->default(20);
-            
+
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
-            
+
             $table->timestamps();
         });
     }

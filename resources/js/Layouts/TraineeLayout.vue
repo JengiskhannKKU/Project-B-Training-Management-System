@@ -11,6 +11,7 @@ import { trans as $t } from "laravel-vue-i18n";
 const showingSidebar = ref(true);
 const page = usePage();
 const snackbar = useSnackbar();
+const avatarTimestamp = ref(Date.now());
 
 // Notification Center state
 const notifications = ref([
@@ -177,7 +178,7 @@ const handleClearAllNotifications = () => {
                         <div class="relative">
                             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
                                 <img
-                                    :src="`/api/me/avatar?t=${Date.now()}`"
+                                    :src="`/api/me/avatar?t=${avatarTimestamp}`"
                                     alt="Avatar"
                                     class="w-full h-full object-cover"
                                     @error="$event.target.src = '/default-avatar.svg'"

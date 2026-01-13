@@ -20,19 +20,22 @@ import {
     Award,
     Eye,
     Download,
+    UserRoundCheck,
+    UserRoundX,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterDropdown from "@/Components/FilterDropdown.vue";
 import SortDropdown from "@/Components/SortDropdown.vue";
 import ConfirmationDialog from "@/Components/ConfirmationDialog.vue";
+import SessionDayTabs from "@/Components/SessionDayTabs.vue";
 import { formatDate, formatTime } from "@/utils/dateFormatter";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 // Props from route
 const props = defineProps({
-    courseId: {
-        type: [Number, String],
+    courseCode: {
+        type: String,
         required: true
     },
     sessionId: {
@@ -65,6 +68,9 @@ const sessionInfo = ref({
 });
 
 const trainees = ref([]);
+const sessionDays = ref([]);
+const selectedDay = ref(null);
+const attendanceMatrix = ref({});
 
 // Attendance summary from API
 const attendanceSummary = ref({
@@ -106,9 +112,14 @@ const departments = computed(() => {
     return [...new Set(trainees.value.map((trainee) => trainee.department))];
 });
 
-// Filtered and sorted trainees
+// Select a session day
+const selectDay = (day) => {
+    selectedDay.value = day;
+};
+
+// Filtered and sorted trainees (uses currentDayTrainees for multi-day)
 const filteredTrainees = computed(() => {
-    let result = trainees.value;
+    let result = showDayTabs.value ? currentDayTrainees.value : trainees.value;
 
     // Filter by search query
     if (searchQuery.value) {
@@ -201,6 +212,18 @@ const canGenerateCertificates = computed(() => {
     return sessionInfo.value?.trainer_id === user.id;
 });
 
+// Check if trainee is eligible for certificate (80% attendance)
+const isEligibleForCertificate = (trainee) => {
+    return trainee.attendancePercent >= 80;
+};
+
+// Get eligibility badge class
+const eligibilityBadgeClass = (trainee) => {
+    return isEligibleForCertificate(trainee)
+        ? 'bg-green-100 text-green-700'
+        : 'bg-red-100 text-red-700';
+};
+
 const sessionStatus = computed(() => (sessionInfo.value?.status || 'unknown').toLowerCase());
 const sessionStatusBadgeClass = computed(() => {
     switch (sessionStatus.value) {
@@ -217,6 +240,23 @@ const sessionStatusBadgeClass = computed(() => {
         default:
             return 'bg-gray-100 text-gray-700';
     }
+});
+
+// Multi-day support
+const showDayTabs = computed(() => sessionDays.value.length > 1);
+
+const currentDayTrainees = computed(() => {
+    if (!selectedDay.value) return trainees.value;
+
+    return trainees.value.map(trainee => {
+        const dayAttendance = attendanceMatrix.value[trainee.enrollmentId]?.[selectedDay.value.id] || {};
+
+        return {
+            ...trainee,
+            status: dayAttendance.status || 'not_marked',
+            checked: dayAttendance.status === 'present',
+        };
+    });
 });
 
 // Reset to first page when filters change
@@ -384,37 +424,40 @@ const fetchAttendanceSummary = async () => {
     }
 };
 
-// Fetch enrollments and attendance data
+// Fetch enrollments and attendance data (multi-day support)
 const fetchAttendanceData = async () => {
     isLoading.value = true;
     try {
-        const [enrollmentsResponse] = await Promise.all([
-            axios.get(`/api/sessions/${props.sessionId}/enrollments-for-attendance`),
-            fetchAttendanceSummary(),
-            fetchSessionInfo()
-        ]);
+        const response = await axios.get(`/api/sessions/${props.sessionId}/attendance-days`);
+        const data = response.data.data;
 
-        const enrollments = enrollmentsResponse.data.data;
+        sessionInfo.value = data.session;
+        sessionDays.value = data.session_days || [];
+        attendanceMatrix.value = data.attendance_matrix || {};
 
         // Map enrollments to trainees format
-        trainees.value = enrollments.map(enrollment => {
-            // Get the latest attendance record if exists
-            const latestAttendance = enrollment.attendances?.[0];
-            const status = latestAttendance?.status || 'absent';
-
+        trainees.value = (data.enrollments || []).map(enrollment => {
             return {
                 id: enrollment.id,
                 enrollmentId: enrollment.id,
+                userId: enrollment.user_id,
                 name: enrollment.user?.name || 'Unknown',
                 email: enrollment.user?.email || '',
                 contact: enrollment.user?.phone_number || '',
                 department: enrollment.user?.department || 'N/A',
-                status: status,
-                checked: status === 'present',
+                status: 'not_marked',
+                checked: false,
+                attendancePercent: enrollment.attendance_percent || 0,
             };
         });
 
-        await fetchCertificates();
+        // Auto-select today's day or first day
+        if (sessionDays.value.length > 0) {
+            const today = sessionDays.value.find(d => d.is_today);
+            selectedDay.value = today || sessionDays.value[0];
+        }
+
+        await Promise.all([fetchAttendanceSummary(), fetchCertificates()]);
     } catch (error) {
         console.error('Error fetching attendance data:', error);
         toast.error('Failed to load attendance data');
@@ -436,25 +479,40 @@ const fetchCertificates = async () => {
     }
 };
 
-// Auto-save attendance (silent, no toast on success)
+// Auto-save attendance (silent, no toast on success) - multi-day support
 const autoSaveAttendance = async () => {
+    if (!selectedDay.value) return;
+
     try {
-        // Prepare bulk attendance data - only include marked attendances (not 'not_marked')
-        const attendanceData = trainees.value
+        // Prepare bulk attendance data for the selected day
+        const records = currentDayTrainees.value
             .filter(trainee => trainee.status !== 'not_marked')
             .map(trainee => ({
-                enrollment_id: trainee.enrollmentId,
+                user_id: trainee.userId,
                 status: trainee.status,
+                note: trainee.note || null,
             }));
 
         // Check if there's anything to save
-        if (attendanceData.length === 0) {
+        if (records.length === 0) {
             return;
         }
 
-        // Send to API (silent save)
-        await axios.post(`/api/sessions/${props.sessionId}/attendances/bulk`, {
-            items: attendanceData
+        // Send to per-day API endpoint
+        await axios.post(`/api/session-days/${selectedDay.value.id}/attendance/bulk`, {
+            records
+        });
+
+        // Update attendance matrix with saved data
+        records.forEach(record => {
+            const trainee = trainees.value.find(t => t.userId === record.user_id);
+            if (trainee && attendanceMatrix.value[trainee.enrollmentId]) {
+                attendanceMatrix.value[trainee.enrollmentId][selectedDay.value.id] = {
+                    status: record.status,
+                    checked_at: new Date().toISOString(),
+                    note: record.note,
+                };
+            }
         });
 
         // Update last auto-saved time
@@ -626,6 +684,15 @@ onMounted(() => {
                 </div>
             </div>
 
+            <!-- Multi-Day Session Tabs -->
+            <div v-if="showDayTabs" class="bg-white rounded-[25px] shadow-sm border border-[#dfe5ef] overflow-hidden">
+                <SessionDayTabs
+                    :session-days="sessionDays"
+                    :selected-day-id="selectedDay?.id"
+                    @select="selectDay"
+                />
+            </div>
+
             <div class="bg-white rounded-[25px] shadow-sm p-6 border border-[#dfe5ef]">
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <h2 class="text-lg font-semibold text-gray-900">
@@ -775,7 +842,7 @@ onMounted(() => {
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th @click="sort('id')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             ID
                                             <ChevronUp v-if="sortColumn === 'id'" class="h-4 w-4" :class="{
@@ -785,7 +852,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('name')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Name
                                             <ChevronUp v-if="sortColumn === 'name'" class="h-4 w-4" :class="{
@@ -795,7 +862,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('contact')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Contact
                                             <ChevronUp v-if="sortColumn === 'contact'" class="h-4 w-4" :class="{
@@ -805,7 +872,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th @click="sort('department')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Department
                                             <ChevronUp v-if="sortColumn === 'department'" class="h-4 w-4" :class="{
@@ -814,8 +881,14 @@ onMounted(() => {
                                             }" />
                                         </div>
                                     </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Attendance %
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Eligibility
+                                    </th>
                                     <th @click="sort('status')"
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                                         <div class="flex items-center gap-2">
                                             Status
                                             <ChevronUp v-if="sortColumn === 'status'" class="h-4 w-4" :class="{
@@ -825,7 +898,7 @@ onMounted(() => {
                                         </div>
                                     </th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Check
                                     </th>
                                 </tr>
@@ -836,10 +909,10 @@ onMounted(() => {
                                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50',
                                     'hover:bg-gray-100'
                                 ]">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ trainee.id }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div
                                                 class="flex-shrink-0 h-10 w-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
@@ -855,15 +928,35 @@ onMounted(() => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ formatPhoneNumber(trainee.contact) }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <span>
                                             {{ trainee.department }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <span :class="[
+                                                'font-semibold',
+                                                trainee.attendancePercent >= 80 ? 'text-green-600' : 'text-red-600'
+                                            ]">
+                                                {{ trainee.attendancePercent }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span :class="[
+                                            'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                            eligibilityBadgeClass(trainee)
+                                        ]">
+                                            <component :is="isEligibleForCertificate(trainee) ? CheckCircle : XCircle"
+                                                :size="14" />
+                                            {{ isEligibleForCertificate(trainee) ? 'Eligible' : 'Not Eligible' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <span :class="[
                                             'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium',
                                             trainee.status === 'present'
@@ -875,7 +968,7 @@ onMounted(() => {
                                             {{ trainee.status === 'present' ? 'Present' : 'Absent' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <button @click="toggleAttendance(trainee.id)" :class="[
                                             'p-2 rounded-lg transition-all duration-200 hover:scale-110',
                                             trainee.checked

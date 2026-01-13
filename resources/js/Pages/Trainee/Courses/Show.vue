@@ -239,6 +239,38 @@ const seatsLabel = (session) => {
     }
     return `${seats.available} seats available`;
 };
+
+const instructors = computed(() => {
+    if (!sessions.value || sessions.value.length === 0) return [];
+
+    const map = new Map();
+
+    sessions.value.forEach(session => {
+        // Identify trainer by ID (if exists and is not null) or by Name
+        // Prefer ID if available to handle same-name issues, but fallback to name
+        const id = session.trainer_id;
+        const name = session.trainer_name || session.trainer?.name;
+        
+        if (!name) return; // Should not happen if data is consistent but safe to check
+
+        const key = id ? `id:${id}` : `name:${name}`;
+
+        if (!map.has(key)) {
+            map.set(key, {
+                id: id,
+                name: name,
+                photo: session.trainer_photo_url || "/default-avatar.svg",
+                sessions: []
+            });
+        }
+
+        const instructor = map.get(key);
+        instructor.sessions.push(session);
+    });
+
+    return Array.from(map.values());
+});
+
 onMounted(() => {
     fetchProgram();
     fetchSessions();
@@ -477,10 +509,34 @@ onMounted(() => {
                         </div>
 
                         <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">Instructor</h3>
-                                    <p class="text-sm text-gray-500">{{ program?.owner?.name || 'Unknown' }}</p>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Instructors</h3>
+                            
+                            <div v-if="instructors.length === 0" class="text-sm text-gray-500">
+                                No instructor assigned.
+                            </div>
+
+                            <div v-else class="space-y-5">
+                                <div v-for="instructor in instructors" :key="instructor.name" class="group">
+                                    <div class="flex items-center gap-3">
+                                        <img 
+                                            :src="instructor.photo" 
+                                            :alt="instructor.name" 
+                                            class="h-10 w-10 rounded-full object-cover border border-gray-100 bg-gray-50" 
+                                        />
+                                        <div class="font-medium text-gray-900 text-sm">{{ instructor.name }}</div>
+                                    </div>
+                                    
+                                    <div class="mt-2 ml-[3.25rem]">
+                                        <ul class="space-y-1">
+                                            <li v-for="session in instructor.sessions" :key="session.id" class="text-xs text-gray-500 flex items-start gap-1.5">
+                                                <span class="mt-1 h-1 w-1 rounded-full bg-gray-400"></span>
+                                                <span>
+                                                    <span class="text-gray-700">{{ session.title || 'Session' }}</span>
+                                                    <span class="text-gray-400 ml-1">({{ formattedDate(session.start_at || session.start_date) }})</span>
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>

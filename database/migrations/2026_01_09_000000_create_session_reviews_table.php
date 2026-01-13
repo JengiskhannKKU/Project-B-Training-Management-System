@@ -16,13 +16,13 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('enrollment_id')->unique()->constrained()->onDelete('cascade');
             $table->foreignId('session_id')->constrained('training_sessions')->onDelete('cascade');
-            $table->foreignId('program_id')->constrained()->onDelete('cascade');
+            $table->foreignId('course_id')->constrained()->onDelete('cascade');
             $table->unsignedTinyInteger('rating'); // 1-5
             $table->text('comment')->nullable();
             $table->timestamps();
 
-            // Index for quick program/session review lookups
-            $table->index(['program_id', 'created_at']);
+            // Index for quick course/session review lookups
+            $table->index(['course_id', 'created_at']);
             $table->index(['session_id', 'created_at']);
         });
     }
