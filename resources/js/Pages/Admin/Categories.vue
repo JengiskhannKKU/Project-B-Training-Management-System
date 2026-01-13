@@ -5,75 +5,16 @@ import AdminLayout from "@/Layouts/AdminLayout.vue";
 import CategoryCard from "@/Components/CategoryCard.vue";
 import CategoryModal from "@/Components/CategoryModal.vue";
 import { Plus } from "lucide-vue-next";
+import axios from "axios";
 
 const page = usePage();
 
-const categories = ref([
-    {
-        id: 1,
-        name: "Programming",
-        description: "Software development and programming courses",
-        courses: 12,
-        color: "blue",
-        icon: "Code",
+const props = defineProps({
+    categories: {
+        type: Array,
+        default: () => [],
     },
-    {
-        id: 2,
-        name: "Design",
-        description: "UI/UX and graphic design courses",
-        courses: 8,
-        color: "purple",
-        icon: "Palette",
-    },
-    {
-        id: 3,
-        name: "Business",
-        description: "Business management and leadership",
-        courses: 15,
-        color: "green",
-        icon: "Briefcase",
-    },
-    {
-        id: 4,
-        name: "Marketing",
-        description: "Digital marketing and SEO",
-        courses: 6,
-        color: "yellow",
-        icon: "TrendingUp",
-    },
-    {
-        id: 5,
-        name: "Data Science",
-        description: "Analytics, ML, and AI courses",
-        courses: 10,
-        color: "red",
-        icon: "Database",
-    },
-    {
-        id: 6,
-        name: "Photography",
-        description: "Photography and videography courses",
-        courses: 7,
-        color: "cyan",
-        icon: "Camera",
-    },
-    {
-        id: 7,
-        name: "Innovation",
-        description: "Creative thinking and innovation",
-        courses: 5,
-        color: "orange",
-        icon: "Lightbulb",
-    },
-    {
-        id: 8,
-        name: "Technology",
-        description: "General technology courses",
-        courses: 9,
-        color: "indigo",
-        icon: "Laptop",
-    },
-]);
+});
 
 // Detect modal state from current route
 const currentPath = computed(() => page.url);
@@ -95,7 +36,7 @@ const selectedCategory = computed(() => {
         const match = currentPath.value.match(/\/admin\/categories\/(\d+)\/edit/);
         if (match) {
             const categoryId = parseInt(match[1]);
-            return categories.value.find((c) => c.id === categoryId) || null;
+            return props.categories.find((c) => c.id === categoryId) || null;
         }
     }
     return null;
@@ -122,48 +63,60 @@ const handleCloseModal = () => {
     });
 };
 
-const handleSaveCategory = (categoryData) => {
-    if (modalMode.value === "add") {
-        // Add new category
-        const newId = Math.max(...categories.value.map((c) => c.id)) + 1;
-        categories.value.push({
-            id: newId,
-            ...categoryData,
-            description: "",
-            courses: 0,
+const handleSaveCategory = async (categoryData) => {
+    try {
+        if (modalMode.value === "add") {
+            // Create new category
+            await axios.post("/api/admin/categories", categoryData);
+        } else {
+            // Update existing category
+            await axios.put(
+                `/api/admin/categories/${selectedCategory.value.id}`,
+                categoryData
+            );
+        }
+        // Close modal and reload page to show updated data
+        router.visit(route("admin.categories"), {
+            preserveScroll: true,
         });
-    } else {
-        // Edit existing category
-        const index = categories.value.findIndex(
-            (c) => c.id === selectedCategory.value.id
-        );
-        if (index !== -1) {
-            categories.value[index] = {
-                ...categories.value[index],
-                ...categoryData,
-            };
+    } catch (error) {
+        console.error("Error saving category:", error);
+        if (error.response?.data?.errors) {
+            alert(
+                "Validation error: " +
+                Object.values(error.response.data.errors).flat().join(", ")
+            );
+        } else {
+            alert("Failed to save category. Please try again.");
         }
     }
-    // Close modal and clear URL after save
-    handleCloseModal();
 };
 
-const handleDeleteCategory = (category) => {
+const handleDeleteCategory = async (category) => {
     if (confirm(`Are you sure you want to delete "${category.name}"?`)) {
-        const index = categories.value.findIndex((c) => c.id === category.id);
-        if (index !== -1) {
-            categories.value.splice(index, 1);
+        try {
+            await axios.delete(`/api/admin/categories/${category.id}`);
+            // Reload page to show updated data
+            router.visit(route("admin.categories"), {
+                preserveScroll: true,
+            });
+        } catch (error) {
+            console.error("Error deleting category:", error);
+            if (error.response?.data?.message) {
+                alert(error.response.data.message);
+            } else {
+                alert("Failed to delete category. Please try again.");
+            }
         }
     }
 };
 </script>
 
 <template>
+
     <Head title="Categories" />
     <AdminLayout>
-        <div
-            class="flex flex-col h-full gap-6 bg-white border border-[#dfe5ef] rounded-[25px] p-6"
-        >
+        <div class="flex flex-col h-full gap-6 bg-white border border-[#dfe5ef] rounded-[25px] p-6">
             <div class="flex items-center justify-between flex-shrink-0">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Categories</h1>
@@ -171,10 +124,8 @@ const handleDeleteCategory = (category) => {
                         {{ $t('Organize courses into categories') }}
                     </p>
                 </div>
-                <button
-                    @click="handleCreateCategory"
-                    class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md"
-                >
+                <button @click="handleCreateCategory"
+                    class="bg-[#2f837d] hover:bg-[#26685f] text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
                     <Plus :size="20" />
                     <span>Create Category</span>
                 </button>
@@ -182,25 +133,14 @@ const handleDeleteCategory = (category) => {
 
             <!-- Categories Grid -->
             <div
-                class="grid grid-cols-[repeat(auto-fill,256px)] gap-x-4 gap-y-3 overflow-auto h-[calc(100vh-300px)] content-start"
-            >
-                <CategoryCard
-                    v-for="category in categories"
-                    :key="category.id"
-                    :category="category"
-                    @edit="handleEditCategory"
-                    @delete="handleDeleteCategory"
-                />
+                class="grid grid-cols-[repeat(auto-fill,256px)] gap-x-4 gap-y-3 overflow-auto h-[calc(100vh-300px)] content-start">
+                <CategoryCard v-for="category in props.categories" :key="category.id" :category="category"
+                    @edit="handleEditCategory" @delete="handleDeleteCategory" />
             </div>
         </div>
 
         <!-- Category Modal -->
-        <CategoryModal
-            :show="showModal"
-            :mode="modalMode"
-            :category="selectedCategory"
-            @close="handleCloseModal"
-            @save="handleSaveCategory"
-        />
+        <CategoryModal :show="showModal" :mode="modalMode" :category="selectedCategory" @close="handleCloseModal"
+            @save="handleSaveCategory" />
     </AdminLayout>
 </template>

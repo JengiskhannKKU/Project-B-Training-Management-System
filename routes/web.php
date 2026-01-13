@@ -104,15 +104,60 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.users.edit');
 
     Route::get('/admin/categories', function () {
-        return Inertia::render('Admin/Categories');
+        $categories = \App\Models\Category::withCount('courses')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
+                    'color' => $category->color,
+                    'courses' => $category->courses_count ?? 0,
+                ];
+            });
+
+        return Inertia::render('Admin/Categories', [
+            'categories' => $categories
+        ]);
     })->name('admin.categories');
 
     Route::get('/admin/categories/create', function () {
-        return Inertia::render('Admin/Categories');
+        $categories = \App\Models\Category::withCount('courses')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
+                    'color' => $category->color,
+                    'courses' => $category->courses_count ?? 0,
+                ];
+            });
+
+        return Inertia::render('Admin/Categories', [
+            'categories' => $categories
+        ]);
     })->name('admin.categories.create');
 
     Route::get('/admin/categories/{id}/edit', function ($id) {
-        return Inertia::render('Admin/Categories');
+        $categories = \App\Models\Category::withCount('courses')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
+                    'color' => $category->color,
+                    'courses' => $category->courses_count ?? 0,
+                ];
+            });
+
+        return Inertia::render('Admin/Categories', [
+            'categories' => $categories
+        ]);
     })->name('admin.categories.edit');
 
     Route::get('/admin/my-courses', function () {
@@ -355,12 +400,12 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
         }
 
         $certificates = \App\Models\Certificate::with(['user', 'session'])
-            ->where('course_id', $id)
+            ->where('course_id', $course->id)
             ->orderBy('issued_at', 'desc')
             ->get();
 
         return Inertia::render('Certificates/CourseCertificates', [
-            'programId' => $id,
+            'programId' => $course->id,
             'program' => $course, // Passing as program prop to reuse component
             'certificates' => $certificates,
         ]);
