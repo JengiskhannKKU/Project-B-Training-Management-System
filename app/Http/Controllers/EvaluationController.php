@@ -65,6 +65,7 @@ class EvaluationController extends Controller
 
     /**
      * Calculate attendance rate for a user in a session
+     * Uses the attendance_percent field from enrollment (calculated by multi-day attendance system)
      */
     private function calculateAttendanceRate($sessionId, $userId)
     {
@@ -78,20 +79,9 @@ class EvaluationController extends Controller
             return 0;
         }
 
-        // Check if there's an attendance record for this enrollment
-        $attendance = DB::table('attendances')
-            ->where('enrollment_id', $enrollment->id)
-            ->where('session_id', $sessionId)
-            ->first();
-
-        // If no attendance record or status is not present, return 0
-        if (!$attendance || $attendance->status !== 'present') {
-            return 0;
-        }
-
-        // For now, if attendance status is 'present', assume 100% attendance
-        // This is simplified - you may want to implement a more detailed attendance tracking system
-        return 100;
+        // Return the attendance percentage calculated by the multi-day attendance system
+        // This is automatically updated when attendance is marked for each session day
+        return $enrollment->attendance_percent ?? 0;
     }
 
     /**

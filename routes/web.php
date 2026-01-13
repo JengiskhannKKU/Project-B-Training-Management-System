@@ -69,17 +69,14 @@ Route::middleware(['auth'])->group(function () {
                         ->where('user_id', $certificate->user_id)
                         ->exists();
 
-                    // Check attendance rate
+                    // Check attendance rate (from multi-day attendance system)
                     $enrollment = \App\Models\Enrollment::where('session_id', $certificate->session_id)
                         ->where('user_id', $user->id)
                         ->first();
 
                     if ($enrollment) {
-                        $attendance = \App\Models\Attendance::where('session_id', $certificate->session_id)
-                            ->where('enrollment_id', $enrollment->id)
-                            ->first();
-
-                        $attendanceRate = ($attendance && $attendance->status === 'present') ? 100 : 0;
+                        // Use attendance_percent calculated by multi-day attendance system
+                        $attendanceRate = $enrollment->attendance_percent ?? 0;
                     }
 
                     // Determine block reason

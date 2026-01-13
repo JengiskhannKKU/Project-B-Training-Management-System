@@ -90,11 +90,8 @@ class TrainingSessionPolicy
         }
 
         // 4. Must have >= 80% attendance
-        $attendance = \App\Models\Attendance::where('session_id', $trainingSession->id)
-            ->where('enrollment_id', $enrollment->id)
-            ->first();
-
-        $attendanceRate = ($attendance && $attendance->status === 'present') ? 100 : 0;
+        // Use attendance_percent from enrollment (calculated by multi-day attendance system)
+        $attendanceRate = $enrollment->attendance_percent ?? 0;
 
         if ($attendanceRate < 80) {
             return Response::deny('You must have at least 80% attendance to submit feedback.');
