@@ -313,7 +313,32 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.sessions.index');
 
     Route::get('/admin/feedback', function () {
-        return Inertia::render('Admin/Feedback');
+        // Get all completed sessions with evaluation stats
+        $sessions = \App\Models\TrainingSession::with(['course', 'trainer', 'sessionDays'])
+            ->where('status', 'completed')
+            ->get()
+            ->map(function ($session) {
+                $evaluations = \App\Models\Evaluation::where('session_id', $session->id)->get();
+
+                // Get first session day date
+                $firstDay = $session->sessionDays->sortBy('date')->first();
+                $startDate = $firstDay ? $firstDay->date : null;
+
+                return [
+                    'id' => $session->id,
+                    'title' => $session->title,
+                    'course_name' => $session->course->title ?? 'Unknown',
+                    'trainer_name' => $session->trainer->name ?? 'Unknown',
+                    'status' => $session->status,
+                    'start_date' => $startDate,
+                    'total_evaluations' => $evaluations->count(),
+                    'average_rating' => $evaluations->count() > 0 ? $evaluations->avg('overall_rating') : null,
+                ];
+            });
+
+        return Inertia::render('Admin/FeedbackSessions', [
+            'sessions' => $sessions
+        ]);
     })->name('admin.feedback');
 
     Route::get('/admin/certificates', function () {
@@ -429,7 +454,33 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     })->name('trainer.sessions.index');
 
     Route::get('/trainer/feedback', function () {
-        return Inertia::render('Trainer/Feedback');
+        $user = Auth::user();
+
+        // Get completed sessions taught by this trainer with evaluation stats
+        $sessions = \App\Models\TrainingSession::with(['course', 'sessionDays'])
+            ->where('trainer_id', $user->id)
+            ->where('status', 'completed')
+            ->get()
+            ->map(function ($session) {
+                $evaluations = \App\Models\Evaluation::where('session_id', $session->id)->get();
+
+                $firstDay = $session->sessionDays->sortBy('date')->first();
+                $startDate = $firstDay ? $firstDay->date : null;
+
+                return [
+                    'id' => $session->id,
+                    'title' => $session->title,
+                    'course_name' => $session->course->title ?? 'Unknown',
+                    'status' => $session->status,
+                    'start_date' => $startDate,
+                    'total_evaluations' => $evaluations->count(),
+                    'average_rating' => $evaluations->count() > 0 ? $evaluations->avg('overall_rating') : null,
+                ];
+            });
+
+        return Inertia::render('Trainer/FeedbackSessions', [
+            'sessions' => $sessions
+        ]);
     })->name('trainer.feedback');
 
 
@@ -513,9 +564,26 @@ Route::middleware(['auth', 'role:trainee'])->group(function () {
         ->name('sessions.evaluation.store');
 });
 
-// Admin & Trainer - View session evaluations (API only)
+// Admin & Trainer - View session evaluations
 Route::middleware(['auth', 'role:admin,trainer'])->group(function () {
-    // GET /api/sessions/{id}/evaluation - View all evaluations for a session
+    // GET /sessions/{id}/evaluation - View evaluation results page (UI)
+    Route::get('/sessions/{id}/evaluation', function ($id) {
+        return Inertia::render('Session/EvaluationResults', [
+            'sessionId' => $id,
+        ]);
+    })->name('sessions.evaluation.show');
+
+    // GET /api/sessions/{id}/evaluation - Get evaluation data (API)
     Route::get('/api/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
         ->name('api.sessions.evaluation.show');
+
+    // Debug route
+    Route::get('/api/test-auth', function () {
+        return response()->json([
+            'authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
+            'user_role' => Auth::user()->role->name ?? 'unknown',
+            'message' => 'Auth test passed - you can access this route'
+        ]);
+    });
 });

@@ -130,6 +130,14 @@ class EvaluationController extends Controller
     {
         $session = TrainingSession::with(['course', 'trainer'])->findOrFail($id);
 
+        // Debug logging
+        \Log::info('EvaluationController@show', [
+            'session_id' => $id,
+            'user_id' => Auth::id(),
+            'user_role' => Auth::user()->role->name ?? 'unknown',
+            'session_trainer_id' => $session->trainer_id,
+        ]);
+
         // Authorize using Policy
         $this->authorize('viewSessionEvaluations', $session);
 
