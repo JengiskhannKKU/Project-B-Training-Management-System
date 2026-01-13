@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed } from "vue";
-import { Head, Link, usePage } from "@inertiajs/vue3";
+import { Head, Link, usePage, router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import TrainerLayout from "@/Layouts/TrainerLayout.vue";
 import TraineeLayout from "@/Layouts/TraineeLayout.vue";
 import LoadingSpinner from "@/Components/LoadingSpinner.vue";
-import { Award, Download, Eye, ArrowLeft } from "lucide-vue-next";
+import { Award, Download, Eye, ArrowLeft, AlertCircle, X } from "lucide-vue-next";
 
 const props = defineProps({
     certificateId: {
@@ -22,6 +22,8 @@ const page = usePage();
 const certificate = ref(props.certificate);
 const isLoading = ref(false);
 const errorMessage = ref(props.certificate ? "" : "Certificate not found");
+const showEvaluationModal = ref(false);
+const selectedCertificate = ref(null);
 
 const roleName = computed(
     () =>
@@ -95,6 +97,39 @@ const backLink = computed(() => {
 const backLabel = computed(() =>
     roleName.value === "admin" ? "Back to Certificates" : "Back to My Certificates"
 );
+
+const getButtonText = () => {
+    if (certificate.value?.status === 'revoked') return 'Revoked';
+    if (!certificate.value?.can_download) {
+        if (certificate.value?.block_reason === 'insufficient_attendance') {
+            return 'Low Attendance';
+        }
+        return 'Feedback Required';
+    }
+    return downloadLabel.value;
+};
+
+const handleDownload = async () => {
+    // Check if download is blocked
+    if (!certificate.value?.can_download && certificate.value?.session_id) {
+        selectedCertificate.value = certificate.value;
+        showEvaluationModal.value = true;
+        return;
+    }
+
+    // Proceed with download
+    window.location.href = `/api/certificates/${certificate.value.id}/download`;
+};
+
+const closeModal = () => {
+    showEvaluationModal.value = false;
+    selectedCertificate.value = null;
+};
+
+const goToFeedback = () => {
+    closeModal();
+    router.visit('/trainee/feedback');
+};
 </script>
 
 <template>
@@ -194,13 +229,21 @@ const backLabel = computed(() =>
                                 <Eye class="h-4 w-4" />
                                 Open in New Tab
                             </a>
-                            <a
-                                :href="`/api/certificates/${certificate.id}/download`"
-                                class="inline-flex items-center gap-2 rounded-lg border border-emerald-400 px-4 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-50"
+                            <button
+                                @click="handleDownload"
+                                :disabled="certificate.status === 'revoked' || certificate.block_reason === 'insufficient_attendance'"
+                                :class="[
+                                    'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors',
+                                    certificate.status === 'revoked' || certificate.block_reason === 'insufficient_attendance'
+                                        ? 'border border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : !certificate.can_download
+                                        ? 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                        : 'border border-emerald-400 bg-white text-emerald-600 hover:bg-emerald-50'
+                                ]"
                             >
                                 <Download class="h-4 w-4" />
-                                {{ downloadLabel }}
-                            </a>
+                                {{ getButtonText() }}
+                            </button>
                         </div>
                     </div>
 
@@ -236,5 +279,61 @@ const backLabel = computed(() =>
                 </div>
             </div>
         </div>
+
+        <!-- Feedback Required Modal -->
+        <Teleport to="body">
+            <div
+                v-if="showEvaluationModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+                @click.self="closeModal"
+            >
+                <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                    <button
+                        @click="closeModal"
+                        class="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+                    >
+                        <X class="h-5 w-5" />
+                    </button>
+
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
+                            <AlertCircle class="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                {{ selectedCertificate?.block_reason === 'insufficient_attendance' ? 'Insufficient Attendance' : 'Feedback Required' }}
+                            </h3>
+                            <p class="mt-2 text-sm text-gray-600">
+                                <template v-if="selectedCertificate?.block_reason === 'insufficient_attendance'">
+                                    You cannot download this certificate because your attendance rate ({{ selectedCertificate?.attendance_rate || 0 }}%) is below the required 80%.
+                                </template>
+                                <template v-else>
+                                    You need to complete the course feedback before downloading your certificate.
+                                </template>
+                            </p>
+                            <p class="mt-2 text-sm font-medium text-gray-900">
+                                Session: {{ selectedCertificate?.session?.title || 'N/A' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-3">
+                        <button
+                            @click="closeModal"
+                            class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            v-if="selectedCertificate?.block_reason !== 'insufficient_attendance'"
+                            @click="goToFeedback"
+                            class="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                        >
+                            Go to Feedback
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </component>
 </template>
