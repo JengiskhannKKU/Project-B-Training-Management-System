@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
-import { X, Loader2 } from 'lucide-vue-next';
+import { X, Loader2, Plus, Trash2, Copy } from 'lucide-vue-next';
 import SearchableSelect from '@/Components/SearchableSelect.vue';
 
 const toast = useToast();
@@ -31,8 +31,6 @@ const isLoadingTrainers = ref(false);
 const form = ref({
     course_id: props.initialCourseId || '',
     title: '',
-    start_at: '',
-    end_at: '',
     min_participants: 1,
     capacity: 30,
     registration_start: '',
@@ -41,7 +39,10 @@ const form = ref({
     location: '',
     online_link: '',
     mode: 'onsite',
-    status: ''
+    status: '',
+    session_days: [
+        { date: '', start_time: '', end_time: '' }
+    ]
 });
 
 const errors = ref({});
@@ -58,8 +59,6 @@ const resetForm = () => {
     form.value = {
         course_id: props.initialCourseId || '',
         title: '',
-        start_at: '',
-        end_at: '',
         min_participants: 1,
         capacity: 30,
         registration_start: '',
@@ -68,7 +67,10 @@ const resetForm = () => {
         location: '',
         online_link: '',
         mode: 'onsite',
-        status: ''
+        status: '',
+        session_days: [
+            { date: '', start_time: '', end_time: '' }
+        ]
     };
     errors.value = {};
 };
@@ -82,7 +84,6 @@ const fetchTrainers = async () => {
                 per_page: 100
             }
         });
-        // Handle both paginated and non-paginated responses
         trainers.value = data?.data?.data || data?.data || [];
     } catch (error) {
         toast.error('Failed to load trainers');
@@ -92,6 +93,23 @@ const fetchTrainers = async () => {
     }
 };
 
+const addSessionDay = () => {
+    form.value.session_days.push({ date: '', start_time: '', end_time: '' });
+};
+
+const removeSessionDay = (index) => {
+    if (form.value.session_days.length > 1) {
+        form.value.session_days.splice(index, 1);
+    } else {
+        toast.error('At least one session date is required');
+    }
+};
+
+const copySessionDay = (index) => {
+    const dayToCopy = form.value.session_days[index];
+    form.value.session_days.splice(index + 1, 0, { ...dayToCopy });
+};
+
 const handleSubmit = async () => {
     isSubmitting.value = true;
     errors.value = {};
@@ -99,7 +117,7 @@ const handleSubmit = async () => {
     try {
         // Prepare payload
         const payload = { ...form.value };
-        
+
         await axios.get('/sanctum/csrf-cookie');
 
         const { data } = await axios.post('/api/admin/sessions', payload);
@@ -128,6 +146,14 @@ const handleClose = () => {
 const isOnline = computed(() => ['online', 'hybrid'].includes(form.value.mode));
 const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
 
+const getSessionDayError = (index, field) => {
+    const fieldKey = `session_days.${index}.${field}`;
+    return errors.value[fieldKey] ? errors.value[fieldKey][0] : '';
+};
+
+const hasSessionDayError = (index, field) => {
+    return !!getSessionDayError(index, field);
+};
 </script>
 
 <template>
@@ -136,13 +162,13 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
         @click.self="handleClose"
     >
-        <div class="w-full max-w-3xl rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="w-full max-w-4xl rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto">
             <!-- Header -->
             <div class="border-b px-6 py-4 sticky top-0 bg-white z-10">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900">Create New Session</h2>
-                        <p class="mt-1 text-sm text-gray-500">Add a new training session</p>
+                        <p class="mt-1 text-sm text-gray-500">Add a new training session with specific dates</p>
                     </div>
                     <button
                         @click="handleClose"
@@ -236,41 +262,107 @@ const isOnsite = computed(() => ['onsite', 'hybrid'].includes(form.value.mode));
                     </div>
                 </div>
 
-                <!-- Session Schedule -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Start At <span class="text-red-500">*</span>
+                <!-- Session Dates -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Session Dates <span class="text-red-500">*</span>
                         </label>
-                        <input
-                            v-model="form.start_at"
-                            type="datetime-local"
+                        <button
+                            type="button"
+                            @click="addSessionDay"
                             :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                errors.start_at ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        />
-                        <p v-if="errors.start_at" class="mt-1 text-sm text-red-600">
-                            {{ errors.start_at[0] }}
-                        </p>
+                            class="inline-flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 disabled:opacity-50"
+                        >
+                            <Plus :size="16" />
+                            Add Date
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            End At <span class="text-red-500">*</span>
-                        </label>
-                        <input
-                            v-model="form.end_at"
-                            type="datetime-local"
-                            :disabled="isSubmitting"
-                            :class="[
-                                'w-full rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
-                                errors.end_at ? 'border-red-300' : 'border-gray-300'
-                            ]"
-                        />
-                        <p v-if="errors.end_at" class="mt-1 text-sm text-red-600">
-                            {{ errors.end_at[0] }}
-                        </p>
+
+                    <div v-if="errors.session_days" class="mb-2 text-sm text-red-600">
+                        {{ errors.session_days[0] }}
+                    </div>
+
+                    <div class="space-y-3">
+                        <div
+                            v-for="(day, index) in form.session_days"
+                            :key="index"
+                            class="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                        >
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                        Date <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="day.date"
+                                        type="date"
+                                        :disabled="isSubmitting"
+                                        :class="[
+                                            'w-full text-sm rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                            hasSessionDayError(index, 'date') ? 'border-red-300' : 'border-gray-300'
+                                        ]"
+                                    />
+                                    <p v-if="getSessionDayError(index, 'date')" class="mt-1 text-xs text-red-600">
+                                        {{ getSessionDayError(index, 'date') }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                        Start Time <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="day.start_time"
+                                        type="time"
+                                        :disabled="isSubmitting"
+                                        :class="[
+                                            'w-full text-sm rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                            hasSessionDayError(index, 'start_time') ? 'border-red-300' : 'border-gray-300'
+                                        ]"
+                                    />
+                                    <p v-if="getSessionDayError(index, 'start_time')" class="mt-1 text-xs text-red-600">
+                                        {{ getSessionDayError(index, 'start_time') }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                                        End Time <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="day.end_time"
+                                        type="time"
+                                        :disabled="isSubmitting"
+                                        :class="[
+                                            'w-full text-sm rounded-lg shadow-sm focus:border-teal-500 focus:ring-teal-500',
+                                            hasSessionDayError(index, 'end_time') ? 'border-red-300' : 'border-gray-300'
+                                        ]"
+                                    />
+                                    <p v-if="getSessionDayError(index, 'end_time')" class="mt-1 text-xs text-red-600">
+                                        {{ getSessionDayError(index, 'end_time') }}
+                                    </p>
+                                </div>
+                                <div class="flex items-end gap-2">
+                                    <button
+                                        type="button"
+                                        @click="copySessionDay(index)"
+                                        :disabled="isSubmitting"
+                                        class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                        title="Copy to new date"
+                                    >
+                                        <Copy :size="16" class="mx-auto" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="removeSessionDay(index)"
+                                        :disabled="isSubmitting || form.session_days.length <= 1"
+                                        class="flex-1 px-3 py-2 text-sm text-red-600 bg-white border border-gray-300 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                                        title="Remove date"
+                                    >
+                                        <Trash2 :size="16" class="mx-auto" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

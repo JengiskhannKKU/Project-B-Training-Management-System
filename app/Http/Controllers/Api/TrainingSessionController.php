@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TrainingSession;
+use App\Models\SessionDay;
 use App\Models\Course;
 use App\Services\CompletionService;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +36,7 @@ class TrainingSessionController extends Controller
         return $this->successResponse($sessions, 'Sessions retrieved successfully');
     }
 
-    
+
     public function store(Request $request)
     {
         if (!$request->user()->isRole('admin')) {
@@ -45,8 +46,6 @@ class TrainingSessionController extends Controller
         $data = $request->validate([
             'course_id' => ['required', 'integer', 'exists:courses,id'],
             'title' => ['nullable', 'string', 'max:255'],
-            'start_at' => ['required', 'date', 'before:end_at'],
-            'end_at' => ['required', 'date', 'after:start_at'],
             'capacity' => ['required', 'integer', 'min:1'],
             'min_participants' => ['required', 'integer', 'min:1'],
             'trainer_id' => ['required', 'integer', 'exists:users,id'],
@@ -56,11 +55,53 @@ class TrainingSessionController extends Controller
             'online_link' => ['nullable', 'string', 'max:255'],
             'registration_start' => ['nullable', 'date'],
             'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
+            'session_days' => ['required', 'array', 'min:1'],
+            'session_days.*.date' => ['required', 'date'],
+            'session_days.*.start_time' => ['required', 'date_format:H:i'],
+            'session_days.*.end_time' => ['required', 'date_format:H:i', 'after:session_days.*.start_time'],
         ]);
 
-        $session = TrainingSession::create($data);
+        // Check for conflicts
+        foreach ($data['session_days'] as $day) {
+            if (TrainingSession::trainerHasConflict($data['trainer_id'], $day['date'], $day['start_time'], $day['end_time'])) {
+                return $this->errorResponse('Trainer is already booked at this time on ' . $day['date'], 422);
+            }
+            if (!empty($data['location']) && TrainingSession::locationHasConflict($data['location'], $day['date'], $day['start_time'], $day['end_time'])) {
+                return $this->errorResponse('Location is already booked at this time on ' . $day['date'], 422);
+            }
+        }
 
-        return $this->createdResponse($session, 'Session created successfully');
+        $session = null;
+        \DB::transaction(function () use ($data, &$session) {
+            $sessionData = [
+                'course_id' => $data['course_id'],
+                'title' => $data['title'] ?? null,
+                'min_participants' => $data['min_participants'],
+                'capacity' => $data['capacity'],
+                'registration_start' => $data['registration_start'] ?? null,
+                'registration_end' => $data['registration_end'] ?? null,
+                'mode' => $data['mode'],
+                'online_link' => $data['online_link'] ?? null,
+                'trainer_id' => $data['trainer_id'],
+                'location' => $data['location'] ?? null,
+                'status' => $data['status'] ?? 'scheduled',
+            ];
+
+            $session = TrainingSession::create($sessionData);
+
+            // Create session days
+            foreach ($data['session_days'] as $index => $day) {
+                SessionDay::create([
+                    'session_id' => $session->id,
+                    'date' => $day['date'],
+                    'start_time' => $day['start_time'],
+                    'end_time' => $day['end_time'],
+                    'day_number' => $index + 1,
+                ]);
+            }
+        });
+
+        return $this->createdResponse($session->load('sessionDays'), 'Session created successfully');
     }
 
     /**
@@ -89,8 +130,6 @@ class TrainingSessionController extends Controller
         $data = $request->validate([
             'course_id' => ['sometimes', 'required', 'integer', 'exists:courses,id'],
             'title' => ['nullable', 'string', 'max:255'],
-            'start_at' => ['sometimes', 'required', 'date', 'before:end_at'],
-            'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
             'capacity' => ['sometimes', 'required', 'integer', 'min:1'],
             'min_participants' => ['sometimes', 'required', 'integer', 'min:1'],
             'trainer_id' => ['sometimes', 'required', 'integer', 'exists:users,id'],
@@ -100,11 +139,71 @@ class TrainingSessionController extends Controller
             'online_link' => ['nullable', 'string', 'max:255'],
             'registration_start' => ['nullable', 'date'],
             'registration_end' => ['nullable', 'date', 'after_or_equal:registration_start'],
+            'session_days' => ['sometimes', 'required', 'array', 'min:1'],
+            'session_days.*.id' => ['nullable', 'integer', 'exists:session_days,id'],
+            'session_days.*.date' => ['required', 'date'],
+            'session_days.*.start_time' => ['required', 'date_format:H:i'],
+            'session_days.*.end_time' => ['required', 'date_format:H:i', 'after:session_days.*.start_time'],
         ]);
 
-        $session->update($data);
+        \DB::transaction(function () use ($data, $session) {
+            $sessionData = [
+                'course_id' => $data['course_id'] ?? $session->course_id,
+                'title' => $data['title'] ?? $session->title,
+                'min_participants' => $data['min_participants'] ?? $session->min_participants,
+                'capacity' => $data['capacity'] ?? $session->capacity,
+                'registration_start' => $data['registration_start'] ?? $session->registration_start,
+                'registration_end' => $data['registration_end'] ?? $session->registration_end,
+                'mode' => $data['mode'] ?? $session->mode,
+                'online_link' => $data['online_link'] ?? $session->online_link,
+                'trainer_id' => $data['trainer_id'] ?? $session->trainer_id,
+                'location' => $data['location'] ?? $session->location,
+                'status' => $data['status'] ?? $session->status,
+            ];
 
-        return $this->successResponse($session->fresh(), 'Session updated successfully');
+            $session->update($sessionData);
+
+            // Update session days if provided
+            if (isset($data['session_days'])) {
+                // Get existing session day IDs
+                $existingIds = $session->sessionDays()->pluck('id')->toArray();
+                $newIds = [];
+
+                foreach ($data['session_days'] as $index => $day) {
+                    if (isset($day['id'])) {
+                        // Update existing session day
+                        $sessionDay = SessionDay::find($day['id']);
+                        if ($sessionDay && $sessionDay->session_id === $session->id) {
+                            $sessionDay->update([
+                                'date' => $day['date'],
+                                'start_time' => $day['start_time'],
+                                'end_time' => $day['end_time'],
+                                'day_number' => $index + 1,
+                            ]);
+                            $newIds[] = $sessionDay->id;
+                        }
+                    } else {
+                        // Create new session day
+                        $newDay = SessionDay::create([
+                            'session_id' => $session->id,
+                            'date' => $day['date'],
+                            'start_time' => $day['start_time'],
+                            'end_time' => $day['end_time'],
+                            'day_number' => $index + 1,
+                        ]);
+                        $newIds[] = $newDay->id;
+                    }
+                }
+
+                // Delete session days that were removed
+                $idsToDelete = array_diff($existingIds, $newIds);
+                if (!empty($idsToDelete)) {
+                    SessionDay::whereIn('id', $idsToDelete)->delete();
+                }
+            }
+        });
+
+        return $this->successResponse($session->fresh()->load('sessionDays'), 'Session updated successfully');
     }
 
     /**
@@ -173,7 +272,8 @@ class TrainingSessionController extends Controller
             })
             ->with(['sessions' => function ($query) {
                 $query->withCount(['enrollments', 'activeEnrollments'])
-                    ->orderBy('start_at', 'desc');
+                    ->with('sessionDays')
+                    ->orderBy('id', 'desc');
             }])
             ->get()
             ->map(function ($course) {
@@ -187,18 +287,29 @@ class TrainingSessionController extends Controller
 
                 // Calculate aggregated data
                 $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
-                $dates = $sessions ? $sessions->pluck('start_at')->filter() : collect();
-                $earliestDate = $dates->min();
-                $latestDate = $dates->max();
 
-                // Format date range
+                // Collect all session days for date range
+                $allSessionDays = collect();
+                if ($sessions) {
+                    foreach ($sessions as $session) {
+                        if ($session->sessionDays) {
+                            $allSessionDays = $allSessionDays->concat($session->sessionDays);
+                        }
+                    }
+                }
+
                 $dateRange = 'N/A';
-                if ($earliestDate && $latestDate) {
-                    $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
-                    $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
-                    $dateRange = $earliestDate->eq($latestDate)
-                        ? Carbon::parse($earliestDate)->format('M j, Y')
-                        : "{$earliestFormatted} - {$latestFormatted}";
+                if ($allSessionDays->isNotEmpty()) {
+                    $earliestDate = $allSessionDays->pluck('date')->min();
+                    $latestDate = $allSessionDays->pluck('date')->max();
+
+                    if ($earliestDate && $latestDate) {
+                        $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
+                        $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
+                        $dateRange = $earliestDate === $latestDate
+                            ? Carbon::parse($earliestDate)->format('M j, Y')
+                            : "{$earliestFormatted} - {$latestFormatted}";
+                    }
                 }
 
                 // Get most common location
@@ -206,11 +317,11 @@ class TrainingSessionController extends Controller
                 $locationCounts = $locations->countBy();
                 $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
 
-                // Get time range from first session
-                $firstSession = $sessions ? $sessions->first() : null;
+                // Get time range from first session day
                 $timeRange = 'N/A';
-                if ($firstSession && $firstSession->start_at && $firstSession->end_at) {
-                    $timeRange = $firstSession->start_at->format('H:i') . ' - ' . $firstSession->end_at->format('H:i');
+                $firstSessionDay = $allSessionDays->sortBy('date')->first();
+                if ($firstSessionDay && $firstSessionDay->start_time && $firstSessionDay->end_time) {
+                    $timeRange = substr($firstSessionDay->start_time, 0, 5) . ' - ' . substr($firstSessionDay->end_time, 0, 5);
                 }
 
                 return [
@@ -227,22 +338,29 @@ class TrainingSessionController extends Controller
                     'max_participants' => $course->max_participants,
                     'status' => $course->status,
                     'sessions' => $sessions ? $sessions->map(function ($session) {
+                        $firstDay = $session->sessionDays?->sortBy('date')->first();
                         return [
                             'id' => $session->id,
                             'name' => $session->title,
                             'title' => $session->title,
-                            'date' => $session->start_at?->format('M j, Y'),
-                            'start_date' => $session->start_at?->format('Y-m-d'),
-                            'end_date' => $session->end_at?->format('Y-m-d'),
-                            'time' => $session->start_at && $session->end_at
-                                ? $session->start_at->format('H:i') . ' - ' . $session->end_at->format('H:i')
+                            'date' => $firstDay?->date?->format('M j, Y'),
+                            'start_date' => $session->sessionDays?->sortBy('date')->first()?->date,
+                            'end_date' => $session->sessionDays?->sortByDesc('date')->first()?->date,
+                            'time' => $firstDay && $firstDay->start_time && $firstDay->end_time
+                                ? substr($firstDay->start_time, 0, 5) . ' - ' . substr($firstDay->end_time, 0, 5)
                                 : 'N/A',
-                            'start_time' => $session->start_at?->format('H:i'),
-                            'end_time' => $session->end_at?->format('H:i'),
+                            'start_time' => $firstDay?->start_time ? substr($firstDay->start_time, 0, 5) : null,
+                            'end_time' => $firstDay?->end_time ? substr($firstDay->end_time, 0, 5) : null,
                             'location' => $session->location ?? 'N/A',
                             'capacity' => $session->capacity,
                             'enrolled' => $session->enrollments_count,
                             'status' => $session->status,
+                            'session_days' => $session->sessionDays?->map(fn($day) => [
+                                'id' => $day->id,
+                                'date' => $day->date,
+                                'start_time' => substr($day->start_time, 0, 5),
+                                'end_time' => substr($day->end_time, 0, 5),
+                            ])->values() ?? [],
                         ];
                     })->values()->all() : [],
                 ];
@@ -266,7 +384,8 @@ class TrainingSessionController extends Controller
         $courses = Course::where('status', 'published')
             ->with(['sessions' => function ($query) {
                 $query->withCount(['enrollments', 'activeEnrollments'])
-                    ->orderBy('start_at', 'desc');
+                    ->with('sessionDays')
+                    ->orderBy('id', 'desc');
             }])
             ->get()
             ->map(function ($course) {
@@ -280,18 +399,29 @@ class TrainingSessionController extends Controller
 
                 // Calculate aggregated data
                 $totalEnrolled = $sessions ? $sessions->sum('enrollments_count') : 0;
-                $dates = $sessions ? $sessions->pluck('start_at')->filter() : collect();
-                $earliestDate = $dates->min();
-                $latestDate = $dates->max();
 
-                // Format date range
+                // Collect all session days for date range
+                $allSessionDays = collect();
+                if ($sessions) {
+                    foreach ($sessions as $session) {
+                        if ($session->sessionDays) {
+                            $allSessionDays = $allSessionDays->concat($session->sessionDays);
+                        }
+                    }
+                }
+
                 $dateRange = 'N/A';
-                if ($earliestDate && $latestDate) {
-                    $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
-                    $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
-                    $dateRange = $earliestDate->eq($latestDate)
-                        ? Carbon::parse($earliestDate)->format('M j, Y')
-                        : "{$earliestFormatted} - {$latestFormatted}";
+                if ($allSessionDays->isNotEmpty()) {
+                    $earliestDate = $allSessionDays->pluck('date')->min();
+                    $latestDate = $allSessionDays->pluck('date')->max();
+
+                    if ($earliestDate && $latestDate) {
+                        $earliestFormatted = Carbon::parse($earliestDate)->format('M j');
+                        $latestFormatted = Carbon::parse($latestDate)->format('M j, Y');
+                        $dateRange = $earliestDate === $latestDate
+                            ? Carbon::parse($earliestDate)->format('M j, Y')
+                            : "{$earliestFormatted} - {$latestFormatted}";
+                    }
                 }
 
                 // Get most common location
@@ -299,17 +429,16 @@ class TrainingSessionController extends Controller
                 $locationCounts = $locations->countBy();
                 $mostCommonLocation = $locationCounts->sortDesc()->keys()->first() ?? 'N/A';
 
-                // Get time range from first session
-                $firstSession = $sessions ? $sessions->first() : null;
+                // Get time range from first session day
                 $timeRange = 'N/A';
-                if ($firstSession && $firstSession->start_at && $firstSession->end_at) {
-                    $timeRange = $firstSession->start_at->format('H:i') . ' - ' . $firstSession->end_at->format('H:i');
+                $firstSessionDay = $allSessionDays->sortBy('date')->first();
+                if ($firstSessionDay && $firstSessionDay->start_time && $firstSessionDay->end_time) {
+                    $timeRange = substr($firstSessionDay->start_time, 0, 5) . ' - ' . substr($firstSessionDay->end_time, 0, 5);
                 }
 
                 return [
                     'id' => $course->id,
                     'request_id' => $adminRequest?->id,
-                    // 'code' => $course->code,
                     'name' => $course->title,
                     'image_url' => $course->thumbnail_path ?? 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
                     'rating' => 4.5, // Placeholder
@@ -323,22 +452,29 @@ class TrainingSessionController extends Controller
                     'duration' => 'N/A',
                     'status' => $course->status,
                     'sessions' => $sessions ? $sessions->map(function ($session) {
+                        $firstDay = $session->sessionDays?->sortBy('date')->first();
                         return [
                             'id' => $session->id,
                             'name' => $session->title,
                             'title' => $session->title,
-                            'date' => $session->start_at?->format('M j, Y'),
-                            'start_date' => $session->start_at?->format('Y-m-d'),
-                            'end_date' => $session->end_at?->format('Y-m-d'),
-                            'time' => $session->start_at && $session->end_at
-                                ? $session->start_at->format('H:i') . ' - ' . $session->end_at->format('H:i')
+                            'date' => $firstDay?->date?->format('M j, Y'),
+                            'start_date' => $session->sessionDays?->sortBy('date')->first()?->date,
+                            'end_date' => $session->sessionDays?->sortByDesc('date')->first()?->date,
+                            'time' => $firstDay && $firstDay->start_time && $firstDay->end_time
+                                ? substr($firstDay->start_time, 0, 5) . ' - ' . substr($firstDay->end_time, 0, 5)
                                 : 'N/A',
-                            'start_time' => $session->start_at?->format('H:i'),
-                            'end_time' => $session->end_at?->format('H:i'),
+                            'start_time' => $firstDay?->start_time ? substr($firstDay->start_time, 0, 5) : null,
+                            'end_time' => $firstDay?->end_time ? substr($firstDay->end_time, 0, 5) : null,
                             'location' => $session->location ?? 'N/A',
                             'capacity' => $session->capacity,
                             'enrolled' => $session->enrollments_count,
                             'status' => $session->status,
+                            'session_days' => $session->sessionDays?->map(fn($day) => [
+                                'id' => $day->id,
+                                'date' => $day->date,
+                                'start_time' => substr($day->start_time, 0, 5),
+                                'end_time' => substr($day->end_time, 0, 5),
+                            ])->values() ?? [],
                         ];
                     })->values()->all() : [],
                 ];
@@ -352,7 +488,7 @@ class TrainingSessionController extends Controller
      */
     public function sessionsForAttendance(Request $request): JsonResponse
     {
-        $query = TrainingSession::with(['course', 'trainer'])
+        $query = TrainingSession::with(['course', 'trainer', 'sessionDays'])
             ->withCount(['enrollments', 'attendances']);
 
         // Apply filters
@@ -364,16 +500,21 @@ class TrainingSessionController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter by session dates if provided
         if ($request->filled('date_from')) {
-            $query->where('start_at', '>=', $request->date_from);
+            $query->whereHas('sessionDays', function ($q) use ($request) {
+                $q->where('date', '>=', $request->date_from);
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->where('start_at', '<=', $request->date_to);
+            $query->whereHas('sessionDays', function ($q) use ($request) {
+                $q->where('date', '<=', $request->date_to);
+            });
         }
 
-        // Order by date (most recent first)
-        $query->orderBy('start_at', 'desc');
+        // Order by created date (most recent first)
+        $query->orderBy('id', 'desc');
 
         // Paginate results
         $sessions = $query->paginate(20);

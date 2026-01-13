@@ -280,6 +280,7 @@ const handleModalClose = () => {
 const handleEditCourse = (course: any) => {
     editingCourse.value = {
         id: course.id,
+        code: course.code,
         title: course.title,
         description: course.description,
         category: course.category,
@@ -296,14 +297,14 @@ const handleEditCourse = (course: any) => {
     showCreateModal.value = true;
 };
 
-const handleDeleteCourse = async (courseId: number) => {
+const handleDeleteCourse = async (courseCode: string) => {
     if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
         return;
     }
 
     try {
         await axios.get('/sanctum/csrf-cookie');
-        await axios.delete(`/api/courses/${courseId}`);
+        await axios.delete(`/api/courses/${courseCode}`);
         toast.success('Course deleted successfully!');
         await fetchPrograms();
     } catch (error: any) {
@@ -317,10 +318,38 @@ const handleDeleteCourse = async (courseId: number) => {
 
 const handleCreateProgram = async (payload: Record<string, unknown> | undefined) => {
     // The API call now happens in CourseModal itself
-    // This handler is called only on success, so just refresh the list
+    // This handler is called only on success
+
+    if (editingCourse.value && payload) {
+        // Update mode: Update the local course in the programs array directly
+        const index = programs.value.findIndex(p => p.code === editingCourse.value.code);
+
+        if (index !== -1) {
+            // Update the existing course in the array
+            programs.value[index] = {
+                ...programs.value[index],
+                title: payload.title as string,
+                name: payload.title as string,
+                description: payload.description as string,
+                category: payload.category as string,
+                level: payload.level as string,
+                learning_outcomes: payload.learning_outcomes as string,
+                target_audience: payload.target_audience as string,
+                prerequisites: payload.prerequisites as string,
+                additional_info: payload.additional_info as string,
+                thumbnail_path: payload.thumbnail_path as string,
+                image_url: payload.thumbnail_path as string,
+                status: payload.status as string,
+            };
+        }
+    } else {
+        // Create mode: Fetch the full list from API
+        await fetchPrograms();
+    }
+
+    // Close the modal
     showCreateModal.value = false;
     editingCourse.value = null;
-    await fetchPrograms();
 };
 
 const setBearerToken = (token: string) => {
@@ -634,7 +663,7 @@ onMounted(() => {
                             :status="course.status"
                             :show-actions="true"
                             @edit="handleEditCourse(course)"
-                            @delete="handleDeleteCourse(course.id)"
+                            @delete="handleDeleteCourse(course.code)"
                         />
                     </div>
 
@@ -750,7 +779,6 @@ onMounted(() => {
                 :show="showCreateModal"
                 :course="editingCourse"
                 uploadUrlPrefix="admin"
-                :enable-preview-dialogs="false"
                 @close="handleModalClose"
                 @success="handleCreateProgram"
             />

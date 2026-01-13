@@ -16,31 +16,34 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            // 1. Roles and Users (with comprehensive profiles)
+                // 1. Roles and Users (with comprehensive profiles)
             AuthLoginSeeder::class,
             UserCategorySeeder::class,
             ProfileChangeSeeder::class,
 
-            // 2. Courses and Sessions
+                // 2. Categories
+            CategorySeeder::class,
+
+                // 3. Courses and Sessions
             CourseSeeder::class,
             TrainingSessionSeeder::class,
             SessionDaySeeder::class, // NEW: Multi-day session support
 
-            // 3. Enrollments
+                // 4. Enrollments
             EnrollmentSeeder::class,
 
-            // 4. Attendance (now linked to session days)
+                // 5. Attendance (now linked to session days)
             AttendanceSeeder::class,
 
-            // 5. Reviews
+                // 6. Reviews
             ReviewSeeder::class, // NEW: Session reviews
 
-            // 6. Certificates
+                // 7. Certificates
             CertificateTemplateSeeder::class,
             CertificateSeeder::class,
             CertificateRequestSeeder::class,
 
-            // 7. Admin Requests
+                // 8. Admin Requests
             AdminRequestSeeder::class,
         ]);
 

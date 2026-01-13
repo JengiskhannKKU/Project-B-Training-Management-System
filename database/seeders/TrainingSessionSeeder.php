@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Course;
 use App\Models\TrainingSession;
+use App\Models\SessionDay;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -30,7 +31,6 @@ class TrainingSessionSeeder extends Seeder
         }
 
         $now = now();
-        $sessions = [];
         $modes = ['online', 'onsite', 'hybrid'];
         $locations = [
             'online' => 'Online',
@@ -38,9 +38,9 @@ class TrainingSessionSeeder extends Seeder
             'hybrid' => ['Conference Room A', 'Hybrid Learning Center', 'Training Room 302']
         ];
 
-        // Create 2-3 sessions per course with different statuses and times
+        // Create 1-2 sessions per course with different statuses and times
         foreach ($courses as $course) {
-            $numberOfSessions = rand(2, 3);
+            $numberOfSessions = rand(1, 2);
 
             for ($i = 0; $i < $numberOfSessions; $i++) {
                 $trainer = $trainers->random();
@@ -51,35 +51,27 @@ class TrainingSessionSeeder extends Seeder
                 if ($statusRand < 40) {
                     // 40% completed sessions (in the past)
                     $status = 'completed';
-                    $daysAgo = rand(30, 180);
-                    $startDate = $now->copy()->subDays($daysAgo);
-                    $endDate = $startDate->copy()->addDays(rand(3, 14));
-                    $regStart = $startDate->copy()->subDays(rand(20, 40));
-                    $regEnd = $startDate->copy()->subDays(rand(1, 5));
+                    $baseDate = $now->copy()->subDays(rand(30, 180));
+                    $registrationStart = $baseDate->copy()->subDays(rand(20, 40));
+                    $registrationEnd = $baseDate->copy()->subDays(rand(1, 5));
                 } elseif ($statusRand < 75) {
                     // 35% scheduled sessions (future)
                     $status = 'scheduled';
-                    $daysAhead = rand(5, 90);
-                    $startDate = $now->copy()->addDays($daysAhead);
-                    $endDate = $startDate->copy()->addDays(rand(3, 14));
-                    $regStart = $now->copy()->subDays(rand(1, 10));
-                    $regEnd = $startDate->copy()->subDays(rand(1, 3));
+                    $baseDate = $now->copy()->addDays(rand(5, 90));
+                    $registrationStart = $now->copy()->subDays(rand(1, 10));
+                    $registrationEnd = $baseDate->copy()->subDays(rand(1, 3));
                 } elseif ($statusRand < 90) {
                     // 15% ongoing sessions (currently happening)
                     $status = 'scheduled';
-                    $daysAgo = rand(1, 3);
-                    $startDate = $now->copy()->subDays($daysAgo);
-                    $endDate = $now->copy()->addDays(rand(2, 7));
-                    $regStart = $startDate->copy()->subDays(rand(15, 30));
-                    $regEnd = $startDate->copy()->subDays(1);
+                    $baseDate = $now->copy()->subDays(rand(1, 3));
+                    $registrationStart = $baseDate->copy()->subDays(rand(15, 30));
+                    $registrationEnd = $baseDate->copy()->subDays(1);
                 } else {
                     // 10% cancelled sessions
                     $status = 'cancelled';
-                    $daysAhead = rand(10, 60);
-                    $startDate = $now->copy()->addDays($daysAhead);
-                    $endDate = $startDate->copy()->addDays(rand(3, 10));
-                    $regStart = $now->copy()->subDays(rand(5, 15));
-                    $regEnd = $startDate->copy()->subDays(rand(3, 7));
+                    $baseDate = $now->copy()->addDays(rand(10, 60));
+                    $registrationStart = $now->copy()->subDays(rand(5, 15));
+                    $registrationEnd = $baseDate->copy()->subDays(rand(3, 7));
                 }
 
                 // Select location based on mode
@@ -98,29 +90,68 @@ class TrainingSessionSeeder extends Seeder
                 $sessionNumber = $i + 1;
                 $sessionTitle = $course->title . ' - Session ' . $sessionNumber;
 
-                $sessions[] = [
-                    'course_id' => $course->id,
-                    'title' => $sessionTitle,
-                    'start_at' => $startDate,
-                    'end_at' => $endDate,
-                    'min_participants' => rand(5, 10),
-                    'capacity' => rand(20, 50),
-                    'registration_start' => $regStart,
-                    'registration_end' => $regEnd,
-                    'mode' => $mode,
-                    'online_link' => $onlineLink,
-                    'trainer_id' => $trainer->id,
-                    'location' => $location,
-                    'status' => $status,
-                ];
+                // Create or update session
+                $session = TrainingSession::updateOrCreate(
+                    [
+                        'course_id' => $course->id,
+                        'title' => $sessionTitle,
+                    ],
+                    [
+                        'min_participants' => rand(5, 10),
+                        'capacity' => rand(20, 50),
+                        'registration_start' => $registrationStart,
+                        'registration_end' => $registrationEnd,
+                        'mode' => $mode,
+                        'online_link' => $onlineLink,
+                        'trainer_id' => $trainer->id,
+                        'location' => $location,
+                        'status' => $status,
+                    ]
+                );
+
+                // Delete existing session days for this session
+                SessionDay::where('session_id', $session->id)->delete();
+
+                // Create session days (random 2-3 specific dates)
+                $numDays = rand(2, 3);
+                $sessionDays = [];
+
+                // Use a set to track unique dates
+                $usedDates = [];
+
+                for ($day = 0; $day < $numDays; $day++) {
+                    // Keep generating dates until we find a unique one
+                    do {
+                        // Increment day by at least 1 to ensure unique dates
+                        $daysToAdd = $day + ($day > 0 ? rand(0, 2) : 0);
+                        $dayDate = $baseDate->copy()->addDays($daysToAdd);
+                        $dateString = $dayDate->format('Y-m-d');
+                    } while (in_array($dateString, $usedDates));
+
+                    $usedDates[] = $dateString;
+
+                    // Random times between 9 AM and 5 PM
+                    $startHour = rand(9, 15);
+                    $durationHours = rand(2, 4);
+                    $startTime = sprintf('%02d:00', $startHour);
+                    $endTime = sprintf('%02d:00', $startHour + $durationHours);
+
+                    $sessionDays[] = [
+                        'session_id' => $session->id,
+                        'date' => $dateString,
+                        'start_time' => $startTime,
+                        'end_time' => $endTime,
+                        'day_number' => $day + 1,
+                        'status' => 'active',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+
+                SessionDay::insert($sessionDays);
             }
         }
 
-        // Create all sessions
-        foreach ($sessions as $session) {
-            TrainingSession::create($session);
-        }
-
-        $this->command->info('Training sessions seeded: ' . count($sessions));
+        $this->command->info('Training sessions seeded successfully');
     }
 }

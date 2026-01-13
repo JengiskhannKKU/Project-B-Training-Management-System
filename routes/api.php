@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\CertificateTemplateController;
 use App\Http\Controllers\Api\AdminSessionController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SessionDayController;
+use App\Http\Controllers\Api\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -141,5 +142,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('admin/requests/pending-count', [AdminRequestActionController::class, 'getPendingCount']);
         Route::post('admin/requests/{adminRequest}/approve', [AdminRequestActionController::class, 'approve']);
         Route::post('admin/requests/{adminRequest}/reject', [AdminRequestActionController::class, 'reject']);
+
+        // Category management routes
+        Route::apiResource('admin/categories', CategoryController::class)->names([
+            'index' => 'api.admin.categories.index',
+            'store' => 'api.admin.categories.store',
+            'show' => 'api.admin.categories.show',
+            'update' => 'api.admin.categories.update',
+            'destroy' => 'api.admin.categories.destroy',
+        ]);
     });
 });
