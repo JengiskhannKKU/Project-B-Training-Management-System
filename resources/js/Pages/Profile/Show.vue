@@ -337,8 +337,8 @@ onUnmounted(() => {
                                     </p>
                                     <p
                                         :class="apiUser.type?.toLowerCase() === 'external'
-                                            ? 'text-purple-700 bg-purple-50 border-purple-200'
-                                            : 'text-teal-700 bg-teal-50 border-teal-200'"
+                                            ? 'text-orange-800 bg-orange-100 border-orange-200'
+                                            : 'text-indigo-800 bg-indigo-100 border-indigo-200'"
                                         class="font-medium px-3 py-1 rounded-full text-sm inline-flex items-center border"
                                     >
                                         {{ apiUser.type?.toUpperCase() || 'INTERNAL' }}

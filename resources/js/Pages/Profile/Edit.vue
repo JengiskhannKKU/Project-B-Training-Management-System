@@ -99,8 +99,8 @@ const formatDate = (dateString) => {
                                     </span>
                                     <span
                                         :class="user.type?.toLowerCase() === 'external'
-                                            ? 'text-purple-700 bg-purple-50 border-purple-200'
-                                            : 'text-teal-700 bg-teal-50 border-teal-200'"
+                                            ? 'text-orange-800 bg-orange-100 border-orange-200'
+                                            : 'text-indigo-800 bg-indigo-100 border-indigo-200'"
                                         class="px-3 py-1 rounded-full text-xs font-semibold border inline-block"
                                     >
                                         {{ user.type?.toUpperCase() || 'INTERNAL' }}

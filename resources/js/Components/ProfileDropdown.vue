@@ -26,8 +26,8 @@ const userType = computed(() => {
 
 const userTypeColor = computed(() => {
     const type = userType.value.toLowerCase();
-    if (type === 'external') return 'bg-purple-100 text-purple-700 border-purple-200';
-    return 'bg-teal-100 text-teal-700 border-teal-200';
+    if (type === 'external') return 'bg-orange-100 text-orange-800 border-orange-200';
+    return 'bg-indigo-100 text-indigo-800 border-indigo-200';
 });
 
 // Split name into first and last name
