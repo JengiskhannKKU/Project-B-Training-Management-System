@@ -56,7 +56,47 @@ Route::middleware(['auth'])->group(function () {
         $certificates = \App\Models\Certificate::with(['course', 'session.course'])
             ->where('user_id', $user->id)
             ->orderBy('issued_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($certificate) use ($user) {
+                // Check if evaluation exists for this certificate
+                $hasEvaluation = true;
+                $attendanceRate = 100;
+                $blockReason = null;
+
+                if ($certificate->session_id) {
+                    // Check evaluation
+                    $hasEvaluation = \App\Models\Evaluation::where('session_id', $certificate->session_id)
+                        ->where('user_id', $certificate->user_id)
+                        ->exists();
+
+                    // Check attendance rate
+                    $enrollment = \App\Models\Enrollment::where('session_id', $certificate->session_id)
+                        ->where('user_id', $user->id)
+                        ->first();
+
+                    if ($enrollment) {
+                        $attendance = \App\Models\Attendance::where('session_id', $certificate->session_id)
+                            ->where('enrollment_id', $enrollment->id)
+                            ->first();
+
+                        $attendanceRate = ($attendance && $attendance->status === 'present') ? 100 : 0;
+                    }
+
+                    // Determine block reason
+                    if ($attendanceRate < 80) {
+                        $blockReason = 'insufficient_attendance';
+                    } elseif (!$hasEvaluation) {
+                        $blockReason = 'missing_feedback';
+                    }
+                }
+
+                return array_merge($certificate->toArray(), [
+                    'has_evaluation' => $hasEvaluation,
+                    'attendance_rate' => $attendanceRate,
+                    'can_download' => $hasEvaluation && $attendanceRate >= 80,
+                    'block_reason' => $blockReason,
+                ]);
+            });
 
         return Inertia::render('Trainee/Certificates/Index', [
             'certificates' => $certificates
@@ -328,3 +368,21 @@ Route::get('/courses/{code}', function ($code) {
 
 
 require __DIR__ . '/auth.php';
+
+// Trainee Feedback Routes
+Route::middleware(['auth', 'role:trainee'])->group(function () {
+    Route::get('/trainee/feedback', [\App\Http\Controllers\EvaluationController::class, 'index'])
+        ->name('trainee.feedback.index');
+
+    // POST /sessions/{id}/evaluation - Trainee submit feedback
+    Route::post('/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'store'])
+        ->name('sessions.evaluation.store');
+});
+
+// Admin & Trainer - View session evaluations
+Route::middleware(['auth'])->group(function () {
+    // GET /sessions/{id}/evaluation - View all evaluations for a session
+    Route::get('/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
+        ->name('sessions.evaluation.show')
+        ->middleware('role:admin,trainer');
+});
