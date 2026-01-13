@@ -26,6 +26,14 @@ const roleLabel = computed(() => {
     return 'User';
 });
 
+const roleColor = computed(() => {
+    const role = (user.role?.name || '').toLowerCase();
+    if (role === 'admin') return 'text-red-700 bg-red-50 border-red-200';
+    if (role === 'trainer') return 'text-blue-700 bg-blue-50 border-blue-200';
+    if (role === 'trainee') return 'text-green-700 bg-green-50 border-green-200';
+    return 'text-gray-700 bg-gray-50 border-gray-200';
+});
+
 // Helper to check if a field has a value
 const has = (value) => value && value !== '';
 
@@ -75,16 +83,35 @@ const formatDate = (dateString) => {
                                 <h3 class="text-3xl font-extrabold text-gray-900">
                                     {{ profile.prefix ? $t(profile.prefix) + ' ' : '' }}{{ user.name }}
                                 </h3>
-                                <p class="text-lg text-[#3D9792] font-medium mt-1 flex items-center">
-                                    <span class="inline-block w-3 h-3 rounded-full bg-[#3D9792] mr-2"></span>
-                                    {{ roleLabel }}
-                                    <span v-if="profile.sub_category" class="ml-2 text-gray-500 text-sm">
+                                <div class="flex flex-wrap gap-2 items-center mt-1">
+                                    <span
+                                        :class="roleColor"
+                                        class="px-3 py-1 rounded-full text-sm font-semibold border inline-flex items-center"
+                                    >
+                                        <span class="inline-block w-2.5 h-2.5 rounded-full mr-2"
+                                            :class="{
+                                                'bg-red-600': user.role?.name?.toLowerCase() === 'admin',
+                                                'bg-blue-600': user.role?.name?.toLowerCase() === 'trainer',
+                                                'bg-green-600': user.role?.name?.toLowerCase() === 'trainee'
+                                            }"
+                                        ></span>
+                                        {{ roleLabel }}
+                                    </span>
+                                    <span
+                                        :class="user.type?.toLowerCase() === 'external'
+                                            ? 'text-purple-700 bg-purple-50 border-purple-200'
+                                            : 'text-teal-700 bg-teal-50 border-teal-200'"
+                                        class="px-3 py-1 rounded-full text-xs font-semibold border inline-block"
+                                    >
+                                        {{ user.type?.toUpperCase() || 'INTERNAL' }}
+                                    </span>
+                                    <span v-if="profile.sub_category" class="text-gray-500 text-sm">
                                         ({{ $t(profile.sub_category) }})
                                     </span>
-                                     <span v-if="profile.category" class="ml-2 text-gray-500 text-sm">
+                                    <span v-if="profile.category" class="text-gray-500 text-sm">
                                         ({{ $t(profile.category) }})
                                     </span>
-                                </p>
+                                </div>
                             </div>
                              <div class="mt-4 sm:mt-0">
                                 <!-- Could add an 'Edit Profile' button here later -->

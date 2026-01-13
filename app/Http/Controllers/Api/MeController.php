@@ -21,8 +21,23 @@ class MeController extends Controller
 
         $avatarPresent = (bool) optional($user->profile)->avatar_image;
 
+        // Count enrollments (courses)
+        $enrollmentsCount = $user->enrollments()->count();
+
+        // Count distinct sessions the user has enrolled in
+        $sessionsCount = $user->enrollments()->distinct('session_id')->count('session_id');
+
+        // Count certificates
+        $certificatesCount = $user->certificates()->count();
+
+        // Add counts to user object
+        $userData = $user->toArray();
+        $userData['enrollments_count'] = $enrollmentsCount;
+        $userData['sessions_count'] = $sessionsCount;
+        $userData['certificates_count'] = $certificatesCount;
+
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'profile' => $user->profile,
             'avatar_present' => $avatarPresent,
         ]);

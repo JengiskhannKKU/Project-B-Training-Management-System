@@ -55,6 +55,14 @@ const apiUser = ref({
 });
 
 const roleName = computed(() => apiUser.value.role?.name || 'trainee');
+
+const roleColor = computed(() => {
+    const role = roleName.value.toLowerCase();
+    if (role === 'admin') return 'text-red-700 bg-red-50 border-red-200';
+    if (role === 'trainer') return 'text-blue-700 bg-blue-50 border-blue-200';
+    if (role === 'trainee') return 'text-green-700 bg-green-50 border-green-200';
+    return 'text-gray-700 bg-gray-50 border-gray-200';
+});
 const LayoutComponent = computed(() => {
     if (roleName.value === 'trainer') return TrainerLayout;
     if (roleName.value === 'trainee') return TraineeLayout;
@@ -322,19 +330,33 @@ onUnmounted(() => {
                                 <h2 class="mt-4 text-2xl font-bold text-gray-900">
                                     {{ apiUser.name }}
                                 </h2>
-                                <p class="text-teal-600 font-medium bg-teal-50 px-3 py-1 rounded-full text-sm mt-2 inline-flex items-center">
-                                    <Shield class="w-3 h-3 mr-1.5" />
-                                    {{ roleName.toUpperCase() }}
-                                </p>
+                                <div class="flex flex-wrap gap-2 mt-2 justify-center">
+                                    <p :class="roleColor" class="font-medium px-3 py-1 rounded-full text-sm inline-flex items-center border">
+                                        <Shield class="w-3 h-3 mr-1.5" />
+                                        {{ roleName.toUpperCase() }}
+                                    </p>
+                                    <p
+                                        :class="apiUser.type?.toLowerCase() === 'external'
+                                            ? 'text-purple-700 bg-purple-50 border-purple-200'
+                                            : 'text-teal-700 bg-teal-50 border-teal-200'"
+                                        class="font-medium px-3 py-1 rounded-full text-sm inline-flex items-center border"
+                                    >
+                                        {{ apiUser.type?.toUpperCase() || 'INTERNAL' }}
+                                    </p>
+                                </div>
 
                                 <!-- Quick Stats -->
-                                <div class="grid grid-cols-2 w-full gap-4 mt-6 pt-6 border-t border-gray-100">
+                                <div class="grid grid-cols-3 w-full gap-4 mt-6 pt-6 border-t border-gray-100">
                                     <div class="text-center">
-                                        <span class="block text-2xl font-bold text-gray-800">1</span>
-                                        <span class="text-xs text-gray-500 uppercase tracking-wider">Programs</span>
+                                        <span class="block text-2xl font-bold text-teal-600">{{ apiUser.enrollments_count || 0 }}</span>
+                                        <span class="text-xs text-gray-500 uppercase tracking-wider">Courses</span>
                                     </div>
                                     <div class="text-center">
-                                        <span class="block text-2xl font-bold text-gray-800">0</span>
+                                        <span class="block text-2xl font-bold text-blue-600">{{ apiUser.sessions_count || 0 }}</span>
+                                        <span class="text-xs text-gray-500 uppercase tracking-wider">Sessions</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="block text-2xl font-bold text-yellow-600">{{ apiUser.certificates_count || 0 }}</span>
                                         <span class="text-xs text-gray-500 uppercase tracking-wider">Certificates</span>
                                     </div>
                                 </div>

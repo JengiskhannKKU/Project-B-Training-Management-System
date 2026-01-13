@@ -1,39 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
+import ProfileDropdown from '@/Components/ProfileDropdown.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
 
 const page = usePage<PageProps>();
-const roleName = computed<RoleName | null>(() => {
-    const role = page.props.auth.user?.role?.name as RoleName | undefined;
-
-    return role ?? null;
-});
-const currentPath = computed(() => page.url.split('?')[0]);
-
-const roleLinks: Record<RoleName, { label: string; href: string }> = {
-    admin: { label: 'Admin Portal', href: '/admin/dashboard' },
-    trainer: { label: 'Trainer Portal', href: '/trainer' },
-    trainee: { label: 'Trainee Portal', href: '/trainee' },
-};
-
-const menuLinks = computed(() => {
-    const links = [];
-
-    if (roleName.value) {
-        links.push(roleLinks[roleName.value]);
-    }
-
-    links.push({ label: 'Profile', href: '/profile' });
-
-    return links;
-});
-
-const isActive = (href: string) => currentPath.value === href;
 </script>
 
 <template>
@@ -56,60 +29,8 @@ const isActive = (href: string) => currentPath.value === href;
                         </Link>
 
                         <div class="flex items-center gap-4">
-                            <div class="hidden sm:block text-right">
-                                <p class="text-sm font-medium text-gray-900">
-                                    {{ $page.props.auth.user.name }}
-                                </p>
-                                <p class="text-xs text-gray-500">
-                                    {{ $page.props.auth.user.email }}
-                                </p>
-                            </div>
-
-                            <Dropdown align="right" width="48">
-                                <template #trigger>
-                                    <span class="inline-flex rounded-md">
-                                        <button
-                                            type="button"
-                                            class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                        >
-                                            Menu
-                                            <svg
-                                                class="-me-0.5 ms-2 h-4 w-4"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 20 20"
-                                                fill="currentColor"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                        </button>
-                                    </span>
-                                </template>
-
-                                <template #content>
-                            <DropdownLink
-                                v-for="item in menuLinks"
-                                :key="item.href"
-                                :href="item.href"
-                                :active="isActive(item.href)"
-                            >
-                                {{ item.label }}
-                            </DropdownLink>
-
-                                    <div class="my-2 border-t border-gray-100"></div>
-
-                                    <DropdownLink
-                                        :href="route('logout')"
-                                        method="post"
-                                        as="button"
-                                    >
-                                        Log Out
-                                    </DropdownLink>
-                                </template>
-                            </Dropdown>
+                            <!-- Profile Dropdown -->
+                            <ProfileDropdown />
 
                             <button
                                 class="rounded-md p-2 text-gray-500 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none md:hidden"

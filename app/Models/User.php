@@ -48,6 +48,13 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['type'];
+
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);
@@ -124,5 +131,30 @@ class User extends Authenticatable
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'checked_by');
+    }
+
+    /**
+     * Get the user type (Internal or External) based on profile data.
+     */
+    public function getTypeAttribute(): string
+    {
+        $profile = $this->profile;
+
+        if (!$profile) {
+            return 'Internal';
+        }
+
+        // If user has sub_category (Student or Personnel), they are Internal
+        if (!empty($profile->sub_category)) {
+            return 'Internal';
+        }
+
+        // If user has category, they are External
+        if (!empty($profile->category)) {
+            return 'External';
+        }
+
+        // Default to Internal
+        return 'Internal';
     }
 }

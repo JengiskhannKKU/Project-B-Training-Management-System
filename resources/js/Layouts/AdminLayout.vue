@@ -15,12 +15,12 @@ import {
 } from "lucide-vue-next";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
+import ProfileDropdown from "@/Components/ProfileDropdown.vue";
 import Snackbar from "@/Components/Snackbar.vue";
 import { useSnackbar } from "@/composables/useSnackbar";
 
 const showingSidebar = ref(true);
 const showingMobileMenu = ref(false);
-const showingProfileDropdown = ref(false);
 const page = usePage();
 const snackbar = useSnackbar();
 
@@ -83,21 +83,6 @@ const navigationItems = [
 const isActive = (path) => {
     return currentPath.value === path;
 };
-
-const userRole = computed(() => {
-    const role = page.props.auth?.user?.role?.name || page.props.auth?.user?.role;
-    if (!role) return '';
-    return role.toUpperCase();
-});
-
-const roleColor = computed(() => {
-    const role = (page.props.auth?.user?.role?.name || page.props.auth?.user?.role || '').toLowerCase();
-    if (role === 'admin') return 'text-red-600';
-    if (role === 'trainer') return 'text-blue-600';
-    if (role === 'trainee') return 'text-green-600';
-    return 'text-gray-600';
-});
-
 
 const handleMarkAsRead = (notificationId) => {
     const notification = notifications.value.find(n => n.id === notificationId);
@@ -199,32 +184,8 @@ onMounted(() => {
                         <!-- Language Switcher -->
                         <LanguageSwitcher />
 
-                        <!-- Avatar with online indicator -->
-                        <div class="relative">
-                            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                                <img
-                                    :src="`/api/me/avatar?t=${Date.now()}`"
-                                    alt="Avatar"
-                                    class="w-full h-full object-cover"
-                                    @error="$event.target.src = '/default-avatar.svg'"
-                                />
-                            </div>
-                            <!-- Online indicator dot -->
-                            <div
-                                class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"
-                            ></div>
-                        </div>
-                        <div class="hidden sm:block text-left">
-                            <p class="text-sm font-medium text-gray-900">
-                                {{ page.props.auth?.user?.name }}
-                            </p>
-                            <p class="text-xs text-gray-500">
-                                {{ page.props.auth?.user?.email }}
-                            </p>
-                            <p class="text-xs font-medium" :class="roleColor">
-                                {{ $t('Role') }}: {{ userRole }}
-                            </p>
-                        </div>
+                        <!-- Profile Dropdown -->
+                        <ProfileDropdown />
                     </div>
                 </div>
             </header>
