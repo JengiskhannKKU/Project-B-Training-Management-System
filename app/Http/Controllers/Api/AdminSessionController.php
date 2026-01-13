@@ -25,8 +25,10 @@ class AdminSessionController extends Controller
         $validated = $request->validate([
             'course_id' => ['required', 'integer', 'exists:courses,id'],
             'title' => ['nullable', 'string', 'max:255'],
-            'start_at' => ['required', 'date', 'before:end_at'],
-            'end_at' => ['required', 'date', 'after:start_at'],
+            'session_days' => ['required', 'array', 'min:1'],
+            'session_days.*.date' => ['required', 'date'],
+            'session_days.*.start_time' => ['required', 'date_format:H:i'],
+            'session_days.*.end_time' => ['required', 'date_format:H:i', 'after:session_days.*.start_time'],
             'min_participants' => ['required', 'integer', 'min:1'],
             'capacity' => ['required', 'integer', 'gte:min_participants'],
             'registration_start' => ['nullable', 'date'],
@@ -38,28 +40,51 @@ class AdminSessionController extends Controller
             'status' => ['nullable', Rule::in(['scheduled', 'ongoing', 'completed', 'cancelled'])],
         ]);
 
+        // Calculate start_at and end_at from session_days
+        $sessionDays = collect($validated['session_days'])->sortBy('date');
+        $firstDay = $sessionDays->first();
+        $lastDay = $sessionDays->last();
+
+        $startAt = Carbon::parse($firstDay['date'] . ' ' . $firstDay['start_time']);
+        $endAt = Carbon::parse($lastDay['date'] . ' ' . $lastDay['end_time']);
+
         // Determine status based on dates if not provided
         $status = $validated['status'] ?? null;
         if (!$status) {
-            $start = Carbon::parse($validated['start_at']);
-            $end = Carbon::parse($validated['end_at']);
             $now = now();
-
             $status = 'scheduled';
-            if ($now->gt($end)) {
+            if ($now->gt($endAt)) {
                 $status = 'completed';
-            } elseif ($now->gte($start)) {
+            } elseif ($now->gte($startAt)) {
                 $status = 'ongoing';
             }
         }
 
         $session = TrainingSession::create([
-            ...$validated,
+            'course_id' => $validated['course_id'],
+            'title' => $validated['title'],
+            'start_at' => $startAt,
+            'end_at' => $endAt,
+            'min_participants' => $validated['min_participants'],
+            'capacity' => $validated['capacity'],
+            'registration_start' => $validated['registration_start'],
+            'registration_end' => $validated['registration_end'],
+            'mode' => $validated['mode'],
+            'online_link' => $validated['online_link'],
+            'trainer_id' => $validated['trainer_id'],
+            'location' => $validated['location'],
             'status' => $status,
         ]);
 
-        // Generate session days for multi-day attendance tracking
-        app(SessionDayService::class)->generateSessionDays($session);
+        // Create session days from the provided array
+        foreach ($sessionDays as $index => $day) {
+            $session->sessionDays()->create([
+                'date' => $day['date'],
+                'start_time' => $day['start_time'],
+                'end_time' => $day['end_time'],
+                'day_number' => $index + 1,
+            ]);
+        }
 
         return response()->json([
             'success' => true,
