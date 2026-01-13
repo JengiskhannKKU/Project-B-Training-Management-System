@@ -662,7 +662,7 @@ const fetchProgram = async () => {
         // If not, try to load from courses table as a fallback (in case URL has actual course ID)
         if (!program.value && !requestFallback.value) {
             try {
-                const { data } = await axios.get(`/api/courses/${props.program.id}`);
+                const { data } = await axios.get(`/api/courses/${props.program.code}`);
                 program.value = (data?.data || data || props.program) as ProgramData;
             } catch (error: any) {
                 // Course not found - this is expected for pending requests

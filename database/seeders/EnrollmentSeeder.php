@@ -32,11 +32,11 @@ class EnrollmentSeeder extends Seeder
 
         $enrollments = [];
 
-        // Each session should have 10-30 enrollments to make it realistic
+        // Each session should have 3-8 enrollments
         foreach ($sessions as $session) {
             // Determine number of enrollments based on capacity
             $enrollmentCount = min(
-                rand((int)($session->capacity * 0.5), (int)($session->capacity * 0.9)),
+                rand(3, 8),
                 $allTrainees->count()
             );
 

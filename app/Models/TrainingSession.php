@@ -17,8 +17,6 @@ class TrainingSession extends Model
     protected $fillable = [
         'course_id',
         'title',
-        'start_at',
-        'end_at',
         'min_participants',
         'capacity',
         'registration_start',
@@ -31,8 +29,6 @@ class TrainingSession extends Model
     ];
 
     protected $casts = [
-        'start_at' => 'datetime',
-        'end_at' => 'datetime',
         'registration_start' => 'datetime',
         'registration_end' => 'datetime',
     ];
@@ -100,11 +96,7 @@ class TrainingSession extends Model
      */
     public function isMultiDay(): bool
     {
-        if (!$this->start_at || !$this->end_at) {
-            return false;
-        }
-
-        return $this->start_at->diffInDays($this->end_at) > 0;
+        return $this->sessionDays()->count() > 1;
     }
 
     /**
@@ -112,25 +104,90 @@ class TrainingSession extends Model
      */
     public function getTotalDaysAttribute(): int
     {
-        $sessionDaysCount = $this->sessionDays()->count();
+        return $this->sessionDays()->count();
+    }
 
-        // Return count from session_days if exists, otherwise calculate from dates
-        if ($sessionDaysCount > 0) {
-            return $sessionDaysCount;
+    /**
+     * Get the earliest session date (for display purposes)
+     */
+    public function getStartDateAttribute(): ?Carbon
+    {
+        $firstDay = $this->sessionDays()->orderBy('date')->first();
+        return $firstDay ? $firstDay->date : null;
+    }
+
+    /**
+     * Get the latest session date (for display purposes)
+     */
+    public function getEndDateAttribute(): ?Carbon
+    {
+        $lastDay = $this->sessionDays()->orderBy('date', 'desc')->first();
+        return $lastDay ? $lastDay->date : null;
+    }
+
+    /**
+     * Check if the trainer is already booked at a specific date and time
+     */
+    public static function trainerHasConflict($trainerId, $date, $startTime, $endTime, $excludeSessionId = null): bool
+    {
+        $query = static::where('trainer_id', $trainerId)
+            ->whereHas('sessionDays', function ($q) use ($date, $startTime, $endTime) {
+                $q->where('date', $date)
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        // Check for time overlap
+                        $query->where(function ($q) use ($startTime, $endTime) {
+                            // New session starts during existing session
+                            $q->where('start_time', '<=', $startTime)
+                              ->where('end_time', '>', $startTime);
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            // New session ends during existing session
+                            $q->where('start_time', '<', $endTime)
+                              ->where('end_time', '>=', $endTime);
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            // New session completely covers existing session
+                            $q->where('start_time', '>=', $startTime)
+                              ->where('end_time', '<=', $endTime);
+                        });
+                    });
+            });
+
+        if ($excludeSessionId) {
+            $query->where('id', '!=', $excludeSessionId);
         }
 
-        // Fallback calculation if session_days not populated
-        if (!$this->start_at || !$this->end_at) {
-            return 1;
+        return $query->exists();
+    }
+
+    /**
+     * Check if the location is already booked at a specific date and time
+     */
+    public static function locationHasConflict($location, $date, $startTime, $endTime, $excludeSessionId = null): bool
+    {
+        if (empty($location)) {
+            return false;
         }
 
-        $start = $this->start_at->startOfDay();
-        $end = $this->end_at->startOfDay();
+        $query = static::where('location', $location)
+            ->whereHas('sessionDays', function ($q) use ($date, $startTime, $endTime) {
+                $q->where('date', $date)
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        $query->where(function ($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '<=', $startTime)
+                              ->where('end_time', '>', $startTime);
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '<', $endTime)
+                              ->where('end_time', '>=', $endTime);
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '>=', $startTime)
+                              ->where('end_time', '<=', $endTime);
+                        });
+                    });
+            });
 
-        if ($end->lessThan($start)) {
-            return 1;
+        if ($excludeSessionId) {
+            $query->where('id', '!=', $excludeSessionId);
         }
 
-        return $start->diffInDays($end) + 1;
+        return $query->exists();
     }
 }

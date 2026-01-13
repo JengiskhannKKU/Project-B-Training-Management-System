@@ -14,7 +14,7 @@ class CategorySeeder extends Seeder
     {
         $categories = [
             [
-                'name' => 'Web Development',
+                'name' => 'Programming',
                 'icon' => 'Code',
                 'color' => 'blue',
             ],
@@ -32,36 +32,6 @@ class CategorySeeder extends Seeder
                 'name' => 'Business',
                 'icon' => 'Briefcase',
                 'color' => 'indigo',
-            ],
-            [
-                'name' => 'Marketing',
-                'icon' => 'TrendingUp',
-                'color' => 'orange',
-            ],
-            [
-                'name' => 'Programming',
-                'icon' => 'Laptop',
-                'color' => 'teal',
-            ],
-            [
-                'name' => 'Photography',
-                'icon' => 'Camera',
-                'color' => 'yellow',
-            ],
-            [
-                'name' => 'Education',
-                'icon' => 'BookOpen',
-                'color' => 'green',
-            ],
-            [
-                'name' => 'Innovation',
-                'icon' => 'Lightbulb',
-                'color' => 'cyan',
-            ],
-            [
-                'name' => 'General',
-                'icon' => 'Tag',
-                'color' => 'red',
             ],
         ];
 

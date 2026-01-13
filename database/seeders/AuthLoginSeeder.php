@@ -83,29 +83,7 @@ class AuthLoginSeeder extends Seeder
 
         // Additional Test Users (Safe to update/reset)
         $testUsers = [
-            // Admin
-            [
-                'name' => 'Super Admin',
-                'email' => 'superadmin@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['admin']->id ?? 1,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subDays(1),
-            ],
-            [
-                'name' => 'System Manager',
-                'email' => 'manager@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['admin']->id ?? 1,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subHours(12),
-            ],
-
-            // Trainers
+            // 1 more trainer
             [
                 'name' => 'John Trainer',
                 'email' => 'john.trainer@example.com',
@@ -116,38 +94,7 @@ class AuthLoginSeeder extends Seeder
                 'locale' => 'en',
                 'last_login_at' => $now->subHours(6),
             ],
-            [
-                'name' => 'Sarah Tech',
-                'email' => 'sarah.trainer@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['trainer']->id ?? 2,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subHours(8),
-            ],
-            [
-                'name' => 'Mike Security',
-                'email' => 'mike.trainer@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['trainer']->id ?? 2,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subDays(2),
-            ],
-            [
-                'name' => 'David Cloud',
-                'email' => 'david.trainer@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['trainer']->id ?? 2,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subDays(3),
-            ],
-
-            // Trainees (30 more for comprehensive testing)
+            // 2 more trainees
             [
                 'name' => 'Alice Wonder',
                 'email' => 'alice@example.com',
@@ -168,75 +115,6 @@ class AuthLoginSeeder extends Seeder
                 'locale' => 'en',
                 'last_login_at' => $now->subHours(5),
             ],
-        ];
-
-        // Generate 30 additional trainees
-        $firstNames = ['Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Ethan', 'Sophia', 'Mason', 'Isabella', 'William',
-                       'Mia', 'James', 'Charlotte', 'Benjamin', 'Amelia', 'Lucas', 'Harper', 'Henry', 'Evelyn', 'Alexander',
-                       'Abigail', 'Michael', 'Emily', 'Daniel', 'Elizabeth', 'Matthew', 'Sofia', 'Jackson', 'Avery', 'Sebastian'];
-
-        $lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
-                      'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
-                      'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson'];
-
-        for ($i = 0; $i < 30; $i++) {
-            $firstName = $firstNames[$i % count($firstNames)];
-            $lastName = $lastNames[$i % count($lastNames)];
-            $testUsers[] = [
-                'name' => $firstName . ' ' . $lastName . ' ' . ($i + 1),
-                'email' => strtolower($firstName) . '.' . strtolower($lastName) . ($i + 1) . '@example.com',
-                'password' => $commonPassword,
-                'role_id' => $roles['trainee']->id ?? 3,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => $i % 2 ? 'en' : 'th',
-                'last_login_at' => $now->subHours(rand(1, 72)),
-            ];
-        }
-
-        // Add 5 more trainers
-        $trainerNames = [
-            ['Emily Johnson', 'emily.johnson@example.com'],
-            ['Robert Chen', 'robert.chen@example.com'],
-            ['Lisa Anderson', 'lisa.anderson@example.com'],
-            ['Kevin Park', 'kevin.park@example.com'],
-            ['Maria Garcia', 'maria.garcia@example.com'],
-        ];
-
-        foreach ($trainerNames as $trainer) {
-            $testUsers[] = [
-                'name' => $trainer[0],
-                'email' => $trainer[1],
-                'password' => $commonPassword,
-                'role_id' => $roles['trainer']->id ?? 2,
-                'email_verified_at' => $now,
-                'status' => 'active',
-                'locale' => 'en',
-                'last_login_at' => $now->subHours(rand(1, 48)),
-            ];
-        }
-
-        // Add 2 more admins
-        $testUsers[] = [
-            'name' => 'Operations Manager',
-            'email' => 'operations@example.com',
-            'password' => $commonPassword,
-            'role_id' => $roles['admin']->id ?? 1,
-            'email_verified_at' => $now,
-            'status' => 'active',
-            'locale' => 'en',
-            'last_login_at' => $now->subHours(3),
-        ];
-
-        $testUsers[] = [
-            'name' => 'Training Coordinator',
-            'email' => 'coordinator@example.com',
-            'password' => $commonPassword,
-            'role_id' => $roles['admin']->id ?? 1,
-            'email_verified_at' => $now,
-            'status' => 'active',
-            'locale' => 'th',
-            'last_login_at' => $now->subHours(6),
         ];
 
         foreach ($testUsers as $userData) {

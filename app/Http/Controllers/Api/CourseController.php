@@ -142,7 +142,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'sometimes|required|string|max:100',
+            'category' => 'nullable|string|max:100',
             'level' => 'nullable|string',
             'learning_outcomes' => 'nullable|string',
             'target_audience' => 'nullable|string',

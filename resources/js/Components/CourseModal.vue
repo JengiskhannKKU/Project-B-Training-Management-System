@@ -131,10 +131,15 @@ const handleSubmit = async () => {
     // Clear previous errors
     form.clearErrors();
 
-    if (!form.title || !form.category) {
-        if (!form.title) form.setError('title', 'Course title is required');
-        if (!form.category) form.setError('category', 'Category is required');
+    if (!form.title || !form.title.trim()) {
+        form.setError('title', 'Course title is required');
         toast.error('Please fill in all required fields');
+        return;
+    }
+
+    if (!form.category || !form.category.trim()) {
+        form.setError('category', 'Category is required');
+        toast.error('Please select a category');
         return;
     }
 
@@ -157,16 +162,16 @@ const handleSubmit = async () => {
         await axios.get('/sanctum/csrf-cookie');
 
         if (isEditMode.value) {
-            await axios.put(`/api/courses/${props.course.id}`, payload);
+            await axios.put(`/api/courses/${props.course.code}`, payload);
             toast.success('Course updated successfully!');
         } else {
             await axios.post('/api/courses', payload);
             toast.success('Course created successfully!');
         }
 
-        // Only emit success and close if API call succeeded
+        // Only emit success if API call succeeded
+        // Don't call handleClose here - let parent handle it after data refresh
         emit('success', payload);
-        handleClose();
     } catch (error: any) {
         // Handle validation errors from API
         if (error.response?.status === 422 && error.response?.data?.errors) {
