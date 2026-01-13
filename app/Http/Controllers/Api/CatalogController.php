@@ -16,10 +16,14 @@ class CatalogController extends Controller
     {
         $courses = Course::query()
             ->where('status', 'published')
-            ->with(['sessions' => function ($query) {
-                $query->whereIn('status', ['scheduled', 'ongoing'])
-                      ->orderBy('start_at', 'asc'); // Next upcoming first
-            }, 'sessions.enrollments', 'reviews'])
+            ->with([
+                'sessions' => function ($query) {
+                    $query->whereIn('status', ['scheduled', 'ongoing'])
+                        ->orderBy('start_at', 'asc'); // Next upcoming first
+                },
+                'sessions.enrollments',
+                'reviews'
+            ])
             ->withCount('reviews as reviews_count')
             ->withAvg('reviews as rating', 'rating')
             ->latest()
@@ -45,8 +49,8 @@ class CatalogController extends Controller
                 // "Trainees count" usually implies total students ever or current?
                 // Let's assume total active enrollments.
                 // We can use a subquery select.
-                
-                $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function($q) use ($course) {
+    
+                $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function ($q) use ($course) {
                     $q->select('id')->from('training_sessions')->where('course_id', $course->id);
                 })->where('status', '!=', 'cancelled')->count();
 
@@ -58,7 +62,7 @@ class CatalogController extends Controller
                     if ($displaySession->start_at && $displaySession->end_at) {
                         $start = $displaySession->start_at;
                         $end = $displaySession->end_at;
-                        
+
                         // Format Date: "Jan 5-10, 2026" or "Jan 5, 2026"
                         if ($start->isSameDay($end)) {
                             $dateStr = $start->format('M j, Y');
@@ -97,24 +101,12 @@ class CatalogController extends Controller
     public function sessions(Course $course): JsonResponse
     {
         $sessions = TrainingSession::query()
-            ->select([
-                'id',
-                'course_id',
-                'title',
-                'start_at',
-                'end_at',
-                'capacity',
-                'trainer_id',
-                'trainer_name',
-                'trainer_photo_url',
-                'location',
-                'online_link',
-                'status',
-                'mode',
-                'registration_start',
-                'registration_end'
+            ->with([
+                'trainer:id,name,profile_photo_path',
+                'sessionDays' => function ($query) {
+                    $query->orderBy('day_number');
+                }
             ])
-            ->with('trainer:id,name')
             ->withCount([
                 'enrollments as active_enrollments_count' => function ($q) {
                     $q->where('status', '!=', 'cancelled');
@@ -122,8 +114,49 @@ class CatalogController extends Controller
             ])
             ->where('course_id', $course->id)
             ->whereIn('status', ['scheduled', 'ongoing'])
-            ->orderByDesc('start_at')
-            ->get();
+            ->get()
+            ->map(function ($session) {
+                // Get first and last session days
+                $firstDay = $session->sessionDays->first();
+                $lastDay = $session->sessionDays->last();
+
+                // Construct start_at and end_at timestamps
+                $startAt = null;
+                $endAt = null;
+
+                if ($firstDay) {
+                    $date = \Carbon\Carbon::parse($firstDay->date)->format('Y-m-d');
+                    $time = $firstDay->start_time ?? '00:00:00';
+                    $startAt = $date . ' ' . $time;
+                }
+
+                if ($lastDay) {
+                    $date = \Carbon\Carbon::parse($lastDay->date)->format('Y-m-d');
+                    $time = $lastDay->end_time ?? '23:59:59';
+                    $endAt = $date . ' ' . $time;
+                }
+
+                return [
+                    'id' => $session->id,
+                    'course_id' => $session->course_id,
+                    'title' => $session->title,
+                    'start_at' => $startAt,
+                    'end_at' => $endAt,
+                    'capacity' => $session->capacity,
+                    'trainer_id' => $session->trainer_id,
+                    'trainer_name' => $session->trainer->name ?? null,
+                    'trainer_photo_url' => $session->trainer->profile_photo_path ?? null,
+                    'location' => $session->location,
+                    'online_link' => $session->online_link,
+                    'status' => $session->status,
+                    'mode' => $session->mode,
+                    'registration_start' => $session->registration_start,
+                    'registration_end' => $session->registration_end,
+                    'active_enrollments_count' => $session->active_enrollments_count,
+                ];
+            })
+            ->sortBy('start_at')
+            ->values();
 
         return response()->json($sessions);
     }
@@ -138,15 +171,19 @@ class CatalogController extends Controller
             abort(404);
         }
 
-        $course->load(['sessions' => function ($query) {
+        $course->load([
+            'sessions' => function ($query) {
                 $query->whereIn('status', ['scheduled', 'ongoing'])
-                      ->orderBy('start_at', 'asc');
-            }, 'reviews', 'owner'])
+                    ->orderBy('start_at', 'asc');
+            },
+            'reviews',
+            'owner'
+        ])
             ->loadCount('reviews as reviews_count')
             ->loadAvg('reviews as rating', 'rating');
 
         // Calculate total trainees
-        $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function($q) use ($course) {
+        $totalTrainees = \App\Models\Enrollment::whereIn('session_id', function ($q) use ($course) {
             $q->select('id')->from('training_sessions')->where('course_id', $course->id);
         })->where('status', '!=', 'cancelled')->count();
 
@@ -160,7 +197,7 @@ class CatalogController extends Controller
             if ($displaySession->start_at && $displaySession->end_at) {
                 $start = $displaySession->start_at;
                 $end = $displaySession->end_at;
-                
+
                 if ($start->isSameDay($end)) {
                     $dateStr = $start->format('M j, Y');
                 } else {
