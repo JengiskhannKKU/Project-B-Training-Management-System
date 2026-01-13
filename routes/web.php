@@ -120,9 +120,41 @@ Route::middleware(['auth'])->group(function () {
             abort(403, 'Unauthorized to view this certificate');
         }
 
+        // Add evaluation and attendance data
+        $hasEvaluation = true;
+        $attendanceRate = 100;
+        $blockReason = null;
+
+        if ($certificate->session_id) {
+            $hasEvaluation = \App\Models\Evaluation::where('session_id', $certificate->session_id)
+                ->where('user_id', $certificate->user_id)
+                ->exists();
+
+            $enrollment = \App\Models\Enrollment::where('session_id', $certificate->session_id)
+                ->where('user_id', $certificate->user_id)
+                ->first();
+
+            if ($enrollment) {
+                $attendanceRate = $enrollment->attendance_percent ?? 0;
+            }
+
+            if ($attendanceRate < 80) {
+                $blockReason = 'insufficient_attendance';
+            } elseif (!$hasEvaluation) {
+                $blockReason = 'missing_feedback';
+            }
+        }
+
+        $certificateData = array_merge($certificate->toArray(), [
+            'has_evaluation' => $hasEvaluation,
+            'attendance_rate' => $attendanceRate,
+            'can_download' => $hasEvaluation && $attendanceRate >= 80,
+            'block_reason' => $blockReason,
+        ]);
+
         return Inertia::render('Certificates/Show', [
             'certificateId' => $id,
-            'certificate' => $certificate,
+            'certificate' => $certificateData,
         ]);
     })->name('certificates.show');
 });
@@ -481,10 +513,9 @@ Route::middleware(['auth', 'role:trainee'])->group(function () {
         ->name('sessions.evaluation.store');
 });
 
-// Admin & Trainer - View session evaluations
-Route::middleware(['auth'])->group(function () {
-    // GET /sessions/{id}/evaluation - View all evaluations for a session
-    Route::get('/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
-        ->name('sessions.evaluation.show')
-        ->middleware('role:admin,trainer');
+// Admin & Trainer - View session evaluations (API only)
+Route::middleware(['auth', 'role:admin,trainer'])->group(function () {
+    // GET /api/sessions/{id}/evaluation - View all evaluations for a session
+    Route::get('/api/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
+        ->name('api.sessions.evaluation.show');
 });

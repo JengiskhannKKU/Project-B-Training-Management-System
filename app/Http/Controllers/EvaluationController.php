@@ -22,10 +22,13 @@ class EvaluationController extends Controller
         $user = Auth::user();
 
         // Get sessions where:
-        // 1. User is enrolled (approved or completed)
-        // 2. Session is completed
-        // 3. User has >= 80% attendance
+        // 1. User has a certificate issued
+        // 2. User has >= 80% attendance
+        // 3. Feedback not yet submitted
         $sessions = TrainingSession::with(['course', 'trainer'])
+            ->whereHas('certificates', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->whereHas('enrollments', function ($query) use ($user) {
                 $query->where('user_id', $user->id)
                     ->whereIn('status', ['approved', 'completed']);
@@ -119,18 +122,16 @@ class EvaluationController extends Controller
     }
 
     /**
-     * Show all evaluations for a session (GET /sessions/{id}/evaluation)
+     * Show all evaluations for a session (GET /api/sessions/{id}/evaluation)
      * Only accessible by Admin and Trainer
+     * Returns JSON response
      */
     public function show($id)
     {
-        $user = Auth::user();
         $session = TrainingSession::with(['course', 'trainer'])->findOrFail($id);
 
-        // Authorization check for trainer - can only view their own sessions
-        if ($user->role->name === 'trainer' && $session->trainer_id !== $user->id) {
-            abort(403, 'Unauthorized to view this session\'s evaluations.');
-        }
+        // Authorize using Policy
+        $this->authorize('viewSessionEvaluations', $session);
 
         // Get all evaluations for this session with user info
         $evaluations = Evaluation::where('session_id', $id)
@@ -165,16 +166,19 @@ class EvaluationController extends Controller
             'would_recommend_percentage' => round($evaluations->where('would_recommend', true)->count() / max($evaluations->count(), 1) * 100, 2),
         ];
 
-        return Inertia::render('Session/EvaluationResults', [
-            'session' => [
-                'id' => $session->id,
-                'title' => $session->title,
-                'course_name' => $session->course->title ?? 'Unknown',
-                'trainer_name' => $session->trainer->name ?? 'Unknown',
-            ],
-            'evaluations' => $evaluations,
-            'averages' => $averages,
-            'total_evaluations' => $evaluations->count(),
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'session' => [
+                    'id' => $session->id,
+                    'title' => $session->title,
+                    'course_name' => $session->course->title ?? 'Unknown',
+                    'trainer_name' => $session->trainer->name ?? 'Unknown',
+                ],
+                'evaluations' => $evaluations,
+                'averages' => $averages,
+                'total_evaluations' => $evaluations->count(),
+            ]
         ]);
     }
 }
