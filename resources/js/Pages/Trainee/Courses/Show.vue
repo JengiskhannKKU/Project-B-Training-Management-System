@@ -180,10 +180,43 @@ const formattedDate = (value) => {
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+const formatDateRange = (startDate, endDate) => {
+    if (!startDate) return "-";
+    
+    const start = new Date(startDate);
+    if (isNaN(start.getTime())) return startDate;
+    
+    if (!endDate) {
+        return start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    const end = new Date(endDate);
+    if (isNaN(end.getTime())) {
+        return start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    // Check if same day
+    if (start.toDateString() === end.toDateString()) {
+        return start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    // Check if same month and year
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+        const month = start.toLocaleDateString(undefined, { month: 'short' });
+        const year = start.getFullYear();
+        return `${month} ${start.getDate()}-${end.getDate()}, ${year}`;
+    }
+    
+    // Different months
+    const startStr = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const endStr = end.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return `${startStr} - ${endStr}`;
+};
+
 const formatSessionMeta = (session) => {
-    const date = formattedDate(session.start_at || session.start_date);
+    const date = formatDateRange(session.start_at, session.end_at);
     const time = formattedTime(session);
-    const location = session.location || "Smart Classroom";
+    const location = session.location || session.online_link || "Online";
     return `${date} · ${time} · ${location}`;
 };
 
@@ -194,17 +227,30 @@ const formattedTime = (session) => {
     let end = '';
     
     if (session.start_at) {
-        const d = new Date(session.start_at);
-        start = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const startDate = new Date(session.start_at);
+        start = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Check if it's a multi-day session
+        if (session.end_at) {
+            const endDate = new Date(session.end_at);
+            end = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // If it spans multiple days, show "Multi-day schedule"
+            if (startDate.toDateString() !== endDate.toDateString()) {
+                return 'Multi-day schedule';
+            }
+        }
     } else if (session.start_time) {
         start = session.start_time.slice(0, 5);
     }
 
-    if (session.end_at) {
-        const d = new Date(session.end_at);
-        end = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (session.end_time) {
-        end = session.end_time.slice(0, 5);
+    if (!end) {
+        if (session.end_at) {
+            const d = new Date(session.end_at);
+            end = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (session.end_time) {
+            end = session.end_time.slice(0, 5);
+        }
     }
 
     return start && end ? `${start} - ${end}` : (start || "--:--");
@@ -271,6 +317,28 @@ const instructors = computed(() => {
     return Array.from(map.values());
 });
 
+// Computed property for the next upcoming session to display in sidebar
+const nextSession = computed(() => {
+    if (!openSessions.value || openSessions.value.length === 0) return null;
+    // Return the first open session (already sorted by start_at)
+    return openSessions.value[0];
+});
+
+const sidebarDate = computed(() => {
+    if (!nextSession.value) return 'No upcoming sessions';
+    return formatDateRange(nextSession.value.start_at, nextSession.value.end_at);
+});
+
+const sidebarTime = computed(() => {
+    if (!nextSession.value) return '-';
+    return formattedTime(nextSession.value);
+});
+
+const sidebarLocation = computed(() => {
+    if (!nextSession.value) return '-';
+    return nextSession.value.location || nextSession.value.online_link || 'Online';
+});
+
 onMounted(() => {
     fetchProgram();
     fetchSessions();
@@ -297,7 +365,9 @@ onMounted(() => {
                 @dismiss="programError = null"
             />
 
-            <div class="rounded-2xl overflow-hidden">
+            <LoadingSpinner v-if="isLoadingProgram" text="Loading course details..." class="my-8" />
+
+            <div v-else class="rounded-2xl overflow-hidden">
                     <img
                         v-if="program?.image_url"
                         :src="program.image_url"
@@ -491,15 +561,18 @@ onMounted(() => {
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Date:</span>
-                                    <span class="font-semibold text-gray-800">{{ program?.date || '-' }}</span>
+                                    <span class="font-semibold text-gray-800">{{ sidebarDate }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Time:</span>
-                                    <span class="font-semibold text-gray-800">{{ program?.time || '-' }}</span>
+                                    <span class="font-semibold text-gray-800">{{ sidebarTime }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Location:</span>
-                                    <span class="font-semibold text-gray-800">{{ program?.location || '-' }}</span>
+                                    <span v-if="nextSession && nextSession.online_link" class="font-semibold text-teal-600 hover:text-teal-700">
+                                        <a :href="nextSession.online_link" target="_blank" rel="noopener noreferrer" class="underline">Online Class</a>
+                                    </span>
+                                    <span v-else class="font-semibold text-gray-800">{{ sidebarLocation }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Status:</span>
