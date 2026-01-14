@@ -122,4 +122,47 @@ return [
         // Log individual file size warnings
         'log_large_files' => env('CERT_LOG_LARGE_FILES', true),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fixed Template Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the fixed certificate template system.
+    |
+    */
+
+    // Organization Information
+    'organization_name' => env('CERT_ORG_NAME', 'Khon Kaen University'),
+    'organization_name_th' => env('CERT_ORG_NAME_TH', 'มหาวิทยาลัยขอนแก่น'),
+    'organization_logo_url' => env('CERT_ORG_LOGO', '/images/kku-logo.png'),
+
+    // Default Authorized Signatory
+    'default_signatory' => env('CERT_DEFAULT_SIGNATORY', 'Dr. Director Name'),
+    'default_signatory_title' => env('CERT_DEFAULT_SIGNATORY_TITLE', 'Director of Training'),
+
+    // Default language for certificates
+    'default_language' => env('CERT_DEFAULT_LANGUAGE', 'th'), // 'th' or 'en'
+
+    // QR Code Configuration
+    'qr_code' => [
+        'size' => 200, // pixels
+        'error_correction' => 'H', // L, M, Q, H (H = highest, survives 30% damage)
+        'margin' => 1, // margin around QR code
+    ],
+
+    // Text Length Limits (for warnings)
+    'text_limits' => [
+        'trainee_name' => 50,
+        'course_name' => 100,
+        'description' => 500,
+        'skills' => 300,
+    ],
+
+    // Certificate Numbering
+    'certificate_numbering' => [
+        'format' => 'CERT-{YEAR}-{SEQUENCE}', // CERT-2026-0001
+        'sequence_padding' => 4, // Pad sequence to 4 digits
+        'reset_annually' => true, // Reset sequence each year
+    ],
 ];

@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TrainingSession extends Model
 {
@@ -69,18 +68,6 @@ class TrainingSession extends Model
         return $this->hasMany(Attendance::class, 'session_id');
     }
 
-    public function certificateTemplates(): HasMany
-    {
-        return $this->hasMany(CertificateTemplate::class, 'session_id');
-    }
-
-    public function activeCertificateTemplate(): HasOne
-    {
-        return $this->hasOne(CertificateTemplate::class, 'session_id')
-            ->where('is_active', true)
-            ->latestOfMany();
-    }
-
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class, 'session_id');
@@ -110,7 +97,7 @@ class TrainingSession extends Model
     /**
      * Get the earliest session date (for display purposes)
      */
-    public function getStartDateAttribute(): ?Carbon
+    public function getStartDateAttribute()
     {
         $firstDay = $this->sessionDays()->orderBy('date')->first();
         return $firstDay ? $firstDay->date : null;
@@ -119,7 +106,7 @@ class TrainingSession extends Model
     /**
      * Get the latest session date (for display purposes)
      */
-    public function getEndDateAttribute(): ?Carbon
+    public function getEndDateAttribute()
     {
         $lastDay = $this->sessionDays()->orderBy('date', 'desc')->first();
         return $lastDay ? $lastDay->date : null;
