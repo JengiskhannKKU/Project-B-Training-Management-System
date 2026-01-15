@@ -20,6 +20,7 @@ class CertificateRenderer
      */
     public function render(Certificate $certificate): string
     {
+        Log::debug('Starting certificate rendering', ['certificate_id' => $certificate->id]);
         // Load all necessary relationships
         $certificate->loadMissing([
             'user:id,name',
@@ -31,6 +32,7 @@ class CertificateRenderer
 
         // Prepare template data
         $data = $this->prepareTemplateData($certificate);
+        Log::debug('Template data prepared', ['data' => array_keys($data)]);
 
         // Select template based on language
         $template = $certificate->language === 'en'
@@ -38,6 +40,7 @@ class CertificateRenderer
             : 'certificates.templates.fixed-th';
 
         try {
+            Log::debug('Calling Pdf::loadView', ['template' => $template]);
             // Render PDF
             $pdf = Pdf::loadView($template, $data)
                 ->setPaper('a4', 'landscape')
@@ -49,7 +52,10 @@ class CertificateRenderer
                     'dpi' => 150,
                 ]);
 
-            return $pdf->output();
+            Log::debug('Calling $pdf->output()');
+            $output = $pdf->output();
+            Log::debug('PDF rendered successfully', ['size' => strlen($output)]);
+            return $output;
         } catch (\Exception $e) {
             Log::error('Certificate rendering failed', [
                 'certificate_id' => $certificate->id,
@@ -148,6 +154,15 @@ class CertificateRenderer
      */
     protected function generateQrCode(string $url): string
     {
+        // Check if Endroid\QrCode package is installed and classes exist
+        if (
+            !class_exists('\Endroid\QrCode\Builder\Builder') ||
+            !class_exists('\Endroid\QrCode\Writer\PngWriter')
+        ) {
+            Log::warning('Endroid\QrCode package or classes not found. Skipping QR code generation.');
+            return 'data:image/png;base64,';
+        }
+
         try {
             $qrConfig = config('certificates.qr_code', [
                 'size' => 200,
@@ -155,22 +170,34 @@ class CertificateRenderer
                 'margin' => 1,
             ]);
 
-            $errorCorrection = match($qrConfig['error_correction']) {
-                'L' => ErrorCorrectionLevel::Low,
-                'M' => ErrorCorrectionLevel::Medium,
-                'Q' => ErrorCorrectionLevel::Quartile,
-                'H' => ErrorCorrectionLevel::High,
-                default => ErrorCorrectionLevel::High,
-            };
+            // Robust check for ErrorCorrectionLevel class/enum
+            $ecClass = '\Endroid\QrCode\ErrorCorrectionLevel';
+            if (!class_exists($ecClass) && !enum_exists($ecClass)) {
+                // Try alternate namespace/name for different versions if needed
+                // For now, if it's missing, we'll just skip the specific level setting
+                Log::warning('ErrorCorrectionLevel class/enum not found.');
+                $errorCorrection = null;
+            } else {
+                $errorCorrection = match ($qrConfig['error_correction'] ?? 'H') {
+                    'L' => $ecClass::Low,
+                    'M' => $ecClass::Medium,
+                    'Q' => $ecClass::Quartile,
+                    'H' => $ecClass::High,
+                    default => $ecClass::High,
+                };
+            }
 
-            $result = Builder::create()
+            $builder = Builder::create()
                 ->writer(new PngWriter())
                 ->data($url)
                 ->size($qrConfig['size'])
-                ->margin($qrConfig['margin'])
-                ->errorCorrectionLevel($errorCorrection)
-                ->build();
+                ->margin($qrConfig['margin']);
 
+            if ($errorCorrection) {
+                $builder->errorCorrectionLevel($errorCorrection);
+            }
+
+            $result = $builder->build();
             $qrCode = $result->getString();
 
             return 'data:image/png;base64,' . base64_encode($qrCode);
@@ -259,8 +286,8 @@ class CertificateRenderer
             'issue_date' => date('d/m/Y'),
             'certificate_code' => 'CERT-PREVIEW-0000',
             'trainers' => collect([
-                (object)['name' => 'Trainer Name 1'],
-                (object)['name' => 'Trainer Name 2'],
+                (object) ['name' => 'Trainer Name 1'],
+                (object) ['name' => 'Trainer Name 2'],
             ]),
             'trainer_signatures' => [],
             'authorized_signatory' => 'Director Name',

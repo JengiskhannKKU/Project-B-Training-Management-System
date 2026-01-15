@@ -135,7 +135,7 @@ return [
     // Organization Information
     'organization_name' => env('CERT_ORG_NAME', 'Khon Kaen University'),
     'organization_name_th' => env('CERT_ORG_NAME_TH', 'มหาวิทยาลัยขอนแก่น'),
-    'organization_logo_url' => env('CERT_ORG_LOGO', '/images/kku-logo.png'),
+    'organization_logo_url' => env('CERT_ORG_LOGO', '/images/project_logo.png'),
 
     // Default Authorized Signatory
     'default_signatory' => env('CERT_DEFAULT_SIGNATORY', 'Dr. Director Name'),
