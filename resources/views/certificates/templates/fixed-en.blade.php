@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate - {{ $trainee_name }}</title>
+    <title>Certificate of Completion - {{ $trainee_name }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Sarabun:wght@300;400;600;700&display=swap');
+        @page {
+            size: 297mm 210mm;
+            margin: 0;
+        }
 
         * {
             margin: 0;
@@ -14,382 +16,320 @@
         }
 
         body {
-            font-family: 'Montserrat', 'Sarabun', sans-serif;
-            background: white;
-            position: relative;
+            font-family: 'DejaVu Sans', sans-serif;
+            width: 297mm;
+            height: 210mm;
+            background: #fff;
+            display: table-cell;
+            vertical-align: middle;
+            text-align: center;
         }
 
         .certificate {
-            width: 297mm;
-            height: 210mm;
-            padding: 15mm;
-            background: white;
-            position: relative;
+            display: inline-block;
+            width: 275mm;
+            border: 3px solid #1a365d;
+            padding: 4mm;
+            margin: 8mm auto;
         }
 
-        .border-frame {
-            border: 3px solid #1e40af;
-            border-radius: 10px;
-            padding: 10mm;
-            height: 100%;
-            position: relative;
-            box-shadow: inset 0 0 20px rgba(30, 64, 175, 0.1);
-        }
-
-        .inner-border {
-            border: 1px solid #93c5fd;
-            padding: 8mm;
-            height: 100%;
+        .certificate-content {
+            border: 1px solid #b8860b;
+            text-align: center;
+            padding: 6mm 12mm;
         }
 
         .header {
-            text-align: center;
-            margin-bottom: 8mm;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 5mm;
+            margin-bottom: 2mm;
         }
 
-        .org-logo {
-            width: 50mm;
-            height: auto;
-            margin-bottom: 3mm;
+        .logo {
+            height: 12mm;
         }
 
         .org-name {
-            font-size: 18pt;
-            font-weight: 700;
-            color: #1e40af;
-            margin-bottom: 2mm;
-        }
-
-        .cert-title {
-            font-size: 26pt;
-            font-weight: 700;
-            color: #991b1b;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 3mm;
-        }
-
-        .cert-subtitle {
-            font-size: 14pt;
-            color: #991b1b;
-            font-style: italic;
-            margin-top: 1mm;
-        }
-
-        .content {
-            text-align: center;
-            margin-top: 5mm;
-        }
-
-        .intro-text {
-            font-size: 13pt;
-            color: #374151;
-            margin-bottom: 4mm;
-        }
-
-        .trainee-name {
-            font-size: @php
-                echo mb_strlen($trainee_name) > 40 ? '20pt' :
-                     (mb_strlen($trainee_name) > 30 ? '24pt' : '28pt');
-            @endphp;
-            font-weight: 700;
-            color: #1e3a8a;
-            margin: 4mm 0;
-            padding: 2mm 0;
-            border-bottom: 2px solid #1e40af;
-            display: inline-block;
-            min-width: 60%;
-        }
-
-        .program-info {
-            margin: 6mm 0;
-            text-align: center;
-        }
-
-        .program-name {
-            font-size: 16pt;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 2mm;
-        }
-
-        .program-description {
             font-size: 11pt;
-            color: #6b7280;
-            max-width: 80%;
-            margin: 0 auto 2mm auto;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: bold;
+            color: #1a365d;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: 2mm 0 0 0;
         }
 
-        .training-details {
-            display: table;
-            width: 100%;
-            margin: 4mm 0;
-            padding: 2mm 0;
-            border-top: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
+        .org-tagline {
+            font-size: 6pt;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0;
         }
 
-        .detail-row {
-            display: table;
-            width: 100%;
-            margin-bottom: 2mm;
+        .title {
+            font-size: 30pt;
+            font-weight: bold;
+            color: #1a365d;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin: 7mm 0 0 0;
+        }
+
+        .subtitle {
+            font-size: 11pt;
+            color: #b8860b;
+            font-style: italic;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+
+        .certify-text {
+            font-size: 10pt;
+            color: #444;
+            margin: 8mm 0 2mm 0;
+        }
+
+        .recipient-name {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #1a365d;
+            border-bottom: 2px solid #b8860b;
+            display: inline-block;
+            padding: 0 15mm 2mm 15mm;
+            margin: 0;
+        }
+
+        .completion-text {
+            font-size: 10pt;
+            color: #444;
+            margin: 2mm 0;
+        }
+
+        .course-name {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #2c5282;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 2mm 0;
+        }
+
+        .course-description {
+            font-size: 8pt;
+            color: #666;
+            margin: 0 0 3mm 0;
+        }
+
+        .details {
+            margin: 3mm 0;
         }
 
         .detail-item {
-            display: table-cell;
+            display: inline-block;
+            margin: 0 15mm;
             text-align: center;
-            width: 33.33%;
-            padding: 0 2mm;
         }
 
         .detail-label {
-            font-size: 9pt;
-            color: #6b7280;
-            margin-bottom: 1mm;
+            font-size: 6pt;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .detail-value {
-            font-size: 12pt;
-            font-weight: 600;
-            color: #1f2937;
-        }
-
-        .skills-section {
-            margin-top: 4mm;
-            text-align: left;
-            max-width: 80%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .skills-title {
-            font-size: 10pt;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 1mm;
-        }
-
-        .skills-content {
             font-size: 9pt;
-            color: #6b7280;
-            line-height: 1.5;
-        }
-
-        .footer-section {
-            position: absolute;
-            bottom: 10mm;
-            left: 15mm;
-            right: 15mm;
-            display: table;
-            width: calc(100% - 30mm);
-        }
-
-        .signatures-container {
-            display: table-cell;
-            width: 70%;
+            font-weight: bold;
+            color: #1a365d;
         }
 
         .signatures {
-            display: table;
-            width: 100%;
+            margin: 9mm 0 0 0;
         }
 
         .signature-block {
-            display: table-cell;
+            display: inline-block;
+            width: 60mm;
             text-align: center;
-            padding: 0 3mm;
-            vertical-align: bottom;
-        }
-
-        .signature-image {
-            width: 35mm;
-            height: 12mm;
-            margin-bottom: 2mm;
+            margin: 0 12mm;
+            vertical-align: top;
         }
 
         .signature-line {
-            border-top: 1px solid #374151;
+            border-top: 1px solid #1a365d;
             padding-top: 2mm;
-            font-size: 10pt;
-            color: #1f2937;
-            font-weight: 500;
+            margin-top: 11mm;
         }
 
-        .signature-title {
-            font-size: 8pt;
-            color: #6b7280;
-            margin-top: 1mm;
+        .signer-name {
+            font-size: 9pt;
+            font-weight: bold;
+            color: #1a365d;
         }
 
-        .qr-container {
-            display: table-cell;
-            width: 30%;
+        .signer-title {
+            font-size: 7pt;
+            color: #666;
+        }
+
+        .footer {
+            margin-top: 9mm;
+            margin-bottom: 0;
+        }
+
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            padding: 0;
+        }
+
+        .footer-table td {
+            width: 33.33%;
+            vertical-align: middle;
+            padding: 0 5mm;
+        }
+
+        .footer-left {
+            text-align: left;
+        }
+
+        .footer-center {
             text-align: center;
-            vertical-align: bottom;
+        }
+
+        .footer-right {
+            text-align: right;
+        }
+
+        .issue-label {
+            font-size: 6pt;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .issue-value {
+            font-size: 8pt;
+            color: #1a365d;
+            font-weight: bold;
+        }
+
+        .seal {
+            display: inline-block;
+            font-size: 7pt;
+            font-weight: bold;
+            color: #b8860b;
+            text-align: center;
+            border: 2px solid #b8860b;
+            padding: 3mm 5mm;
+            letter-spacing: 1px;
         }
 
         .qr-code {
-            width: 22mm;
-            height: 22mm;
-            border: 2px solid #e5e7eb;
-            padding: 1mm;
-            border-radius: 3px;
+            width: 14mm;
+            height: 14mm;
         }
 
-        .cert-code {
-            font-size: 8pt;
-            color: #6b7280;
-            margin-top: 2mm;
-            font-weight: 600;
+        .cert-number {
+            font-size: 6pt;
+            color: #666;
         }
 
-        .verification-url {
-            font-size: 7pt;
-            color: #9ca3af;
-        }
-
-        @page {
-            size: A4 landscape;
-            margin: 0;
+        .verify-text {
+            font-size: 5pt;
+            color: #999;
         }
     </style>
 </head>
 <body>
-    <div class="certificate">
-        <div class="border-frame">
-            <div class="inner-border">
-                <!-- Header -->
-                <div class="header">
-                    @if($organization_logo)
-                        <img src="{{ $organization_logo }}" alt="Logo" class="org-logo" />
-                    @endif
-                    <div class="org-name">{{ $organization_name }}</div>
+<div class="certificate">
+    <div class="certificate-content">
+        <div class="header">
+            @if($organization_logo)
+                <img src="{{ $organization_logo }}" alt="Logo" class="logo" /><br>
+            @endif
+            <p class="org-name">{{ $organization_name }}</p>
+            <p class="org-tagline">Professional Development & Training</p>
+        </div>
+
+        <p class="title">Certificate</p>
+        <p class="subtitle">of Completion</p>
+
+        <p class="certify-text">This is to certify that</p>
+        <p class="recipient-name">{{ $trainee_name }}</p>
+        <p class="completion-text">has successfully completed the training program</p>
+
+        <p class="course-name">{{ $course_name }}</p>
+        @if($course_description)
+            <p class="course-description">{{ Str::limit($course_description, 120) }}</p>
+        @endif
+
+        <div class="details">
+            @if($start_date && $end_date)
+                <div class="detail-item">
+                    <div class="detail-label">Training Period</div>
+                    <div class="detail-value">{{ $start_date }} - {{ $end_date }}</div>
                 </div>
+            @endif
+            @if($total_hours)
+                <div class="detail-item">
+                    <div class="detail-label">Duration</div>
+                    <div class="detail-value">{{ $total_hours }} Hours</div>
+                </div>
+            @endif
+            @if($score)
+                <div class="detail-item">
+                    <div class="detail-label">Score</div>
+                    <div class="detail-value">{{ $score }}%</div>
+                </div>
+            @endif
+        </div>
 
-                <!-- Title -->
-                <div class="cert-title">Certificate</div>
-                <div class="cert-subtitle">of Completion</div>
+        <div class="signatures">
+            @php
+                $displayTrainers = collect($trainers)->take(2);
+                $hasAuthorized = !empty($authorized_signatory);
+            @endphp
 
-                <!-- Content -->
-                <div class="content">
-                    <div class="intro-text">This is to certify that</div>
-
-                    <div class="trainee-name">{{ $trainee_name }}</div>
-
-                    <div class="intro-text" style="margin-top: 4mm;">
-                        has successfully completed the training program
+            @foreach($displayTrainers as $trainer)
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <div class="signer-name">{{ $trainer->name ?? $trainer['name'] ?? 'Instructor' }}</div>
+                        <div class="signer-title">Course Instructor</div>
                     </div>
+                </div>
+            @endforeach
 
-                    <div class="program-info">
-                        <div class="program-name">{{ $course_name }}</div>
+            @if($hasAuthorized)
+                <div class="signature-block">
+                    <div class="signature-line">
+                        <div class="signer-name">{{ $authorized_signatory }}</div>
+                        <div class="signer-title">Director</div>
+                    </div>
+                </div>
+            @endif
+        </div>
 
-                        @if($course_description)
-                            <div class="program-description">{{ $course_description }}</div>
+        <div class="footer">
+            <table class="footer-table">
+                <tr>
+                    <td class="footer-left">
+                        <div class="issue-label">Date of Issue</div>
+                        <div class="issue-value">{{ $issue_date }}</div>
+                    </td>
+                    <td class="footer-center">
+                        <div class="seal">CERTIFIED</div>
+                    </td>
+                    <td class="footer-right">
+                        @if($qr_code)
+                            <img src="{{ $qr_code }}" alt="QR" class="qr-code" /><br>
                         @endif
-                    </div>
-
-                    <!-- Training Details -->
-                    <div class="training-details">
-                        @if($start_date && $end_date)
-                            <div class="detail-row">
-                                <div class="detail-item">
-                                    <div class="detail-label">Training Period</div>
-                                    <div class="detail-value">{{ $start_date }} - {{ $end_date }}</div>
-                                </div>
-
-                                @if($total_hours)
-                                    <div class="detail-item">
-                                        <div class="detail-label">Total Hours</div>
-                                        <div class="detail-value">{{ $total_hours }} Hours</div>
-                                    </div>
-                                @endif
-
-                                <div class="detail-item">
-                                    <div class="detail-label">Issue Date</div>
-                                    <div class="detail-value">{{ $issue_date }}</div>
-                                </div>
-                            </div>
-                        @else
-                            <div class="detail-row">
-                                @if($total_hours)
-                                    <div class="detail-item">
-                                        <div class="detail-label">Total Hours</div>
-                                        <div class="detail-value">{{ $total_hours }} Hours</div>
-                                    </div>
-                                @endif
-
-                                <div class="detail-item">
-                                    <div class="detail-label">Issue Date</div>
-                                    <div class="detail-value">{{ $issue_date }}</div>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-
-                    @if($skills)
-                        <div class="skills-section">
-                            <div class="skills-title">Skills & Competencies Gained:</div>
-                            <div class="skills-content">{{ $skills }}</div>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Footer -->
-                <div class="footer-section">
-                    <div class="signatures-container">
-                        <div class="signatures">
-                            @php
-                                $displayTrainers = collect($trainers)->take(3);
-                                $trainerCount = count($displayTrainers);
-                                $hasAuthorized = !empty($authorized_signatory);
-                                $totalSignatures = $trainerCount + ($hasAuthorized ? 1 : 0);
-                            @endphp
-
-                            <!-- Trainer Signatures -->
-                            @foreach($displayTrainers as $index => $trainer)
-                                <div class="signature-block">
-                                    @if(isset($trainer_signatures[$index]))
-                                        <img src="{{ $trainer_signatures[$index] }}" alt="Signature" class="signature-image" />
-                                    @else
-                                        <div style="height: 12mm;"></div>
-                                    @endif
-                                    <div class="signature-line">{{ $trainer->name ?? $trainer['name'] ?? 'N/A' }}</div>
-                                    <div class="signature-title">Trainer</div>
-                                </div>
-                            @endforeach
-
-                            <!-- Authorized Signatory -->
-                            @if($authorized_signatory)
-                                <div class="signature-block">
-                                    @if($authorized_signature)
-                                        <img src="{{ $authorized_signature }}" alt="Signature" class="signature-image" />
-                                    @else
-                                        <div style="height: 12mm;"></div>
-                                    @endif
-                                    <div class="signature-line">{{ $authorized_signatory }}</div>
-                                    <div class="signature-title">Director</div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- QR Code -->
-                    <div class="qr-container">
-                        <img src="{{ $qr_code }}" alt="QR Code" class="qr-code" />
-                        <div class="cert-code">{{ $certificate_code }}</div>
-                        <div class="verification-url">Verify Certificate</div>
-                    </div>
-                </div>
-            </div>
+                        <div class="cert-number">{{ $certificate_code }}</div>
+                        <div class="verify-text">Scan to verify</div>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
+</div>
 </body>
 </html>

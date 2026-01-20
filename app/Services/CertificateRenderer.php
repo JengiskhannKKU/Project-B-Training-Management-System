@@ -8,6 +8,7 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Illuminate\Support\Facades\Log;
+use TCPDF;
 
 class CertificateRenderer
 {
@@ -34,20 +35,22 @@ class CertificateRenderer
         $data = $this->prepareTemplateData($certificate);
         Log::debug('Template data prepared', ['data' => array_keys($data)]);
 
-        // Select template based on language
-        $template = $certificate->language === 'en'
-            ? 'certificates.templates.fixed-en'
-            : 'certificates.templates.fixed-th';
-
         try {
-            Log::debug('Calling Pdf::loadView', ['template' => $template]);
-            // Render PDF
+            // Use TCPDF for Thai certificates (better Unicode support)
+            if ($certificate->language === 'th') {
+                Log::debug('Using TCPDF for Thai certificate');
+                return $this->renderWithTcpdf($data);
+            }
+
+            // Use DomPDF for English certificates
+            Log::debug('Using DomPDF for English certificate');
+            $template = 'certificates.templates.fixed-en';
             $pdf = Pdf::loadView($template, $data)
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
                     'isHtml5ParserEnabled' => true,
                     'isRemoteEnabled' => true,
-                    'defaultFont' => 'sarabun',
+                    'defaultFont' => 'DejaVu Sans',
                     'enable_php' => false,
                     'dpi' => 150,
                 ]);
@@ -301,17 +304,203 @@ class CertificateRenderer
             'language' => $language,
         ], $sampleData);
 
+        $orientation = $language === 'en' ? 'landscape' : 'portrait';
+
         $pdf = Pdf::loadView($template, $data)
-            ->setPaper('a4', 'landscape')
+            ->setPaper('a4', $orientation)
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled' => true,
-                'defaultFont' => 'sarabun',
+                'defaultFont' => 'DejaVu Sans',
                 'enable_php' => false,
                 'dpi' => 150,
             ]);
 
         return $pdf->output();
+    }
+
+    /**
+     * Render Thai certificate using TCPDF with proper Unicode support.
+     *
+     * @param array $data
+     * @return string
+     */
+    protected function renderWithTcpdf(array $data): string
+    {
+        // Create TCPDF object in portrait orientation
+        $pdf = new TCPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document info
+        $pdf->SetCreator('KKU Training Management System');
+        $pdf->SetAuthor('KKU');
+        $pdf->SetTitle('ใบประกาศนียบัตร - ' . ($data['trainee_name'] ?? ''));
+        $pdf->SetSubject('Certificate of Completion');
+
+        // Set margins
+        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetHeaderMargin(0);
+        $pdf->SetFooterMargin(0);
+
+        // Remove header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Set auto page break
+        $pdf->SetAutoPageBreak(true, 15);
+
+        // Add page
+        $pdf->AddPage();
+
+        // Set font - use freeserif which has Thai support in TCPDF
+        // TCPDF includes several Unicode fonts: freeserif, freesans, dejavusans
+        $pdf->SetFont('freeserif', '', 14, '', true);
+
+        // Build HTML content for Thai certificate
+        $html = $this->buildThaiCertificateHtml($data);
+
+        // Output HTML content
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Return PDF as string
+        return $pdf->Output('', 'S');
+    }
+
+    /**
+     * Build HTML content for Thai certificate TCPDF rendering.
+     *
+     * @param array $data
+     * @return string
+     */
+    protected function buildThaiCertificateHtml(array $data): string
+    {
+        // Get QR code (already base64 encoded from generateQrCode)
+        $qrCodeData = $data['qr_code'] ?? '';
+
+        // Build signature HTML
+        $signaturesHtml = '';
+        $displayTrainers = collect($data['trainers'])->take(3);
+        foreach ($displayTrainers as $index => $trainer) {
+            $trainerName = $trainer->name ?? $trainer['name'] ?? 'N/A';
+            $signatureImg = isset($data['trainer_signatures'][$index])
+                ? "<img src=\"{$data['trainer_signatures'][$index]}\" style=\"width:50mm;height:15mm;\" />"
+                : '<div style="height:15mm;"></div>';
+            $signaturesHtml .= "
+                <td style=\"width:25%;text-align:center;padding:5mm;\">
+                    {$signatureImg}
+                    <div style=\"border-top:1px solid #374151;padding-top:2mm;font-size:10pt;color:#1f2937;font-weight:500;\">{$trainerName}</div>
+                    <div style=\"font-size:8pt;color:#6b7280;margin-top:1mm;\">วิทยากร</div>
+                </td>";
+        }
+
+        if (!empty($data['authorized_signatory'])) {
+            $authSignature = !empty($data['authorized_signature'])
+                ? "<img src=\"{$data['authorized_signature']}\" style=\"width:50mm;height:15mm;\" />"
+                : '<div style="height:15mm;"></div>';
+            $signaturesHtml .= "
+                <td style=\"width:25%;text-align:center;padding:5mm;\">
+                    {$authSignature}
+                    <div style=\"border-top:1px solid #374151;padding-top:2mm;font-size:10pt;color:#1f2937;font-weight:500;\">{$data['authorized_signatory']}</div>
+                    <div style=\"font-size:8pt;color:#6b7280;margin-top:1mm;\">ผู้อำนวยการ</div>
+                </td>";
+        }
+
+        // Organization logo
+        $logoHtml = !empty($data['organization_logo'])
+            ? "<img src=\"{$data['organization_logo']}\" style=\"width:50mm;height:auto;margin-bottom:3mm;\" />"
+            : '';
+
+        // Skills section
+        $skillsHtml = !empty($data['skills']) ? "
+            <div style=\"margin-top:4mm;text-align:left;max-width:80%;margin-left:auto;margin-right:auto;\">
+                <div style=\"font-size:10pt;font-weight:600;color:#374151;margin-bottom:1mm;\">ความรู้และทักษะที่ได้รับ:</div>
+                <div style=\"font-size:9pt;color:#6b7280;line-height:1.5;\">{$data['skills']}</div>
+            </div>" : '';
+
+        // Training details
+        $detailsHtml = '';
+        if (!empty($data['start_date']) && !empty($data['end_date'])) {
+            $totalHoursHtml = !empty($data['total_hours'])
+                ? "<td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                    <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">รวมชั่วโมง</div>
+                    <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['total_hours']} ชั่วโมง</div>
+                </td>"
+                : '';
+            $detailsHtml = "
+                <tr>
+                    <td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                        <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">ระยะเวลาการอบรม</div>
+                        <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['start_date']} - {$data['end_date']}</div>
+                    </td>
+                    {$totalHoursHtml}
+                    <td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                        <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">วันที่ออกเอกสาร</div>
+                        <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['issue_date']}</div>
+                    </td>
+                </tr>";
+        }
+
+        return "
+        <style>
+            body { font-family: freeserif, freesans, sans-serif; }
+            .cert-title { font-size:26pt;font-weight:bold;color:#991b1b;letter-spacing:2px;text-align:center; }
+            .cert-subtitle { font-size:14pt;color:#991b1b;font-style:italic;text-align:center;margin-top:1mm; }
+            .intro-text { font-size:13pt;color:#374151;text-align:center;margin-bottom:4mm; }
+            .trainee-name { font-size:" . (mb_strlen($data['trainee_name'] ?? '') > 40 ? '20pt' : (mb_strlen($data['trainee_name'] ?? '') > 30 ? '24pt' : '28pt')) . ";font-weight:bold;color:#1e3a8a;text-align:center;padding:2mm 0;border-bottom:2px solid #1e40af;display:inline-block;min-width:60%; }
+            .program-name { font-size:16pt;font-weight:600;color:#1f2937;text-align:center;margin-bottom:2mm; }
+            .program-desc { font-size:11pt;color:#6b7280;text-align:center;max-width:80%;margin:0 auto 2mm auto;line-height:1.5; }
+            .org-name { font-size:18pt;font-weight:bold;color:#1e40af;text-align:center;margin-bottom:2mm; }
+        </style>
+        <div style=\"border:3px solid #1e40af;border-radius:10px;padding:10mm;height:277mm;position:relative;\">
+            <div style=\"border:1px solid #93c5fd;padding:8mm;height:100%;\">
+                <!-- Header -->
+                <div style=\"text-align:center;margin-bottom:8mm;border-bottom:2px solid #e5e7eb;padding-bottom:5mm;\">
+                    {$logoHtml}
+                    <div class=\"org-name\">{$data['organization_name']}</div>
+                </div>
+
+                <!-- Title -->
+                <div class=\"cert-title\">ใบประกาศนียบัตร</div>
+                <div class=\"cert-subtitle\">Certificate of Completion</div>
+
+                <!-- Content -->
+                <div style=\"text-align:center;margin-top:5mm;\">
+                    <div class=\"intro-text\">ขอมอบให้ไว้เพื่อแสดงว่า</div>
+                    <div class=\"trainee-name\">{$data['trainee_name']}</div>
+                    <div class=\"intro-text\" style=\"margin-top:4mm;\">ได้ผ่านการอบรมหลักสูตร</div>
+                    <div style=\"margin:6mm 0;text-align:center;\">
+                        <div class=\"program-name\">{$data['course_name']}</div>
+                        " . (!empty($data['course_description']) ? "<div class=\"program-desc\">{$data['course_description']}</div>" : "") . "
+                    </div>
+
+                    <!-- Training Details -->
+                    <div style=\"display:table;width:100%;margin:4mm 0;padding:2mm 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;\">
+                        <table style=\"width:100%;border-collapse:collapse;\">
+                            {$detailsHtml}
+                        </table>
+                    </div>
+
+                    {$skillsHtml}
+                </div>
+
+                <!-- Footer -->
+                <div style=\"position:absolute;bottom:10mm;left:15mm;right:15mm;display:table;width:calc(100% - 30mm);\">
+                    <table style=\"width:100%;border-collapse:collapse;\">
+                        <tr>
+                            <td style=\"width:70%;\">
+                                <table style=\"width:100%;border-collapse:collapse;\">
+                                    <tr>{$signaturesHtml}</tr>
+                                </table>
+                            </td>
+                            <td style=\"width:30%;text-align:center;vertical-align:bottom;padding:5mm;\">
+                                <img src=\"{$qrCodeData}\" style=\"width:22mm;height:22mm;border:2px solid #e5e7eb;padding:1mm;border-radius:3px;\" />
+                                <div style=\"font-size:8pt;color:#6b7280;margin-top:2mm;font-weight:600;\">{$data['certificate_code']}</div>
+                                <div style=\"font-size:7pt;color:#9ca3af;\">ตรวจสอบความถูกต้อง</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>";
     }
 
     /**

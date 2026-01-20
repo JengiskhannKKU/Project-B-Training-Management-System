@@ -18,7 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        // Add session middleware to API routes for Sanctum authentication
+        // Add Sanctum's stateful middleware for SPA authentication
+        // EnsureFrontendRequestsAreStateful handles adding session/cookie middleware for stateful requests
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);

@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "nyholm/psr7": "^1.8",
         "railsware/mailtrap-php": "^3.9",
+        "tecnickcom/tcpdf": "^6.10",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

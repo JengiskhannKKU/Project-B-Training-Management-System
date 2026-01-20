@@ -21,6 +21,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('auth/register', [AuthController::class, 'register']);
 Route::post('auth/login', [AuthController::class, 'login']);
 
+// Debug endpoints - remove in production
+Route::get('debug/auth', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
+Route::get('debug/admin-check', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
+
 // Public catalog
 Route::get('catalog/courses', [CatalogController::class, 'courses']);
 Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
@@ -28,6 +32,11 @@ Route::get('catalog/courses/{course}', [CatalogController::class, 'show']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Debug endpoints
+    Route::get('debug/me', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
+    Route::get('debug/admin', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
+    Route::get('debug/middleware', [\App\Http\Controllers\Api\DebugController::class, 'middlewareInfo']);
+
     Route::get('me', [MeController::class, 'show']);
     Route::put('me/profile', [MeController::class, 'updateProfile']);
     Route::post('me/avatar', [MeController::class, 'uploadAvatar']);
