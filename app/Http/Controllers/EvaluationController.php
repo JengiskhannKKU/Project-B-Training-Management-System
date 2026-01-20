@@ -6,6 +6,7 @@ use App\Http\Requests\StoreEvaluationRequest;
 use App\Models\Evaluation;
 use App\Models\Session;
 use App\Models\TrainingSession;
+use App\Services\EvaluationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -187,6 +188,42 @@ class EvaluationController extends Controller
                 'averages' => $averages,
                 'total_evaluations' => $evaluations->count(),
             ]
+        ]);
+    }
+
+    /**
+     * Get evaluation statistics for dashboard
+     * GET /api/evaluations/statistics
+     */
+    public function statistics(Request $request, EvaluationService $evaluationService)
+    {
+        $user = Auth::user();
+        $trainerId = null;
+
+        // If trainer, filter by their ID
+        if ($user->role->name === 'trainer') {
+            $trainerId = $user->id;
+        }
+
+        $statistics = $evaluationService->getDashboardStatistics($trainerId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $statistics,
+        ]);
+    }
+
+    /**
+     * Get overall evaluation statistics (Admin only)
+     * GET /api/evaluations/overall-statistics
+     */
+    public function overallStatistics(EvaluationService $evaluationService)
+    {
+        $statistics = $evaluationService->getOverallStatistics();
+
+        return response()->json([
+            'success' => true,
+            'data' => $statistics,
         ]);
     }
 }

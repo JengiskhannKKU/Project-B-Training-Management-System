@@ -86,6 +86,11 @@ class TrainingSession extends Model
         return $this->hasMany(Review::class, 'session_id');
     }
 
+    public function evaluations(): HasMany
+    {
+        return $this->hasMany(Evaluation::class, 'session_id');
+    }
+
     public function sessionDays(): HasMany
     {
         return $this->hasMany(SessionDay::class, 'session_id')->orderBy('day_number');

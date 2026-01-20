@@ -577,6 +577,10 @@ Route::middleware(['auth', 'role:admin,trainer'])->group(function () {
     Route::get('/api/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
         ->name('api.sessions.evaluation.show');
 
+    // GET /api/evaluations/statistics - Get dashboard statistics
+    Route::get('/api/evaluations/statistics', [\App\Http\Controllers\EvaluationController::class, 'statistics'])
+        ->name('api.evaluations.statistics');
+
     // Debug route
     Route::get('/api/test-auth', function () {
         return response()->json([
@@ -586,4 +590,10 @@ Route::middleware(['auth', 'role:admin,trainer'])->group(function () {
             'message' => 'Auth test passed - you can access this route'
         ]);
     });
+});
+
+// Admin only - Overall statistics
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/api/evaluations/overall-statistics', [\App\Http\Controllers\EvaluationController::class, 'overallStatistics'])
+        ->name('api.evaluations.overall-statistics');
 });

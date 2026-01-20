@@ -125,4 +125,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Attendance::class, 'checked_by');
     }
+
+    public function evaluations(): HasMany
+    {
+        return $this->hasMany(Evaluation::class, 'user_id');
+    }
 }
