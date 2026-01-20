@@ -19,6 +19,7 @@ const props = defineProps<{
         name: string;
         code: string;
         category: string;
+        category_id?: number | null;
         level: string;
         period: string;
         time: string;
@@ -33,9 +34,18 @@ const props = defineProps<{
         duration_hours?: number;
         sessions_count?: number;
         created_at?: string;
+        learning_outcomes?: string;
+        target_audience?: string;
+        prerequisites?: string;
+        additional_info?: string;
+        thumbnail_path?: string;
     };
 }>();
-type ProgramData = typeof props.program & { approval_status?: string; duration_hours?: number };
+type ProgramData = typeof props.program & {
+    approval_status?: string;
+    duration_hours?: number;
+    title?: string;
+};
 
 const activeTab = ref('overview');
 const showEditModal = ref(false);
@@ -103,15 +113,7 @@ const backLinkText = computed(() => {
     return 'Back to My Courses';
 });
 
-const editForm = useForm({
-    title: 'Advanced UX Design for Enterprise Application',
-    short_description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue nullam consectetur ornare consectetur sed in leo.',
-    full_description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae congue nullam consectetur ornare consectetur sed in leo.\nEnim imperdiet urna tincidunt at integer nunc amet vitae orci.\nUltrices augue scelerisque.',
-    category: 'Design',
-    level: 'beginner',
-    certificate_template: 'standard',
-    certificate_type: 'free',
-});
+// editForm is no longer used - courseDataForModal uses displayProgram directly
 
 const traineeForm = useForm({
     full_name: '',
@@ -125,8 +127,6 @@ const traineeForm = useForm({
     session_id: '',
 });
 
-const categories = ['Design', 'Development', 'Marketing', 'Business'];
-
 // Sessions data
 const sessions = ref<Array<any>>([]);
 
@@ -134,39 +134,35 @@ const sessions = ref<Array<any>>([]);
 const trainees = ref<Array<any>>([]);
 const isLoadingTrainees = ref(false);
 
-// Create course data for the modal
-const courseDataForModal = computed(() => ({
-    id: props.program.id,
-    title: editForm.title,
-    short_description: editForm.short_description,
-    full_description: editForm.full_description,
-    category: editForm.category,
-    level: editForm.level,
-    certificate_template: editForm.certificate_template,
-    certificate_type: editForm.certificate_type,
-}));
+// Create course data for the modal - uses displayProgram for actual course data
+const courseDataForModal = computed(() => {
+    const prog = displayProgram.value;
+    return {
+        id: prog?.id || props.program.id,
+        title: prog?.name || prog?.title || props.program.name,
+        description: prog?.description || props.program.description,
+        category_id: prog?.category_id || props.program.category_id,
+        level: prog?.level || props.program.level,
+        learning_outcomes: prog?.learning_outcomes || props.program.learning_outcomes || '',
+        target_audience: prog?.target_audience || props.program.target_audience || '',
+        prerequisites: prog?.prerequisites || props.program.prerequisites || '',
+        additional_info: prog?.additional_info || props.program.additional_info || '',
+        thumbnail_path: prog?.image_url || props.program.image_url || props.program.thumbnail_path || '',
+        status: prog?.status || props.program.status,
+    };
+});
 
 const handleEditModalClose = () => {
     showEditModal.value = false;
 };
 
 const handleEditModalSuccess = (payload?: Record<string, unknown>) => {
-    if (!payload) {
-        showEditModal.value = false;
-        return;
-    }
+    // CourseModal now handles the API call directly for admins
+    // Just close the modal and refresh the page to show updated data
+    showEditModal.value = false;
 
-    ensureCsrf()
-        .then(() => axios.post('/api/trainer/program-requests', {
-            action: 'update',
-            program_id: props.program.id,
-            payload,
-        }))
-        .then(() => {
-            toast.success('Program update request sent to admin.');
-            showEditModal.value = false;
-        })
-        .catch((error) => handleApiError(error, 'Unable to submit program update.'));
+    // Refresh page to show updated data
+    window.location.reload();
 };
 
 const validateSessionForm = () => {
@@ -699,6 +695,7 @@ const displayProgram = computed<ProgramData>(() => {
             name: payload.title || payload.name || 'Program',
             code: payload.code || '',
             category: payload.category || 'General',
+            category_id: payload.category_id || null,
             level: payload.level || '',
             period: payload.period || '',
             time: payload.time || '',
@@ -713,6 +710,10 @@ const displayProgram = computed<ProgramData>(() => {
             duration_hours: payload.duration_hours || 0,
             sessions_count: payload.sessions_count || 0,
             created_at: payload.created_at || '',
+            learning_outcomes: payload.learning_outcomes || '',
+            target_audience: payload.target_audience || '',
+            prerequisites: payload.prerequisites || '',
+            additional_info: payload.additional_info || '',
         } as ProgramData;
     }
     return (props.program || {}) as ProgramData;

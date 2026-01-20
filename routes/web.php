@@ -120,7 +120,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.my-courses');
 
     Route::get('/admin/my-courses/{code}', function ($code) {
-        $course = \App\Models\Course::with(['owner', 'sessions'])
+        $course = \App\Models\Course::with(['owner', 'sessions', 'category'])
             ->where('code', $code)
             ->first();
 
@@ -159,7 +159,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
                 'name' => $course->title,
                 'title' => $course->title,
                 'code' => $course->code,
-                'category' => $course->category,
+                'category' => $course->category?->name ?? 'General',
+                'category_id' => $course->category_id,
                 'level' => $course->level ?? 'beginner',
                 'period' => '',
                 'time' => '',
