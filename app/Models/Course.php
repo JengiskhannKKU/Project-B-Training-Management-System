@@ -16,7 +16,7 @@ class Course extends Model
         'code',
         'title',
         'description',
-        'category',
+        'category_id',
         'level',
         'learning_outcomes',
         'target_audience',
@@ -66,6 +66,11 @@ class Course extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function sessions(): HasMany

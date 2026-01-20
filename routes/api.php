@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\CertificateTemplateController;
 use App\Http\Controllers\Api\AdminSessionController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SessionDayController;
+use App\Http\Controllers\Api\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/register', [AuthController::class, 'register']);
@@ -28,6 +29,7 @@ Route::get('catalog/courses/{course}', [CatalogController::class, 'show']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('categories', [CategoryController::class, 'index']);
     Route::get('me', [MeController::class, 'show']);
     Route::put('me/profile', [MeController::class, 'updateProfile']);
     Route::post('me/avatar', [MeController::class, 'uploadAvatar']);

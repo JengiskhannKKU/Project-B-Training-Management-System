@@ -282,7 +282,7 @@ const handleEditCourse = (course: any) => {
         id: course.id,
         title: course.title,
         description: course.description,
-        category: course.category,
+        category_id: course.category_id,
         level: course.level,
         learning_outcomes: course.learning_outcomes,
         target_audience: course.target_audience,
@@ -395,19 +395,22 @@ const fetchPrograms = async () => {
             const isPublished = course.status === 'published';
             // A course is incomplete only if it's published but has no sessions
             const isIncomplete = isPublished && !hasSessions;
+            // Get category name from relationship or fallback
+            const categoryName = course.category?.name || course.category || 'General';
 
             return {
                 id: course.id,
                 code: course.code,
                 name: course.title, // Map title to name for CourseCard
                 description: course.description,
-                category: course.category,
+                category: categoryName,
+                category_id: course.category_id,
                 image_url: course.thumbnail_path || '',
                 level: course.level || 'beginner',
                 sessions_count: course.sessions_count || 0,
                 enrolled_count: course.enrolled_count || 0,
                 max_participants: course.max_participants || 20,
-                department: course.category || 'General',
+                department: categoryName,
                 status: course.status,
                 isIncomplete: isIncomplete,
                 created_by_id: course.owner_id,

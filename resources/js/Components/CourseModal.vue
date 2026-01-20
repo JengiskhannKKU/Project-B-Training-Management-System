@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { useToast } from 'vue-toastification';
 import axios from 'axios';
@@ -44,11 +44,37 @@ const imageUploading = ref(false);
 const thumbnailPath = ref<string>('');
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
+// Categories from API
+interface Category {
+    id: number;
+    name: string;
+    icon_name?: string;
+    color?: string;
+}
+const categories = ref<Category[]>([]);
+const categoriesLoading = ref(false);
+
+const fetchCategories = async () => {
+    categoriesLoading.value = true;
+    try {
+        const { data } = await axios.get('/api/categories');
+        categories.value = data.data || [];
+    } catch (error) {
+        console.error('Failed to fetch categories:', error);
+    } finally {
+        categoriesLoading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchCategories();
+});
+
 // Form initialization
 const form = useForm({
     title: props.course?.title || '',
     description: props.course?.description || '', // Maps to Short Description
-    category: props.course?.category || '',
+    category_id: props.course?.category_id || null,
     level: props.course?.level || 'beginner',
     learning_outcomes: props.course?.learning_outcomes || '',
     target_audience: props.course?.target_audience || '',
@@ -72,7 +98,7 @@ watch(() => props.course, (newCourse) => {
     if (newCourse) {
         form.title = newCourse.title || '';
         form.description = newCourse.description || '';
-        form.category = newCourse.category || '';
+        form.category_id = newCourse.category_id || null;
         form.level = newCourse.level || 'beginner';
         form.learning_outcomes = newCourse.learning_outcomes || '';
         form.target_audience = newCourse.target_audience || '';
@@ -87,15 +113,6 @@ watch(() => props.course, (newCourse) => {
     }
 }, { immediate: true });
 
-const categories = [
-    'IT',
-    'Management',
-    'Design',
-    'Marketing',
-    'Business',
-    'Professional Development',
-];
-
 const levels = [
     { id: 'beginner', label: 'Beginner', desc: 'No prior experience required' },
     { id: 'intermediate', label: 'Intermediate', desc: 'Some experience required' },
@@ -106,9 +123,9 @@ const handleSubmit = async () => {
     // Clear previous errors
     form.clearErrors();
 
-    if (!form.title || !form.category) {
+    if (!form.title || !form.category_id) {
         if (!form.title) form.setError('title', 'Course title is required');
-        if (!form.category) form.setError('category', 'Category is required');
+        if (!form.category_id) form.setError('category_id', 'Category is required');
         toast.error('Please fill in all required fields');
         return;
     }
@@ -116,7 +133,7 @@ const handleSubmit = async () => {
     const payload = {
         title: form.title,
         description: form.description,
-        category: form.category,
+        category_id: form.category_id,
         level: form.level,
         learning_outcomes: form.learning_outcomes,
         target_audience: form.target_audience,
@@ -291,11 +308,11 @@ const triggerFileInput = () => fileInputRef.value?.click();
                         <!-- Category -->
                         <div class="space-y-2">
                             <InputLabel value="Category" required />
-                            <select v-model="form.category" class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm py-2.5">
-                                <option value="">Select Category</option>
-                                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                            <select v-model="form.category_id" class="w-full rounded-xl border-gray-300 focus:border-teal-500 focus:ring-teal-500 shadow-sm py-2.5" :disabled="categoriesLoading">
+                                <option :value="null">{{ categoriesLoading ? 'Loading...' : 'Select Category' }}</option>
+                                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                             </select>
-                            <InputError :message="form.errors.category" />
+                            <InputError :message="form.errors.category_id" />
                         </div>
                     </div>
 
