@@ -1,10 +1,18 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { Search, CheckCircle, XCircle, AlertCircle, Award, Calendar, Building2, User } from 'lucide-vue-next';
 import axios from 'axios';
 
-const certificateCode = ref('');
+// Accept certificateCode as a prop from the page
+const props = defineProps({
+    certificateCode: {
+        type: String,
+        default: '',
+    },
+});
+
+const certificateCode = ref(props.certificateCode || '');
 const isVerifying = ref(false);
 const verificationResult = ref(null);
 const errorMessage = ref('');
@@ -119,6 +127,14 @@ const statusMessage = computed(() => {
     }
 
     return 'This certificate is not valid.';
+});
+
+// Auto-verify if certificate code is provided in URL
+onMounted(() => {
+    if (props.certificateCode) {
+        certificateCode.value = props.certificateCode;
+        verifyCertificate();
+    }
 });
 </script>
 

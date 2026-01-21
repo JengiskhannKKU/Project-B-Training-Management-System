@@ -262,7 +262,6 @@ class CertificateController extends Controller
     {
         $validated = $request->validate([
             'enrollment_id' => 'required|exists:enrollments,id',
-            'language' => 'nullable|in:th,en',
         ]);
 
         $enrollment = Enrollment::with(['user', 'session.course'])->findOrFail($validated['enrollment_id']);
@@ -288,7 +287,7 @@ class CertificateController extends Controller
             'issued_at' => now(),
             'certificate_code' => 'CERT-PREVIEW-XXXX',
             'organization_name' => config('certificates.organization_name'),
-            'language' => $validated['language'] ?? 'th',
+            'language' => 'en',
             'status' => 'valid',
         ]);
 
@@ -329,7 +328,6 @@ class CertificateController extends Controller
             'type' => 'required|in:course,session',
             'course_id' => 'required_if:type,course|exists:courses,id',
             'session_id' => 'required_if:type,session|exists:training_sessions,id',
-            'language' => 'nullable|in:th,en',
             'eager_generate' => 'nullable|boolean',
         ]);
 
@@ -347,7 +345,7 @@ class CertificateController extends Controller
                     session: $session,
                     issuerId: $user->id,
                     eagerGenerate: $validated['eager_generate'] ?? false,
-                    language: $validated['language'] ?? 'th'
+                    language: 'en'
                 );
             } else {
                 $course = Course::findOrFail($validated['course_id']);
@@ -362,7 +360,7 @@ class CertificateController extends Controller
                     course: $course,
                     issuerId: $user->id,
                     eagerGenerate: $validated['eager_generate'] ?? false,
-                    language: $validated['language'] ?? 'th'
+                    language: 'en'
                 );
             }
 

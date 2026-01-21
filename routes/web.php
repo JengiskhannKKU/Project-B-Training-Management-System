@@ -444,5 +444,12 @@ Route::get('/courses/{code}', function ($code) {
     ]);
 })->name('courses.show');
 
+// Public certificate verification route (no auth required)
+Route::get('/verify/{code?}', function ($code = null) {
+    return Inertia::render('Public/VerifyCertificate', [
+        'certificateCode' => $code,
+    ]);
+})->name('verify.certificate');
+
 
 require __DIR__ . '/auth.php';

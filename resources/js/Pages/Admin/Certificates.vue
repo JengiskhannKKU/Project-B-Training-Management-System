@@ -82,7 +82,7 @@ const openBatchModal = () => {
         type: 'session',
         course_id: '',
         session_id: '',
-        language: 'th',
+        language: 'en',
         eager_generate: false,
     };
     batchProgress.value = null;
@@ -117,7 +117,6 @@ const generateBatch = async () => {
             type: batchForm.value.type,
             course_id: batchForm.value.course_id || undefined,
             session_id: batchForm.value.session_id || undefined,
-            language: batchForm.value.language,
             eager_generate: batchForm.value.eager_generate,
         });
 
@@ -429,8 +428,8 @@ onMounted(fetchCertificates);
                                 <Zap class="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 class="text-xl font-semibold">Batch Certificate Generation</h2>
-                                <p class="text-sm text-white/80 mt-0.5">Generate certificates for multiple enrollments at once</p>
+                                <h2 class="text-xl font-semibold">Generate Certificates</h2>
+                                <p class="text-sm text-white/80 mt-0.5">Create English certificates (A4 Landscape)</p>
                             </div>
                         </div>
                     </div>
@@ -504,41 +503,8 @@ onMounted(fetchCertificates);
                             </p>
                         </div>
 
-                        <!-- Language Selection -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Certificate Language
-                            </label>
-                            <div class="flex gap-3">
-                                <button
-                                    @click="batchForm.language = 'th'"
-                                    :class="[
-                                        'flex-1 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all',
-                                        batchForm.language === 'th'
-                                            ? 'border-[#2f837d] bg-[#2f837d] text-white'
-                                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                                    ]"
-                                    :disabled="isBatchGenerating"
-                                >
-                                    ภาษาไทย (Thai)
-                                </button>
-                                <button
-                                    @click="batchForm.language = 'en'"
-                                    :class="[
-                                        'flex-1 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-all',
-                                        batchForm.language === 'en'
-                                            ? 'border-[#2f837d] bg-[#2f837d] text-white'
-                                            : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                                    ]"
-                                    :disabled="isBatchGenerating"
-                                >
-                                    English
-                                </button>
-                            </div>
-                        </div>
-
                         <!-- Eager Generation Option -->
-                        <div class="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-100">
+                        <div class="flex items-start gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
                             <input
                                 id="eager-generate"
                                 v-model="batchForm.eager_generate"
@@ -546,11 +512,10 @@ onMounted(fetchCertificates);
                                 class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#2f837d] focus:ring-[#2f837d]"
                                 :disabled="isBatchGenerating"
                             />
-                            <label for="eager-generate" class="flex-1 text-sm">
-                                <span class="font-medium text-gray-900">Generate PDF files immediately</span>
-                                <p class="mt-1 text-xs text-gray-600">
-                                    If enabled, PDF files will be generated and stored in the database immediately.
-                                    Otherwise, PDFs will be generated on-demand when first accessed (recommended for large batches).
+                            <label for="eager-generate" class="flex-1 text-sm cursor-pointer">
+                                <span class="font-medium text-gray-900">Generate PDF files now</span>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Leave unchecked to generate PDFs on-demand when first downloaded (faster, recommended).
                                 </p>
                             </label>
                         </div>
@@ -593,11 +558,11 @@ onMounted(fetchCertificates);
                         <button
                             @click="generateBatch"
                             :disabled="isBatchGenerating"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#2f837d] to-[#26685f] text-sm font-semibold text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#2f837d] text-sm font-semibold text-white hover:bg-[#266a66] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Loader2 v-if="isBatchGenerating" class="h-4 w-4 animate-spin" />
-                            <Zap v-else class="h-4 w-4" />
-                            <span>{{ isBatchGenerating ? 'Generating...' : 'Generate Certificates' }}</span>
+                            <CheckCircle v-else class="h-4 w-4" />
+                            <span>{{ isBatchGenerating ? 'Generating...' : 'Generate' }}</span>
                         </button>
                     </div>
                 </div>
