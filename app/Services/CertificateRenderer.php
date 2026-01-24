@@ -3,340 +3,518 @@
 namespace App\Services;
 
 use App\Models\Certificate;
-use App\Models\CertificateTemplate;
-use Carbon\CarbonInterface;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
-use RuntimeException;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Illuminate\Support\Facades\Log;
+use TCPDF;
 
 class CertificateRenderer
 {
-    private const DEFAULT_CANVAS_WIDTH = 1600;
-    private const DEFAULT_CANVAS_HEIGHT = 1200;
-    private const DEFAULT_DATE_FORMAT = 'Y-m-d';
-
-    public function buildCertificateData(Certificate $certificate): array
+    /**
+     * Render certificate to PDF.
+     *
+     * @param Certificate $certificate
+     * @return string Binary PDF data
+     * @throws \Exception
+     */
+    public function render(Certificate $certificate): string
     {
+        Log::debug('Starting certificate rendering', ['certificate_id' => $certificate->id]);
+        // Load all necessary relationships
         $certificate->loadMissing([
             'user:id,name',
-            'course:id,title',
-            'session:id,title,course_id,start_date,end_date',
-            'session.course:id,title',
+            'course:id,title,description',
+            'session:id,title,start_date,end_date',
             'issuer:id,name',
-            'enrollment.session:id,title,course_id,start_date,end_date',
-            'enrollment.session.course:id,title',
+            'enrollment',
         ]);
 
-        $session = $certificate->session ?? $certificate->enrollment?->session;
-        $course = $certificate->course ?? $session?->course;
+        // Prepare template data
+        $data = $this->prepareTemplateData($certificate);
+        Log::debug('Template data prepared', ['data' => array_keys($data)]);
 
-        return [
-            'name' => $certificate->user?->name,
-            'program' => $course?->title, // Legacy support for templates using 'program'
-            'course' => $course?->title,
-            'session' => $session?->title,
-            'start_date' => $session?->start_date,
-            'end_date' => $session?->end_date,
-            'issued_at' => $certificate->issued_at,
-            'issued_by' => $certificate->issuer?->name,
-            'certificate_code' => $certificate->certificate_code,
-            'verify_url' => url("/verify/{$certificate->certificate_code}"),
-        ];
-    }
-
-    public function render(Certificate $certificate, CertificateTemplate $template): array
-    {
-        if (!extension_loaded('gd')) {
-            throw new RuntimeException('GD extension is required for certificate rendering.');
-        }
-
-        $data = $this->buildCertificateData($certificate);
-        $layout = is_array($template->layout_config) ? $template->layout_config : [];
-
-        $image = $this->createCanvas($template, $layout);
-        $defaultColor = $this->resolveColor($image, $template->text_color);
-
-        foreach ($layout as $field => $config) {
-            if ($field === 'qr' || $field === 'canvas') {
-                continue;
+        try {
+            // Use TCPDF for Thai certificates (better Unicode support)
+            if ($certificate->language === 'th') {
+                Log::debug('Using TCPDF for Thai certificate');
+                return $this->renderWithTcpdf($data);
             }
 
-            $value = $data[$field] ?? null;
-            if ($value === null) {
-                continue;
-            }
+            // Use DomPDF for English certificates
+            Log::debug('Using DomPDF for English certificate');
+            $template = 'certificates.templates.fixed-en';
+            $pdf = Pdf::loadView($template, $data)
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'defaultFont' => 'DejaVu Sans',
+                    'enable_php' => false,
+                    'dpi' => 150,
+                ]);
 
-            $this->drawText($image, $value, (array) $config, $template, $defaultColor);
+            Log::debug('Calling $pdf->output()');
+            $output = $pdf->output();
+            Log::debug('PDF rendered successfully', ['size' => strlen($output)]);
+            return $output;
+        } catch (\Exception $e) {
+            Log::error('Certificate rendering failed', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw new \Exception("Failed to render certificate: {$e->getMessage()}", 0, $e);
         }
-
-        if (isset($layout['qr'])) {
-            $this->drawQr($image, $data, (array) $layout['qr']);
-        }
-
-        ob_start();
-        imagepng($image);
-        $binary = ob_get_clean();
-        unset($image);
-
-        return [
-            'mime_type' => 'image/png',
-            'binary' => $binary,
-        ];
-    }
-
-    private function createCanvas(CertificateTemplate $template, array $layout)
-    {
-        if ($template->background_image) {
-            $image = imagecreatefromstring($template->background_image);
-            if (!$image) {
-                throw new RuntimeException('Unable to read certificate background image.');
-            }
-
-            return $image;
-        }
-
-        $width = (int) ($layout['canvas']['width'] ?? self::DEFAULT_CANVAS_WIDTH);
-        $height = (int) ($layout['canvas']['height'] ?? self::DEFAULT_CANVAS_HEIGHT);
-        $image = imagecreatetruecolor($width, $height);
-        $white = imagecolorallocate($image, 255, 255, 255);
-        imagefilledrectangle($image, 0, 0, $width, $height, $white);
-
-        return $image;
-    }
-
-    private function drawText($image, $value, array $config, CertificateTemplate $template, ?int $defaultColor): void
-    {
-        $canvasWidth = imagesx($image);
-        $canvasHeight = imagesy($image);
-
-        $x = $this->resolveCoordinate($config['x'] ?? 0, $canvasWidth);
-        $y = $this->resolveCoordinate($config['y'] ?? 0, $canvasHeight);
-
-        // Support both 'fontSize' and 'size' for backward compatibility
-        $size = (int) ($config['fontSize'] ?? $config['size'] ?? $template->font_size ?? 16);
-        $color = $this->resolveColor($image, $config['color'] ?? $template->text_color) ?? $defaultColor;
-
-        if ($color === null) {
-            $color = imagecolorallocate($image, 0, 0, 0);
-        }
-
-        if ($value instanceof CarbonInterface) {
-            $format = $config['format'] ?? self::DEFAULT_DATE_FORMAT;
-            $value = $value->format($format);
-        }
-
-        $text = (string) $value;
-
-        // Get font style if specified
-        $fontStyle = $config['fontStyle'] ?? 'normal';
-        $fontFamily = $config['fontFamily'] ?? $config['font'] ?? $template->font_family;
-
-        // Resolve font path with style support
-        $fontPath = $this->resolveFontPathWithStyle($fontFamily, $fontStyle);
-
-        if ($fontPath) {
-            // imagettftext treats y as the baseline.
-            imagettftext($image, $size, 0, $x, $y, $color, $fontPath, $text);
-            return;
-        }
-
-        $font = $this->mapToBuiltInFont($size);
-        imagestring($image, $font, $x, $y, $text, $color);
-    }
-
-    private function drawQr($image, array $data, array $config): void
-    {
-        $payload = $data['verify_url'] ?? $data['certificate_code'] ?? null;
-        if (!$payload) {
-            return;
-        }
-
-        $canvasWidth = imagesx($image);
-        $canvasHeight = imagesy($image);
-
-        $size = (int) ($config['size'] ?? 160);
-        $x = $this->resolveCoordinate($config['x'] ?? 0, $canvasWidth);
-        $y = $this->resolveCoordinate($config['y'] ?? 0, $canvasHeight);
-        $width = $this->resolveCoordinate($config['width'] ?? $size, $canvasWidth);
-        $height = $this->resolveCoordinate($config['height'] ?? $size, $canvasHeight);
-
-        $qrBinary = $this->buildQrCode($payload, $size);
-        $qrImage = imagecreatefromstring($qrBinary);
-        if (!$qrImage) {
-            return;
-        }
-
-        imagecopyresampled(
-            $image,
-            $qrImage,
-            $x,
-            $y,
-            0,
-            0,
-            $width,
-            $height,
-            imagesx($qrImage),
-            imagesy($qrImage)
-        );
-
-        unset($qrImage);
-    }
-
-    private function buildQrCode(string $payload, int $size): string
-    {
-        $result = (new Builder())->build(
-            writer: new PngWriter(),
-            data: $payload,
-            size: $size,
-            margin: 0
-        );
-
-        return $result->getString();
-    }
-
-    private function resolveFontPath(?string $fontFamily): ?string
-    {
-        if (!$fontFamily) {
-            return null;
-        }
-
-        if (is_file($fontFamily)) {
-            return $fontFamily;
-        }
-
-        $storagePath = storage_path('app/fonts/' . $fontFamily);
-        if (is_file($storagePath)) {
-            return $storagePath;
-        }
-
-        return null;
-    }
-
-    private function resolveFontPathWithStyle(?string $fontFamily, string $fontStyle = 'normal'): ?string
-    {
-        if (!$fontFamily) {
-            return null;
-        }
-
-        // If fontStyle is normal, use the original font
-        if ($fontStyle === 'normal') {
-            return $this->resolveFontPath($fontFamily);
-        }
-
-        // Try to find a styled font variant
-        // For example: Prompt-Regular.ttf -> Prompt-Bold.ttf or Prompt-Italic.ttf
-        $styledFontFamily = $this->getStyledFontName($fontFamily, $fontStyle);
-
-        // Try the styled font first
-        $styledPath = $this->resolveFontPath($styledFontFamily);
-        if ($styledPath) {
-            return $styledPath;
-        }
-
-        // Fallback to original font if styled version not found
-        return $this->resolveFontPath($fontFamily);
-    }
-
-    private function getStyledFontName(string $fontFamily, string $fontStyle): string
-    {
-        // Common patterns for font file naming
-        $patterns = [
-            'bold' => ['Regular' => 'Bold', 'regular' => 'bold', '-Regular' => '-Bold', '-regular' => '-bold'],
-            'italic' => ['Regular' => 'Italic', 'regular' => 'italic', '-Regular' => '-Italic', '-regular' => '-italic'],
-        ];
-
-        if (!isset($patterns[$fontStyle])) {
-            return $fontFamily;
-        }
-
-        // Try to replace common patterns
-        foreach ($patterns[$fontStyle] as $search => $replace) {
-            if (str_contains($fontFamily, $search)) {
-                return str_replace($search, $replace, $fontFamily);
-            }
-        }
-
-        // If no pattern matched, try to insert style before extension
-        // Example: MyFont.ttf -> MyFont-Bold.ttf
-        $extension = pathinfo($fontFamily, PATHINFO_EXTENSION);
-        $baseName = pathinfo($fontFamily, PATHINFO_FILENAME);
-
-        if ($extension) {
-            $styleCapitalized = ucfirst($fontStyle);
-            return "{$baseName}-{$styleCapitalized}.{$extension}";
-        }
-
-        return $fontFamily;
-    }
-
-    private function resolveColor($image, ?string $color): ?int
-    {
-        if (!$color) {
-            return null;
-        }
-
-        $color = trim($color);
-        if (preg_match('/^#?([0-9a-fA-F]{3})$/', $color, $matches) === 1) {
-            $hex = $matches[1];
-            $color = sprintf(
-                '%s%s%s%s%s%s',
-                $hex[0],
-                $hex[0],
-                $hex[1],
-                $hex[1],
-                $hex[2],
-                $hex[2]
-            );
-        } elseif (preg_match('/^#?([0-9a-fA-F]{6})$/', $color, $matches) === 1) {
-            $color = $matches[1];
-        } else {
-            return null;
-        }
-
-        $red = hexdec(substr($color, 0, 2));
-        $green = hexdec(substr($color, 2, 2));
-        $blue = hexdec(substr($color, 4, 2));
-
-        return imagecolorallocate($image, $red, $green, $blue);
-    }
-
-    private function mapToBuiltInFont(int $size): int
-    {
-        if ($size >= 24) {
-            return 5;
-        }
-
-        if ($size >= 18) {
-            return 4;
-        }
-
-        if ($size >= 14) {
-            return 3;
-        }
-
-        if ($size >= 10) {
-            return 2;
-        }
-
-        return 1;
     }
 
     /**
-     * Resolve coordinate value (supports both pixel integers and percentage strings).
+     * Prepare template data from certificate.
      *
-     * @param mixed $value Coordinate value (int or "50%")
-     * @param int $dimension Canvas dimension (width or height)
-     * @return int Resolved pixel value
+     * @param Certificate $certificate
+     * @return array
      */
-    private function resolveCoordinate($value, int $dimension): int
+    protected function prepareTemplateData(Certificate $certificate): array
     {
-        // Handle percentage strings (e.g., "50%")
-        if (is_string($value) && str_ends_with($value, '%')) {
-            $percentage = (float) rtrim($value, '%');
-            return (int) round($dimension * $percentage / 100);
+        $session = $certificate->session;
+        $course = $certificate->course;
+
+        return [
+            'certificate' => $certificate,
+            'trainee_name' => $certificate->user->name ?? 'Unknown',
+            'course_name' => $course->title ?? $course->name ?? 'Unknown Course',
+            'course_description' => $certificate->description ?? $course->description ?? '',
+            'session_name' => $session?->title ?? $session?->name,
+            'start_date' => $session?->start_date ? $session->start_date->format('d/m/Y') : null,
+            'end_date' => $session?->end_date ? $session->end_date->format('d/m/Y') : null,
+            'total_hours' => $certificate->total_hours,
+            'issue_date' => $certificate->issued_at->format('d/m/Y'),
+            'certificate_code' => $certificate->certificate_code,
+            'trainers' => $certificate->trainers(),
+            'trainer_signatures' => $certificate->trainer_signatures ?? [],
+            'authorized_signatory' => $certificate->authorized_signatory_name
+                ?? config('certificates.default_signatory'),
+            'authorized_signature' => $certificate->authorized_signature_url,
+            'organization_name' => $certificate->organization_name
+                ?? config('certificates.organization_name', 'KKU'),
+            'organization_logo' => $this->getOrganizationLogo($certificate),
+            'score' => $certificate->score,
+            'skills' => $certificate->skills,
+            'verification_url' => $certificate->verification_url,
+            'qr_code' => $this->generateQrCode($certificate->verification_url),
+            'language' => $certificate->language,
+        ];
+    }
+
+    /**
+     * Get organization logo path or URL.
+     *
+     * @param Certificate $certificate
+     * @return string
+     */
+    protected function getOrganizationLogo(Certificate $certificate): string
+    {
+        // Use certificate-specific logo if available
+        if ($certificate->organization_logo_url) {
+            return $this->resolveAssetPath($certificate->organization_logo_url);
         }
 
-        // Handle pixel values (int or numeric string)
-        return (int) $value;
+        // Use default from config
+        $defaultLogo = config('certificates.organization_logo_url', '/images/kku-logo.png');
+        return $this->resolveAssetPath($defaultLogo);
+    }
+
+    /**
+     * Resolve asset path for use in PDF.
+     *
+     * @param string $path
+     * @return string
+     */
+    protected function resolveAssetPath(string $path): string
+    {
+        // If it's already an absolute path or URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        // Convert relative path to absolute file path
+        $publicPath = public_path($path);
+        if (file_exists($publicPath)) {
+            return $publicPath;
+        }
+
+        // If file doesn't exist, return the URL (will let DOMPDF try to fetch it)
+        return asset($path);
+    }
+
+    /**
+     * Generate QR code as base64 data URI.
+     *
+     * @param string $url
+     * @return string
+     */
+    protected function generateQrCode(string $url): string
+    {
+        // Check if Endroid\QrCode package is installed and classes exist
+        if (
+            !class_exists('\Endroid\QrCode\Builder\Builder') ||
+            !class_exists('\Endroid\QrCode\Writer\PngWriter')
+        ) {
+            Log::warning('Endroid\QrCode package or classes not found. Skipping QR code generation.');
+            return 'data:image/png;base64,';
+        }
+
+        try {
+            $qrConfig = config('certificates.qr_code', [
+                'size' => 200,
+                'error_correction' => 'H',
+                'margin' => 1,
+            ]);
+
+            // Robust check for ErrorCorrectionLevel class/enum
+            $ecClass = '\Endroid\QrCode\ErrorCorrectionLevel';
+            if (!class_exists($ecClass) && !enum_exists($ecClass)) {
+                // Try alternate namespace/name for different versions if needed
+                // For now, if it's missing, we'll just skip the specific level setting
+                Log::warning('ErrorCorrectionLevel class/enum not found.');
+                $errorCorrection = null;
+            } else {
+                $errorCorrection = match ($qrConfig['error_correction'] ?? 'H') {
+                    'L' => $ecClass::Low,
+                    'M' => $ecClass::Medium,
+                    'Q' => $ecClass::Quartile,
+                    'H' => $ecClass::High,
+                    default => $ecClass::High,
+                };
+            }
+
+            $builder = Builder::create()
+                ->writer(new PngWriter())
+                ->data($url)
+                ->size($qrConfig['size'])
+                ->margin($qrConfig['margin']);
+
+            if ($errorCorrection) {
+                $builder->errorCorrectionLevel($errorCorrection);
+            }
+
+            $result = $builder->build();
+            $qrCode = $result->getString();
+
+            return 'data:image/png;base64,' . base64_encode($qrCode);
+        } catch (\Exception $e) {
+            Log::warning('QR code generation failed', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Return empty data URI as fallback
+            return 'data:image/png;base64,';
+        }
+    }
+
+    /**
+     * Validate certificate text length and return warnings.
+     *
+     * @param Certificate $certificate
+     * @return array
+     */
+    public function validateTextLength(Certificate $certificate): array
+    {
+        $warnings = [];
+        $limits = config('certificates.text_limits', [
+            'trainee_name' => 50,
+            'course_name' => 100,
+            'description' => 500,
+            'skills' => 300,
+        ]);
+
+        $certificate->loadMissing('user', 'course');
+
+        // Check trainee name
+        $nameLength = mb_strlen($certificate->user?->name ?? '');
+        if ($nameLength > $limits['trainee_name']) {
+            $warnings[] = "Trainee name exceeds recommended length ({$limits['trainee_name']} characters). Current: {$nameLength} characters.";
+        }
+
+        // Check course name
+        $courseNameLength = mb_strlen($certificate->course?->title ?? '');
+        if ($courseNameLength > $limits['course_name']) {
+            $warnings[] = "Course name exceeds recommended length ({$limits['course_name']} characters). Current: {$courseNameLength} characters.";
+        }
+
+        // Check description
+        if ($certificate->description) {
+            $descLength = mb_strlen($certificate->description);
+            if ($descLength > $limits['description']) {
+                $warnings[] = "Description exceeds recommended length ({$limits['description']} characters). Current: {$descLength} characters.";
+            }
+        }
+
+        // Check skills
+        if ($certificate->skills) {
+            $skillsLength = mb_strlen($certificate->skills);
+            if ($skillsLength > $limits['skills']) {
+                $warnings[] = "Skills text exceeds recommended length ({$limits['skills']} characters). Current: {$skillsLength} characters.";
+            }
+        }
+
+        return $warnings;
+    }
+
+    /**
+     * Preview certificate with sample data (for testing templates).
+     *
+     * @param array $sampleData
+     * @param string $language
+     * @return string Binary PDF data
+     */
+    public function renderPreview(array $sampleData, string $language = 'th'): string
+    {
+        $template = $language === 'en'
+            ? 'certificates.templates.fixed-en'
+            : 'certificates.templates.fixed-th';
+
+        // Merge with defaults
+        $data = array_merge([
+            'trainee_name' => 'Sample Trainee Name',
+            'course_name' => 'Sample Course Name',
+            'course_description' => 'This is a sample course description for preview purposes.',
+            'session_name' => 'Sample Session',
+            'start_date' => '01/01/2026',
+            'end_date' => '31/01/2026',
+            'total_hours' => 40,
+            'issue_date' => date('d/m/Y'),
+            'certificate_code' => 'CERT-PREVIEW-0000',
+            'trainers' => collect([
+                (object) ['name' => 'Trainer Name 1'],
+                (object) ['name' => 'Trainer Name 2'],
+            ]),
+            'trainer_signatures' => [],
+            'authorized_signatory' => 'Director Name',
+            'authorized_signature' => null,
+            'organization_name' => config('certificates.organization_name', 'KKU'),
+            'organization_logo' => $this->resolveAssetPath(config('certificates.organization_logo_url', '/images/kku-logo.png')),
+            'score' => null,
+            'skills' => 'Sample skills and competencies gained from this training.',
+            'verification_url' => url('/verify/CERT-PREVIEW-0000'),
+            'qr_code' => $this->generateQrCode(url('/verify/CERT-PREVIEW-0000')),
+            'language' => $language,
+        ], $sampleData);
+
+        $orientation = $language === 'en' ? 'landscape' : 'portrait';
+
+        $pdf = Pdf::loadView($template, $data)
+            ->setPaper('a4', $orientation)
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'DejaVu Sans',
+                'enable_php' => false,
+                'dpi' => 150,
+            ]);
+
+        return $pdf->output();
+    }
+
+    /**
+     * Render Thai certificate using TCPDF with proper Unicode support.
+     *
+     * @param array $data
+     * @return string
+     */
+    protected function renderWithTcpdf(array $data): string
+    {
+        // Create TCPDF object in portrait orientation
+        $pdf = new TCPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document info
+        $pdf->SetCreator('KKU Training Management System');
+        $pdf->SetAuthor('KKU');
+        $pdf->SetTitle('ใบประกาศนียบัตร - ' . ($data['trainee_name'] ?? ''));
+        $pdf->SetSubject('Certificate of Completion');
+
+        // Set margins
+        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetHeaderMargin(0);
+        $pdf->SetFooterMargin(0);
+
+        // Remove header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Set auto page break
+        $pdf->SetAutoPageBreak(true, 15);
+
+        // Add page
+        $pdf->AddPage();
+
+        // Set font - use freeserif which has Thai support in TCPDF
+        // TCPDF includes several Unicode fonts: freeserif, freesans, dejavusans
+        $pdf->SetFont('freeserif', '', 14, '', true);
+
+        // Build HTML content for Thai certificate
+        $html = $this->buildThaiCertificateHtml($data);
+
+        // Output HTML content
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Return PDF as string
+        return $pdf->Output('', 'S');
+    }
+
+    /**
+     * Build HTML content for Thai certificate TCPDF rendering.
+     *
+     * @param array $data
+     * @return string
+     */
+    protected function buildThaiCertificateHtml(array $data): string
+    {
+        // Get QR code (already base64 encoded from generateQrCode)
+        $qrCodeData = $data['qr_code'] ?? '';
+
+        // Build signature HTML
+        $signaturesHtml = '';
+        $displayTrainers = collect($data['trainers'])->take(3);
+        foreach ($displayTrainers as $index => $trainer) {
+            $trainerName = $trainer->name ?? $trainer['name'] ?? 'N/A';
+            $signatureImg = isset($data['trainer_signatures'][$index])
+                ? "<img src=\"{$data['trainer_signatures'][$index]}\" style=\"width:50mm;height:15mm;\" />"
+                : '<div style="height:15mm;"></div>';
+            $signaturesHtml .= "
+                <td style=\"width:25%;text-align:center;padding:5mm;\">
+                    {$signatureImg}
+                    <div style=\"border-top:1px solid #374151;padding-top:2mm;font-size:10pt;color:#1f2937;font-weight:500;\">{$trainerName}</div>
+                    <div style=\"font-size:8pt;color:#6b7280;margin-top:1mm;\">วิทยากร</div>
+                </td>";
+        }
+
+        if (!empty($data['authorized_signatory'])) {
+            $authSignature = !empty($data['authorized_signature'])
+                ? "<img src=\"{$data['authorized_signature']}\" style=\"width:50mm;height:15mm;\" />"
+                : '<div style="height:15mm;"></div>';
+            $signaturesHtml .= "
+                <td style=\"width:25%;text-align:center;padding:5mm;\">
+                    {$authSignature}
+                    <div style=\"border-top:1px solid #374151;padding-top:2mm;font-size:10pt;color:#1f2937;font-weight:500;\">{$data['authorized_signatory']}</div>
+                    <div style=\"font-size:8pt;color:#6b7280;margin-top:1mm;\">ผู้อำนวยการ</div>
+                </td>";
+        }
+
+        // Organization logo
+        $logoHtml = !empty($data['organization_logo'])
+            ? "<img src=\"{$data['organization_logo']}\" style=\"width:50mm;height:auto;margin-bottom:3mm;\" />"
+            : '';
+
+        // Skills section
+        $skillsHtml = !empty($data['skills']) ? "
+            <div style=\"margin-top:4mm;text-align:left;max-width:80%;margin-left:auto;margin-right:auto;\">
+                <div style=\"font-size:10pt;font-weight:600;color:#374151;margin-bottom:1mm;\">ความรู้และทักษะที่ได้รับ:</div>
+                <div style=\"font-size:9pt;color:#6b7280;line-height:1.5;\">{$data['skills']}</div>
+            </div>" : '';
+
+        // Training details
+        $detailsHtml = '';
+        if (!empty($data['start_date']) && !empty($data['end_date'])) {
+            $totalHoursHtml = !empty($data['total_hours'])
+                ? "<td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                    <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">รวมชั่วโมง</div>
+                    <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['total_hours']} ชั่วโมง</div>
+                </td>"
+                : '';
+            $detailsHtml = "
+                <tr>
+                    <td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                        <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">ระยะเวลาการอบรม</div>
+                        <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['start_date']} - {$data['end_date']}</div>
+                    </td>
+                    {$totalHoursHtml}
+                    <td style=\"width:33%;text-align:center;padding:2mm 0;\">
+                        <div style=\"font-size:9pt;color:#6b7280;margin-bottom:1mm;\">วันที่ออกเอกสาร</div>
+                        <div style=\"font-size:12pt;font-weight:600;color:#1f2937;\">{$data['issue_date']}</div>
+                    </td>
+                </tr>";
+        }
+
+        return "
+        <style>
+            body { font-family: freeserif, freesans, sans-serif; }
+            .cert-title { font-size:26pt;font-weight:bold;color:#991b1b;letter-spacing:2px;text-align:center; }
+            .cert-subtitle { font-size:14pt;color:#991b1b;font-style:italic;text-align:center;margin-top:1mm; }
+            .intro-text { font-size:13pt;color:#374151;text-align:center;margin-bottom:4mm; }
+            .trainee-name { font-size:" . (mb_strlen($data['trainee_name'] ?? '') > 40 ? '20pt' : (mb_strlen($data['trainee_name'] ?? '') > 30 ? '24pt' : '28pt')) . ";font-weight:bold;color:#1e3a8a;text-align:center;padding:2mm 0;border-bottom:2px solid #1e40af;display:inline-block;min-width:60%; }
+            .program-name { font-size:16pt;font-weight:600;color:#1f2937;text-align:center;margin-bottom:2mm; }
+            .program-desc { font-size:11pt;color:#6b7280;text-align:center;max-width:80%;margin:0 auto 2mm auto;line-height:1.5; }
+            .org-name { font-size:18pt;font-weight:bold;color:#1e40af;text-align:center;margin-bottom:2mm; }
+        </style>
+        <div style=\"border:3px solid #1e40af;border-radius:10px;padding:10mm;height:277mm;position:relative;\">
+            <div style=\"border:1px solid #93c5fd;padding:8mm;height:100%;\">
+                <!-- Header -->
+                <div style=\"text-align:center;margin-bottom:8mm;border-bottom:2px solid #e5e7eb;padding-bottom:5mm;\">
+                    {$logoHtml}
+                    <div class=\"org-name\">{$data['organization_name']}</div>
+                </div>
+
+                <!-- Title -->
+                <div class=\"cert-title\">ใบประกาศนียบัตร</div>
+                <div class=\"cert-subtitle\">Certificate of Completion</div>
+
+                <!-- Content -->
+                <div style=\"text-align:center;margin-top:5mm;\">
+                    <div class=\"intro-text\">ขอมอบให้ไว้เพื่อแสดงว่า</div>
+                    <div class=\"trainee-name\">{$data['trainee_name']}</div>
+                    <div class=\"intro-text\" style=\"margin-top:4mm;\">ได้ผ่านการอบรมหลักสูตร</div>
+                    <div style=\"margin:6mm 0;text-align:center;\">
+                        <div class=\"program-name\">{$data['course_name']}</div>
+                        " . (!empty($data['course_description']) ? "<div class=\"program-desc\">{$data['course_description']}</div>" : "") . "
+                    </div>
+
+                    <!-- Training Details -->
+                    <div style=\"display:table;width:100%;margin:4mm 0;padding:2mm 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;\">
+                        <table style=\"width:100%;border-collapse:collapse;\">
+                            {$detailsHtml}
+                        </table>
+                    </div>
+
+                    {$skillsHtml}
+                </div>
+
+                <!-- Footer -->
+                <div style=\"position:absolute;bottom:10mm;left:15mm;right:15mm;display:table;width:calc(100% - 30mm);\">
+                    <table style=\"width:100%;border-collapse:collapse;\">
+                        <tr>
+                            <td style=\"width:70%;\">
+                                <table style=\"width:100%;border-collapse:collapse;\">
+                                    <tr>{$signaturesHtml}</tr>
+                                </table>
+                            </td>
+                            <td style=\"width:30%;text-align:center;vertical-align:bottom;padding:5mm;\">
+                                <img src=\"{$qrCodeData}\" style=\"width:22mm;height:22mm;border:2px solid #e5e7eb;padding:1mm;border-radius:3px;\" />
+                                <div style=\"font-size:8pt;color:#6b7280;margin-top:2mm;font-weight:600;\">{$data['certificate_code']}</div>
+                                <div style=\"font-size:7pt;color:#9ca3af;\">ตรวจสอบความถูกต้อง</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>";
+    }
+
+    /**
+     * Get estimated file size before rendering (for planning).
+     *
+     * @return array
+     */
+    public function getEstimatedFileSize(): array
+    {
+        return [
+            'min_size_kb' => 50,
+            'avg_size_kb' => 150,
+            'max_size_kb' => 500,
+            'max_allowed_kb' => config('certificates.max_file_sizes.certificate_file', 2048),
+        ];
     }
 }

@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FileUploadController;
 
 use App\Http\Controllers\Api\CertificateController;
-use App\Http\Controllers\Api\CertificateTemplateController;
 use App\Http\Controllers\Api\AdminSessionController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SessionDayController;
@@ -22,6 +21,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('auth/register', [AuthController::class, 'register']);
 Route::post('auth/login', [AuthController::class, 'login']);
 
+// Debug endpoints - remove in production
+Route::get('debug/auth', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
+Route::get('debug/admin-check', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
+
 // Public catalog
 Route::get('catalog/courses', [CatalogController::class, 'courses']);
 Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
@@ -29,6 +32,11 @@ Route::get('catalog/courses/{course}', [CatalogController::class, 'show']);
 Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Debug endpoints
+    Route::get('debug/me', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
+    Route::get('debug/admin', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
+    Route::get('debug/middleware', [\App\Http\Controllers\Api\DebugController::class, 'middlewareInfo']);
+
     Route::get('me', [MeController::class, 'show']);
     Route::put('me/profile', [MeController::class, 'updateProfile']);
     Route::post('me/avatar', [MeController::class, 'uploadAvatar']);
@@ -106,8 +114,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
             Route::get('sessions', [TrainingSessionController::class, 'trainerSessions']);
             Route::get('courses', [\App\Http\Controllers\Api\CourseController::class, 'trainerCourses']);
-            Route::apiResource('certificate-templates', CertificateTemplateController::class)
-                ->except(['create', 'edit']);
 
             // Image upload for programs (now courses)
             Route::post('upload/image', [FileUploadController::class, 'image']);
@@ -124,9 +130,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('users/{user}/avatar', [MeController::class, 'showUserAvatar']);
 
         Route::get('admin/certificates', [CertificateController::class, 'adminIndex']);
+        Route::post('admin/certificates/preview', [CertificateController::class, 'preview']);
+        Route::post('admin/certificates/batch', [CertificateController::class, 'generateBatch']);
+        Route::get('admin/certificates/batch/{batchId}', [CertificateController::class, 'getBatchStatus']);
         Route::post('admin/certificates/{certificate}/revoke', [CertificateController::class, 'revoke']);
-        Route::apiResource('admin/certificate-templates', CertificateTemplateController::class)
-            ->except(['create', 'edit']);
 
         Route::get('admin/sessions', [TrainingSessionController::class, 'adminSessions']);
 

@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
+use App\Models\CertificateGenerationBatch;
 use App\Models\CertificateRequest;
+use App\Models\CertificateVerificationLog;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\TrainingSession;
 use App\Services\CertificateFileService;
 use App\Services\CertificateGenerationService;
+use App\Services\CertificateRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -131,7 +135,7 @@ class CertificateController extends Controller
         return $this->successResponse($certificate, 'Certificate retrieved successfully.');
     }
 
-    public function verify(string $certificateCode)
+    public function verify(Request $request, string $certificateCode)
     {
         $certificate = Certificate::with([
             'user:id,name',
@@ -149,6 +153,13 @@ class CertificateController extends Controller
             ], 404);
         }
 
+        // Log verification attempt
+        CertificateVerificationLog::logVerification(
+            certificateId: $certificate->id,
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
         return $this->successResponse([
             'certificate_code' => $certificate->certificate_code,
             'is_valid' => $certificate->status === 'valid',
@@ -157,6 +168,8 @@ class CertificateController extends Controller
             'course' => $certificate->course?->title,
             'session' => $certificate->session?->title,
             'issued_at' => $certificate->issued_at,
+            'organization' => $certificate->organization_name,
+            'revoked_at' => $certificate->revoked_at,
         ]);
     }
 
@@ -240,6 +253,141 @@ class CertificateController extends Controller
         }
 
         return $this->buildCertificateFileResponse($certificate, 'inline');
+    }
+
+    /**
+     * Preview certificate before generation
+     */
+    public function preview(Request $request, CertificateRenderer $renderer)
+    {
+        $validated = $request->validate([
+            'enrollment_id' => 'required|exists:enrollments,id',
+        ]);
+
+        $enrollment = Enrollment::with(['user', 'session.course'])->findOrFail($validated['enrollment_id']);
+
+        // Check permissions
+        $user = $request->user();
+        $session = $enrollment->session;
+
+        if (!$user->isRole('admin') && $session->trainer_id !== $user->id && $session->course->owner_id !== $user->id) {
+            return $this->forbiddenResponse('You are not allowed to preview this certificate.');
+        }
+
+        // Create temporary certificate (don't save to DB)
+        $tempCertificate = new Certificate([
+            'enrollment_id' => $enrollment->id,
+            'user_id' => $enrollment->user_id,
+            'course_id' => $session->course_id,
+            'session_id' => $session->id,
+            'description' => $session->course->description,
+            'total_hours' => 40, // Sample
+            'trainer_ids' => [$session->trainer_id],
+            'issued_by' => $user->id,
+            'issued_at' => now(),
+            'certificate_code' => 'CERT-PREVIEW-XXXX',
+            'organization_name' => config('certificates.organization_name'),
+            'language' => 'en',
+            'status' => 'valid',
+        ]);
+
+        // Manually set relationships for preview
+        $tempCertificate->setRelation('user', $enrollment->user);
+        $tempCertificate->setRelation('course', $session->course);
+        $tempCertificate->setRelation('session', $session);
+        $tempCertificate->setRelation('issuer', $user);
+
+        try {
+            // Render PDF
+            $pdfData = $renderer->render($tempCertificate);
+
+            // Check for warnings
+            $warnings = $renderer->validateTextLength($tempCertificate);
+
+            return response($pdfData, 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="preview.pdf"')
+                ->header('X-Certificate-Warnings', json_encode($warnings));
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to generate preview: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Batch generate certificates with progress tracking
+     */
+    public function generateBatch(Request $request, CertificateGenerationService $certificateService)
+    {
+        $user = $request->user();
+
+        if (!$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can generate certificates.');
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|in:course,session',
+            'course_id' => 'required_if:type,course|exists:courses,id',
+            'session_id' => 'required_if:type,session|exists:training_sessions,id',
+            'eager_generate' => 'nullable|boolean',
+        ]);
+
+        try {
+            if ($validated['type'] === 'session') {
+                $session = TrainingSession::findOrFail($validated['session_id']);
+
+                if ($session->status !== 'completed') {
+                    return $this->validationErrorResponse([
+                        'status' => ['Session must be completed before generating certificates.'],
+                    ]);
+                }
+
+                $batch = $certificateService->generateCertificatesForSession(
+                    session: $session,
+                    issuerId: $user->id,
+                    eagerGenerate: $validated['eager_generate'] ?? false,
+                    language: 'en'
+                );
+            } else {
+                $course = Course::findOrFail($validated['course_id']);
+
+                if ($course->status !== 'published') {
+                    return $this->validationErrorResponse([
+                        'status' => ['Course must be published before generating certificates.'],
+                    ]);
+                }
+
+                $batch = $certificateService->generateCertificatesForCourse(
+                    course: $course,
+                    issuerId: $user->id,
+                    eagerGenerate: $validated['eager_generate'] ?? false,
+                    language: 'en'
+                );
+            }
+
+            $stats = $certificateService->getBatchStatistics($batch);
+
+            return $this->successResponse($stats, "Generated {$batch->generated_count} certificates");
+        } catch (\Exception $e) {
+            return $this->errorResponse('Batch generation failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get batch generation status
+     */
+    public function getBatchStatus(Request $request, int $batchId, CertificateGenerationService $certificateService)
+    {
+        $user = $request->user();
+
+        if (!$user->isRole('admin')) {
+            return $this->forbiddenResponse('Only admin can view batch status.');
+        }
+
+        $batch = CertificateGenerationBatch::findOrFail($batchId);
+
+        $stats = $certificateService->getBatchStatistics($batch);
+
+        return $this->successResponse($stats);
     }
 
     public function generateForSession(Request $request, TrainingSession $session, CertificateGenerationService $certificateService)

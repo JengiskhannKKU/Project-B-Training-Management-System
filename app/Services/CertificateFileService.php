@@ -3,13 +3,25 @@
 namespace App\Services;
 
 use App\Models\Certificate;
-use App\Models\CertificateTemplate;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class CertificateFileService
 {
+    public function __construct(
+        protected CertificateRenderer $renderer
+    ) {
+    }
+
+    /**
+     * Generate and store PDF file (lazy generation - only if not already stored).
+     *
+     * @param Certificate $certificate
+     * @return Certificate
+     */
     public function generateAndStoreFile(Certificate $certificate): Certificate
     {
+        // Skip if already generated
         if ($this->hasFileData($certificate)) {
             return $certificate;
         }
@@ -17,162 +29,113 @@ class CertificateFileService
         return $this->forceGenerateAndStoreFile($certificate);
     }
 
-    public function forceGenerateAndStoreFile(Certificate $certificate): Certificate
-    {
-        $certificate->loadMissing(['session.course', 'course', 'enrollment.session.course']);
-
-        $template = $this->resolveTemplate($certificate);
-
-        $renderer = new CertificateRenderer();
-        $rendered = $renderer->render($certificate, $template);
-        $binary = $rendered['binary'] ?? null;
-        $mimeType = $rendered['mime_type'] ?? null;
-
-        if (!$binary || !$mimeType) {
-            throw new RuntimeException('Certificate rendering failed.');
-        }
-
-        $fileSize = strlen($binary);
-
-        // KAN-393: Validate file size against configured limit
-        $this->validateFileSize($fileSize, $certificate);
-
-        // template_id can be null if using fallback template (KAN-391)
-        $certificate->forceFill([
-            'file_data' => $binary,
-            'file_mime_type' => $mimeType,
-            'file_size' => $fileSize,
-            'generated_at' => now(),
-            'template_id' => $template->id ?? null,
-        ])->save();
-
-        return $certificate->fresh();
-    }
-
     /**
-     * Resolve template for certificate generation.
-     *
-     * KAN-390: Template selection order:
-     * 1. Session-level template (if certificate is linked to a session)
-     * 2. Course-level template
-     * 3. Global default template
-     * 4. Fallback to hardcoded basic template (KAN-391)
+     * Force regenerate and store PDF file.
      *
      * @param Certificate $certificate
-     * @return CertificateTemplate
+     * @return Certificate
+     * @throws RuntimeException
      */
-    private function resolveTemplate(Certificate $certificate): CertificateTemplate
+    public function forceGenerateAndStoreFile(Certificate $certificate): Certificate
     {
-        // If certificate already has a template assigned, use it
-        if ($certificate->template_id) {
-            $template = CertificateTemplate::find($certificate->template_id);
-            if ($template) {
-                return $template;
-            }
+        try {
+            // Render PDF using the fixed template
+            $pdfData = $this->renderer->render($certificate);
+            $fileSize = strlen($pdfData);
+
+            // Validate file size
+            $this->validateFileSize($fileSize, $certificate);
+
+            // Store in database
+            $certificate->forceFill([
+                'file_data' => $pdfData,
+                'file_mime_type' => 'application/pdf',
+                'file_size' => $fileSize,
+                'generated_at' => now(),
+            ])->save();
+
+            Log::info('Certificate PDF generated and stored', [
+                'certificate_id' => $certificate->id,
+                'certificate_code' => $certificate->certificate_code,
+                'file_size_kb' => round($fileSize / 1024, 2),
+            ]);
+
+            return $certificate->fresh();
+        } catch (\Exception $e) {
+            Log::error('Certificate file generation failed', [
+                'certificate_id' => $certificate->id,
+                'certificate_code' => $certificate->certificate_code,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw new RuntimeException(
+                "Failed to generate certificate file: {$e->getMessage()}",
+                0,
+                $e
+            );
         }
-
-        // KAN-390: Priority 1 - Session-level template
-        $session = $certificate->session ?? $certificate->enrollment?->session;
-        if ($session) {
-            $sessionTemplate = $session->activeCertificateTemplate()->first();
-            if ($sessionTemplate) {
-                return $sessionTemplate;
-            }
-        }
-
-        // KAN-390: Priority 2 - Course-level template
-        $course = $certificate->course ?? $session?->course;
-        if ($course) {
-            $courseTemplate = $course->activeCertificateTemplate()->first();
-            if ($courseTemplate) {
-                return $courseTemplate;
-            }
-        }
-
-        // KAN-390: Priority 3 - Global default template
-        $globalTemplate = CertificateTemplate::where('scope', 'global')
-            ->where('is_active', true)
-            ->latest()
-            ->first();
-
-        if ($globalTemplate) {
-            return $globalTemplate;
-        }
-
-        // KAN-391: Priority 4 - Hardcoded fallback template (no DB persistence)
-        return $this->createFallbackTemplate();
     }
 
     /**
-     * Create a hardcoded fallback template (KAN-391).
-     * This template is NOT persisted to the database.
-     * It's a basic in-memory template used when no other template is available.
+     * Get PDF file data (generate if needed).
      *
-     * @return CertificateTemplate
+     * @param Certificate $certificate
+     * @return string Binary PDF data
      */
-    private function createFallbackTemplate(): CertificateTemplate
+    public function getFileData(Certificate $certificate): string
     {
-        $layout = [
-            'canvas' => [
-                'width' => 1600,
-                'height' => 1200,
-            ],
-            'name' => [
-                'x' => 192,
-                'y' => 384,
-            ],
-            'course' => [
-                'x' => 192,
-                'y' => 504,
-            ],
-            'session' => [
-                'x' => 192,
-                'y' => 624,
-            ],
-            'issued_at' => [
-                'x' => 192,
-                'y' => 744,
-            ],
-            'certificate_code' => [
-                'x' => 192,
-                'y' => 864,
-            ],
-            'qr' => [
-                'x' => 1152,
-                'y' => 696,
-                'width' => 160,
-                'height' => 160,
-                'size' => 160,
-            ],
-        ];
+        if (!$this->hasFileData($certificate)) {
+            $certificate = $this->generateAndStoreFile($certificate);
+        }
 
-        // Create an in-memory template without saving to database
-        $template = new CertificateTemplate();
-        $template->name = 'Hardcoded Fallback Template';
-        $template->scope = 'global';
-        $template->layout_config = $layout;
-        $template->font_size = 28;
-        $template->text_color = '#1f2937';
-        $template->is_active = true;
-
-        return $template;
-    }
-
-    private function hasFileData(Certificate $certificate): bool
-    {
-        $data = $certificate->file_data;
-
-        return $data !== null && $data !== '';
+        return $certificate->file_data;
     }
 
     /**
-     * Validate certificate file size against configured limits (KAN-393).
+     * Check if certificate has file data stored.
+     *
+     * @param Certificate $certificate
+     * @return bool
+     */
+    public function hasFileData(Certificate $certificate): bool
+    {
+        return !empty($certificate->file_data) && !empty($certificate->generated_at);
+    }
+
+    /**
+     * Delete stored file data to save space.
+     *
+     * @param Certificate $certificate
+     * @return bool
+     */
+    public function deleteFileData(Certificate $certificate): bool
+    {
+        if (!$this->hasFileData($certificate)) {
+            return true;
+        }
+
+        $certificate->forceFill([
+            'file_data' => null,
+            'file_size' => null,
+            'generated_at' => null,
+        ])->save();
+
+        Log::info('Certificate file data deleted', [
+            'certificate_id' => $certificate->id,
+            'certificate_code' => $certificate->certificate_code,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Validate certificate file size against configured limits.
      *
      * @param int $fileSizeBytes File size in bytes
-     * @param Certificate $certificate The certificate being generated
+     * @param Certificate $certificate
      * @throws RuntimeException if file size exceeds hard limit
      */
-    private function validateFileSize(int $fileSizeBytes, Certificate $certificate): void
+    protected function validateFileSize(int $fileSizeBytes, Certificate $certificate): void
     {
         $fileSizeKB = round($fileSizeBytes / 1024, 2);
         $maxSizeKB = config('certificates.max_file_sizes.certificate_file', 2048);
@@ -181,12 +144,12 @@ class CertificateFileService
         // Log warning if file is large (>50% of limit)
         $warningThresholdKB = $maxSizeKB * 0.5;
         if ($logLargeFiles && $fileSizeKB > $warningThresholdKB) {
-            \Log::warning('Large certificate file generated', [
+            Log::warning('Large certificate file generated', [
                 'certificate_id' => $certificate->id,
                 'certificate_code' => $certificate->certificate_code,
                 'file_size_kb' => $fileSizeKB,
                 'max_size_kb' => $maxSizeKB,
-                'template_id' => $certificate->template_id,
+                'language' => $certificate->language,
             ]);
         }
 
@@ -194,8 +157,128 @@ class CertificateFileService
         if ($fileSizeKB > $maxSizeKB) {
             throw new RuntimeException(
                 "Certificate file size ({$fileSizeKB} KB) exceeds maximum allowed size ({$maxSizeKB} KB). " .
-                "Consider optimizing the template or reducing background image size."
+                "Consider reducing image sizes or simplifying content."
             );
         }
+    }
+
+    /**
+     * Get file size statistics for certificates.
+     *
+     * @return array
+     */
+    public function getFileStatistics(): array
+    {
+        $stats = Certificate::selectRaw('
+            COUNT(*) as total_certificates,
+            COUNT(file_data) as certificates_with_files,
+            SUM(file_size) as total_size_bytes,
+            AVG(file_size) as avg_size_bytes,
+            MIN(file_size) as min_size_bytes,
+            MAX(file_size) as max_size_bytes
+        ')->first();
+
+        return [
+            'total_certificates' => $stats->total_certificates ?? 0,
+            'certificates_with_files' => $stats->certificates_with_files ?? 0,
+            'total_size_mb' => round(($stats->total_size_bytes ?? 0) / 1024 / 1024, 2),
+            'avg_size_kb' => round(($stats->avg_size_bytes ?? 0) / 1024, 2),
+            'min_size_kb' => round(($stats->min_size_bytes ?? 0) / 1024, 2),
+            'max_size_kb' => round(($stats->max_size_bytes ?? 0) / 1024, 2),
+            'max_allowed_kb' => config('certificates.max_file_sizes.certificate_file', 2048),
+        ];
+    }
+
+    /**
+     * Cleanup old revoked certificate files to save space.
+     *
+     * @param int $daysOld Only cleanup files older than this many days
+     * @return int Number of files cleaned up
+     */
+    public function cleanupRevokedCertificateFiles(int $daysOld = 365): int
+    {
+        if (!config('certificates.cleanup.enabled', false)) {
+            Log::info('Certificate cleanup is disabled in config');
+            return 0;
+        }
+
+        $count = 0;
+        $cutoffDate = now()->subDays($daysOld);
+
+        $certificates = Certificate::where('status', 'revoked')
+            ->where('revoked_at', '<', $cutoffDate)
+            ->whereNotNull('file_data')
+            ->get();
+
+        foreach ($certificates as $certificate) {
+            try {
+                $this->deleteFileData($certificate);
+                $count++;
+            } catch (\Exception $e) {
+                Log::error('Failed to cleanup certificate file', [
+                    'certificate_id' => $certificate->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('Certificate file cleanup completed', [
+            'files_cleaned' => $count,
+            'days_old' => $daysOld,
+        ]);
+
+        return $count;
+    }
+
+    /**
+     * Regenerate all certificates (for template changes or fixes).
+     * Use with caution - this is resource-intensive.
+     *
+     * @param array $certificateIds Specific certificate IDs to regenerate (empty = all)
+     * @param bool $onlyWithoutFiles Only regenerate certificates without files
+     * @return array Statistics
+     */
+    public function regenerateMultiple(array $certificateIds = [], bool $onlyWithoutFiles = false): array
+    {
+        $query = Certificate::query();
+
+        if (!empty($certificateIds)) {
+            $query->whereIn('id', $certificateIds);
+        }
+
+        if ($onlyWithoutFiles) {
+            $query->whereNull('file_data');
+        }
+
+        $certificates = $query->get();
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($certificates as $certificate) {
+            try {
+                $this->forceGenerateAndStoreFile($certificate);
+                $success++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = [
+                    'certificate_id' => $certificate->id,
+                    'certificate_code' => $certificate->certificate_code,
+                    'error' => $e->getMessage(),
+                ];
+
+                Log::error('Certificate regeneration failed', [
+                    'certificate_id' => $certificate->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'total' => $certificates->count(),
+            'success' => $success,
+            'failed' => $failed,
+            'errors' => $errors,
+        ];
     }
 }

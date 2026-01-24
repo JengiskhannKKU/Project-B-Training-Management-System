@@ -265,6 +265,19 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         ]);
     })->name('admin.certificate-templates.edit');
 
+    Route::get('/admin/test-cert/{id}', function ($id) {
+        try {
+            $certificate = \App\Models\Certificate::findOrFail($id);
+            $renderer = app(\App\Services\CertificateRenderer::class);
+            $pdfData = $renderer->render($certificate);
+            return response($pdfData)->header('Content-Type', 'application/pdf');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    });
 
 });
 
@@ -430,6 +443,13 @@ Route::get('/courses/{code}', function ($code) {
         'programId' => $code,
     ]);
 })->name('courses.show');
+
+// Public certificate verification route (no auth required)
+Route::get('/verify/{code?}', function ($code = null) {
+    return Inertia::render('Public/VerifyCertificate', [
+        'certificateCode' => $code,
+    ]);
+})->name('verify.certificate');
 
 
 require __DIR__ . '/auth.php';

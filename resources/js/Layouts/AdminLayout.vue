@@ -55,8 +55,8 @@ const navigationItems = [
         icon: BookCheck,
     },
     {
-        name: "Certificate Templates",
-        path: "/admin/certificate-templates",
+        name: "Certificates",
+        path: "/admin/certificates",
         icon: Award,
     },
     {
