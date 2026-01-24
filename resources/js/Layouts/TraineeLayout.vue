@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import { BookOpen, BookCheck, Award, Settings, LogOut } from "lucide-vue-next";
+import { BookOpen, BookCheck, Award, MessageSquare, Settings, LogOut } from "lucide-vue-next";
 import NotificationCenter from "@/Components/NotificationCenter.vue";
 import LanguageSwitcher from "@/Components/LanguageSwitcher.vue";
 import Snackbar from "@/Components/Snackbar.vue";
@@ -39,6 +39,11 @@ const navigationItems = computed(() => [
         icon: Award,
     },
     {
+        name: $t("Course Feedback"),
+        path: "/trainee/feedback",
+        icon: MessageSquare,
+    },
+    {
         name: $t("Setting"),
         path: "/me/profile",
         icon: Settings,
@@ -54,6 +59,9 @@ const isActive = (path) => {
     }
     if (path === "/me/certificates") {
         return currentPath.value.startsWith("/me/certificates");
+    }
+    if (path === "/trainee/feedback") {
+        return currentPath.value.startsWith("/trainee/feedback");
     }
     if (path === "/me/profile") {
         return currentPath.value.startsWith("/me/profile");

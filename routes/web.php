@@ -56,7 +56,44 @@ Route::middleware(['auth'])->group(function () {
         $certificates = \App\Models\Certificate::with(['course', 'session.course'])
             ->where('user_id', $user->id)
             ->orderBy('issued_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($certificate) use ($user) {
+                // Check if evaluation exists for this certificate
+                $hasEvaluation = true;
+                $attendanceRate = 100;
+                $blockReason = null;
+
+                if ($certificate->session_id) {
+                    // Check evaluation
+                    $hasEvaluation = \App\Models\Evaluation::where('session_id', $certificate->session_id)
+                        ->where('user_id', $certificate->user_id)
+                        ->exists();
+
+                    // Check attendance rate (from multi-day attendance system)
+                    $enrollment = \App\Models\Enrollment::where('session_id', $certificate->session_id)
+                        ->where('user_id', $user->id)
+                        ->first();
+
+                    if ($enrollment) {
+                        // Use attendance_percent calculated by multi-day attendance system
+                        $attendanceRate = $enrollment->attendance_percent ?? 0;
+                    }
+
+                    // Determine block reason
+                    if ($attendanceRate < 80) {
+                        $blockReason = 'insufficient_attendance';
+                    } elseif (!$hasEvaluation) {
+                        $blockReason = 'missing_feedback';
+                    }
+                }
+
+                return array_merge($certificate->toArray(), [
+                    'has_evaluation' => $hasEvaluation,
+                    'attendance_rate' => $attendanceRate,
+                    'can_download' => $hasEvaluation && $attendanceRate >= 80,
+                    'block_reason' => $blockReason,
+                ]);
+            });
 
         return Inertia::render('Trainee/Certificates/Index', [
             'certificates' => $certificates
@@ -83,9 +120,41 @@ Route::middleware(['auth'])->group(function () {
             abort(403, 'Unauthorized to view this certificate');
         }
 
+        // Add evaluation and attendance data
+        $hasEvaluation = true;
+        $attendanceRate = 100;
+        $blockReason = null;
+
+        if ($certificate->session_id) {
+            $hasEvaluation = \App\Models\Evaluation::where('session_id', $certificate->session_id)
+                ->where('user_id', $certificate->user_id)
+                ->exists();
+
+            $enrollment = \App\Models\Enrollment::where('session_id', $certificate->session_id)
+                ->where('user_id', $certificate->user_id)
+                ->first();
+
+            if ($enrollment) {
+                $attendanceRate = $enrollment->attendance_percent ?? 0;
+            }
+
+            if ($attendanceRate < 80) {
+                $blockReason = 'insufficient_attendance';
+            } elseif (!$hasEvaluation) {
+                $blockReason = 'missing_feedback';
+            }
+        }
+
+        $certificateData = array_merge($certificate->toArray(), [
+            'has_evaluation' => $hasEvaluation,
+            'attendance_rate' => $attendanceRate,
+            'can_download' => $hasEvaluation && $attendanceRate >= 80,
+            'block_reason' => $blockReason,
+        ]);
+
         return Inertia::render('Certificates/Show', [
             'certificateId' => $id,
-            'certificate' => $certificate,
+            'certificate' => $certificateData,
         ]);
     })->name('certificates.show');
 });
@@ -244,7 +313,32 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     })->name('admin.sessions.index');
 
     Route::get('/admin/feedback', function () {
-        return Inertia::render('Admin/Feedback');
+        // Get all completed sessions with evaluation stats
+        $sessions = \App\Models\TrainingSession::with(['course', 'trainer', 'sessionDays'])
+            ->where('status', 'completed')
+            ->get()
+            ->map(function ($session) {
+                $evaluations = \App\Models\Evaluation::where('session_id', $session->id)->get();
+
+                // Get first session day date
+                $firstDay = $session->sessionDays->sortBy('date')->first();
+                $startDate = $firstDay ? $firstDay->date : null;
+
+                return [
+                    'id' => $session->id,
+                    'title' => $session->title,
+                    'course_name' => $session->course->title ?? 'Unknown',
+                    'trainer_name' => $session->trainer->name ?? 'Unknown',
+                    'status' => $session->status,
+                    'start_date' => $startDate,
+                    'total_evaluations' => $evaluations->count(),
+                    'average_rating' => $evaluations->count() > 0 ? $evaluations->avg('overall_rating') : null,
+                ];
+            });
+
+        return Inertia::render('Admin/FeedbackSessions', [
+            'sessions' => $sessions
+        ]);
     })->name('admin.feedback');
 
     Route::get('/admin/certificates', function () {
@@ -373,7 +467,33 @@ Route::middleware(['auth', 'role:trainer,admin'])->group(function () {
     })->name('trainer.sessions.index');
 
     Route::get('/trainer/feedback', function () {
-        return Inertia::render('Trainer/Feedback');
+        $user = Auth::user();
+
+        // Get completed sessions taught by this trainer with evaluation stats
+        $sessions = \App\Models\TrainingSession::with(['course', 'sessionDays'])
+            ->where('trainer_id', $user->id)
+            ->where('status', 'completed')
+            ->get()
+            ->map(function ($session) {
+                $evaluations = \App\Models\Evaluation::where('session_id', $session->id)->get();
+
+                $firstDay = $session->sessionDays->sortBy('date')->first();
+                $startDate = $firstDay ? $firstDay->date : null;
+
+                return [
+                    'id' => $session->id,
+                    'title' => $session->title,
+                    'course_name' => $session->course->title ?? 'Unknown',
+                    'status' => $session->status,
+                    'start_date' => $startDate,
+                    'total_evaluations' => $evaluations->count(),
+                    'average_rating' => $evaluations->count() > 0 ? $evaluations->avg('overall_rating') : null,
+                ];
+            });
+
+        return Inertia::render('Trainer/FeedbackSessions', [
+            'sessions' => $sessions
+        ]);
     })->name('trainer.feedback');
 
 
@@ -453,3 +573,47 @@ Route::get('/verify/{code?}', function ($code = null) {
 
 
 require __DIR__ . '/auth.php';
+
+// Trainee Feedback Routes
+Route::middleware(['auth', 'role:trainee'])->group(function () {
+    Route::get('/trainee/feedback', [\App\Http\Controllers\EvaluationController::class, 'index'])
+        ->name('trainee.feedback.index');
+
+    // POST /sessions/{id}/evaluation - Trainee submit feedback
+    Route::post('/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'store'])
+        ->name('sessions.evaluation.store');
+});
+
+// Admin & Trainer - View session evaluations
+Route::middleware(['auth', 'role:admin,trainer'])->group(function () {
+    // GET /sessions/{id}/evaluation - View evaluation results page (UI)
+    Route::get('/sessions/{id}/evaluation', function ($id) {
+        return Inertia::render('Session/EvaluationResults', [
+            'sessionId' => $id,
+        ]);
+    })->name('sessions.evaluation.show');
+
+    // GET /api/sessions/{id}/evaluation - Get evaluation data (API)
+    Route::get('/api/sessions/{id}/evaluation', [\App\Http\Controllers\EvaluationController::class, 'show'])
+        ->name('api.sessions.evaluation.show');
+
+    // GET /api/evaluations/statistics - Get dashboard statistics
+    Route::get('/api/evaluations/statistics', [\App\Http\Controllers\EvaluationController::class, 'statistics'])
+        ->name('api.evaluations.statistics');
+
+    // Debug route
+    Route::get('/api/test-auth', function () {
+        return response()->json([
+            'authenticated' => Auth::check(),
+            'user_id' => Auth::id(),
+            'user_role' => Auth::user()->role->name ?? 'unknown',
+            'message' => 'Auth test passed - you can access this route'
+        ]);
+    });
+});
+
+// Admin only - Overall statistics
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/api/evaluations/overall-statistics', [\App\Http\Controllers\EvaluationController::class, 'overallStatistics'])
+        ->name('api.evaluations.overall-statistics');
+});
