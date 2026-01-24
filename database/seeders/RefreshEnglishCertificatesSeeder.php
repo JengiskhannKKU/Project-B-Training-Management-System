@@ -29,11 +29,11 @@ class RefreshEnglishCertificatesSeeder extends Seeder
         $this->command->info('Resetting certificate sequences...');
         $this->resetCertificateSequences();
 
-        // 3. Create new English certificates
-        $this->command->info('Creating new English certificates...');
-        $certificatesCreated = $this->createEnglishCertificates();
+        // 3. Create new English certificates (English names only)
+        $this->command->info('Creating new English certificates for English-named trainees only...');
+        [$certificatesCreated, $skippedCount] = $this->createEnglishCertificates();
 
-        $this->command->info("Certificate refresh completed. Created {$certificatesCreated} English certificates (A4 Landscape).");
+        $this->command->info("Certificate refresh completed. Created {$certificatesCreated} English certificates (A4 Landscape). Skipped {$skippedCount} non-English named trainees.");
     }
 
     /**
@@ -76,9 +76,9 @@ class RefreshEnglishCertificatesSeeder extends Seeder
     }
 
     /**
-     * Create new English certificates for completed enrollments.
+     * Create new English certificates for completed enrollments (English names only).
      */
-    private function createEnglishCertificates(): int
+    private function createEnglishCertificates(): array
     {
         // Get admin user for issuing certificates
         $admin = User::where('email', 'admin@example.com')->first();
@@ -106,6 +106,7 @@ class RefreshEnglishCertificatesSeeder extends Seeder
         }
 
         $certificatesCreated = 0;
+        $skippedCount = 0;
         $currentYear = (int) date('Y');
 
         foreach ($completedEnrollments as $enrollment) {
@@ -113,6 +114,13 @@ class RefreshEnglishCertificatesSeeder extends Seeder
             $course = $session->course;
             $user = $enrollment->user;
             $trainer = $session->trainer;
+
+            // Skip if user name contains non-English characters
+            if (!$this->isEnglishName($user->name)) {
+                $this->command->info("Skipping {$user->name} - contains non-English characters");
+                $skippedCount++;
+                continue;
+            }
 
             // Calculate total hours from session days
             $totalHours = $this->calculateTotalHours($session);
@@ -176,7 +184,7 @@ class RefreshEnglishCertificatesSeeder extends Seeder
             $certificatesCreated++;
         }
 
-        return $certificatesCreated;
+        return [$certificatesCreated, $skippedCount];
     }
 
     /**
@@ -237,5 +245,15 @@ class RefreshEnglishCertificatesSeeder extends Seeder
     private function generateRandomScore(): float
     {
         return (float) rand(7500, 10000) / 100;
+    }
+
+    /**
+     * Check if a name contains only English characters (ASCII).
+     */
+    private function isEnglishName(string $name): bool
+    {
+        // Check if the name contains only ASCII characters (0-127)
+        // Allows: letters, numbers, spaces, common punctuation
+        return !preg_match('/[^\x00-\x7F]/', $name);
     }
 }
