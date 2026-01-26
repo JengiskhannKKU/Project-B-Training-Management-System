@@ -267,9 +267,31 @@ onUnmounted(() => {
     <component :is="LayoutComponent">
         <div class="min-h-screen bg-gray-50/50 pb-12">
             <!-- Hero Banner -->
-            <div class="h-48 w-full bg-gradient-to-r from-teal-800 to-emerald-600 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('/images/pattern.png')] opacity-10"></div>
-                <div class="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-gray-50/50 to-transparent"></div>
+            <div class="h-48 w-full bg-gradient-to-br from-teal-600 via-emerald-600 to-cyan-700 relative overflow-hidden">
+                <!-- Animated Background Pattern -->
+                <div class="absolute inset-0">
+                    <div class="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+                    <div class="absolute top-1/2 right-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl translate-x-1/3"></div>
+                    <div class="absolute bottom-0 left-1/3 w-64 h-64 bg-cyan-400/10 rounded-full blur-2xl"></div>
+                </div>
+                <!-- Geometric Patterns -->
+                <div class="absolute inset-0 opacity-10">
+                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)"/>
+                    </svg>
+                </div>
+                <!-- Decorative Circles -->
+                <div class="absolute top-4 right-20 w-3 h-3 bg-white/30 rounded-full"></div>
+                <div class="absolute top-12 right-32 w-2 h-2 bg-white/20 rounded-full"></div>
+                <div class="absolute bottom-8 left-24 w-4 h-4 bg-emerald-300/30 rounded-full"></div>
+                <div class="absolute bottom-16 left-48 w-2 h-2 bg-cyan-300/40 rounded-full"></div>
+                <!-- Bottom Fade -->
+                <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-gray-50/50 to-transparent"></div>
             </div>
 
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">

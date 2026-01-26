@@ -81,7 +81,30 @@ const tabs = [
     <TrainerLayout>
         <div class="min-h-screen bg-gray-50/50 pb-12">
             <!-- Header Background -->
-            <div class="h-48 bg-gradient-to-r from-blue-600 to-indigo-700 w-full mb-8"></div>
+            <div class="h-48 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 w-full mb-8 relative overflow-hidden">
+                <!-- Animated Background Orbs -->
+                <div class="absolute inset-0">
+                    <div class="absolute top-0 right-0 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3"></div>
+                    <div class="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/20 rounded-full blur-3xl -translate-x-1/4 translate-y-1/4"></div>
+                    <div class="absolute top-1/2 left-1/2 w-64 h-64 bg-indigo-300/10 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+                </div>
+                <!-- Grid Pattern Overlay -->
+                <div class="absolute inset-0 opacity-10">
+                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="trainer-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                                <circle cx="16" cy="16" r="1" fill="white"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#trainer-grid)"/>
+                    </svg>
+                </div>
+                <!-- Decorative Elements -->
+                <div class="absolute top-8 left-16 w-20 h-20 border-2 border-white/20 rounded-lg rotate-12"></div>
+                <div class="absolute bottom-12 right-24 w-16 h-16 border-2 border-indigo-300/20 rounded-full"></div>
+                <div class="absolute top-16 right-48 w-3 h-3 bg-white/40 rounded-full"></div>
+                <div class="absolute bottom-20 left-32 w-2 h-2 bg-purple-300/50 rounded-full"></div>
+            </div>
 
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24">
                 <div class="flex flex-col md:flex-row gap-8">

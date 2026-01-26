@@ -68,9 +68,38 @@ const saveSettings = () => {
 <template>
     <Head title="Settings" />
     <AdminLayout>
-        <div class="space-y-6">
-            <!-- Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="min-h-screen bg-gray-50/50 pb-12">
+            <!-- Hero Banner -->
+            <div class="h-48 bg-gradient-to-br from-orange-600 via-red-600 to-rose-700 w-full mb-8 relative overflow-hidden">
+                <!-- Animated Background Orbs -->
+                <div class="absolute inset-0">
+                    <div class="absolute top-0 left-0 w-96 h-96 bg-orange-400/20 rounded-full blur-3xl -translate-x-1/3 -translate-y-1/3"></div>
+                    <div class="absolute bottom-0 right-0 w-80 h-80 bg-rose-400/20 rounded-full blur-3xl translate-x-1/4 translate-y-1/4"></div>
+                    <div class="absolute top-1/2 left-1/2 w-72 h-72 bg-red-300/10 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+                </div>
+                <!-- Hexagon Pattern Overlay -->
+                <div class="absolute inset-0 opacity-10">
+                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="admin-hexagon" width="50" height="43.4" patternUnits="userSpaceOnUse" patternTransform="scale(0.8)">
+                                <path d="M25 0 L50 14.43 L50 28.87 L25 43.3 L0 28.87 L0 14.43 Z" fill="none" stroke="white" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#admin-hexagon)"/>
+                    </svg>
+                </div>
+                <!-- Decorative Elements -->
+                <div class="absolute top-10 right-20 w-24 h-24 border-2 border-white/20 rounded-full"></div>
+                <div class="absolute bottom-8 left-16 w-16 h-16 border-2 border-rose-300/30 rounded-lg rotate-45"></div>
+                <div class="absolute top-20 left-40 w-3 h-3 bg-white/40 rounded-full"></div>
+                <div class="absolute bottom-16 right-32 w-2 h-2 bg-orange-300/50 rounded-full"></div>
+                <div class="absolute top-12 right-56 w-2 h-2 bg-rose-200/40 rounded-full"></div>
+            </div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32">
+                <div class="space-y-6">
+                    <!-- Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ $t('Settings') }}</h1>
                     <p class="mt-1 text-sm text-gray-500">{{ $t('Manage application preferences and configurations.') }}</p>
@@ -385,6 +414,8 @@ const saveSettings = () => {
                         </div>
 
                     </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div>
