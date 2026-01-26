@@ -121,7 +121,7 @@ const generateBatch = async () => {
         });
 
         batchProgress.value = response.data.data;
-        toast.success(`Generated ${batchProgress.value.generated_count} certificates successfully!`);
+        toast.success(`Regenerated ${batchProgress.value.generated_count} certificates successfully! (${batchProgress.value.failed_count} skipped/failed)`);
 
         // Refresh certificates list
         await fetchCertificates();
@@ -201,15 +201,15 @@ onMounted(fetchCertificates);
                 <div>
                     <h1 class="text-2xl font-semibold text-gray-900">Certificates</h1>
                     <p class="text-sm text-gray-600">
-                        Review issued certificates and manage revocations.
+                        Certificates are automatically generated when sessions are marked complete. Use manual regeneration for error correction or course-level certificates.
                     </p>
                 </div>
                 <button
                     @click="openBatchModal"
                     class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#2f837d] to-[#26685f] px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all"
                 >
-                    <Zap class="h-4 w-4" />
-                    <span>Batch Generate</span>
+                    <RefreshCw class="h-4 w-4" />
+                    <span>Manual Regenerate</span>
                 </button>
             </div>
 
@@ -425,17 +425,36 @@ onMounted(fetchCertificates);
                     <div class="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#2f837d] to-[#26685f] text-white">
                         <div class="flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                                <Zap class="h-5 w-5" />
+                                <RefreshCw class="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 class="text-xl font-semibold">Generate Certificates</h2>
-                                <p class="text-sm text-white/80 mt-0.5">Create English certificates (A4 Landscape)</p>
+                                <h2 class="text-xl font-semibold">Manual Certificate Regeneration</h2>
+                                <p class="text-sm text-white/80 mt-0.5">Override or regenerate certificates manually</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Modal Body -->
                     <div class="p-6 space-y-5">
+                        <!-- Information Notice -->
+                        <div class="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                            <div class="flex-shrink-0 mt-0.5">
+                                <svg class="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 text-sm">
+                                <p class="font-medium text-blue-900 mb-1">📌 When to use manual regeneration</p>
+                                <ul class="text-blue-700 space-y-1 text-xs list-disc list-inside">
+                                    <li><strong>Session:</strong> Re-issue if automatic generation failed or needs correction</li>
+                                    <li><strong>Course:</strong> Generate ONE certificate per student for entire course (all sessions combined)</li>
+                                    <li><strong>Historical:</strong> Create certificates for old sessions before auto-generation was enabled</li>
+                                </ul>
+                                <p class="mt-2 text-xs text-blue-600 italic">
+                                    ℹ️ Normally, certificates are automatically generated when a session is marked "completed"
+                                </p>
+                            </div>
+                        </div>
                         <!-- Generation Type -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -482,7 +501,7 @@ onMounted(fetchCertificates);
                                 :disabled="isBatchGenerating"
                             />
                             <p class="mt-1 text-xs text-gray-500">
-                                Generate certificates for all completed enrollments in this session
+                                ⚠️ <strong>Manual Override:</strong> Regenerate/re-issue certificates for this session (will skip if already exist). Use only for error correction or failed automatic generation.
                             </p>
                         </div>
 
@@ -499,7 +518,7 @@ onMounted(fetchCertificates);
                                 :disabled="isBatchGenerating"
                             />
                             <p class="mt-1 text-xs text-gray-500">
-                                Generate certificates for all completed enrollments across all sessions in this course
+                                📜 <strong>Course-Level Certificate:</strong> Generate ONE certificate per student for the entire course (across all sessions). Useful for course completion certificates rather than session-specific.
                             </p>
                         </div>
 
@@ -523,25 +542,28 @@ onMounted(fetchCertificates);
                         <!-- Progress Display -->
                         <div v-if="batchProgress" class="space-y-3 p-4 rounded-lg bg-green-50 border border-green-200">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-medium text-green-900">Generation Complete!</span>
+                                <span class="text-sm font-medium text-green-900">Regeneration Complete!</span>
                                 <CheckCircle class="h-5 w-5 text-green-600" />
                             </div>
                             <div class="grid grid-cols-3 gap-3 text-center">
                                 <div class="p-3 rounded-lg bg-white">
                                     <div class="text-2xl font-bold text-gray-900">{{ batchProgress.total_count }}</div>
-                                    <div class="text-xs text-gray-500 mt-1">Total</div>
+                                    <div class="text-xs text-gray-500 mt-1">Eligible</div>
                                 </div>
                                 <div class="p-3 rounded-lg bg-white">
                                     <div class="text-2xl font-bold text-green-600">{{ batchProgress.generated_count }}</div>
-                                    <div class="text-xs text-gray-500 mt-1">Generated</div>
+                                    <div class="text-xs text-gray-500 mt-1">Created</div>
                                 </div>
                                 <div class="p-3 rounded-lg bg-white">
-                                    <div class="text-2xl font-bold text-red-600">{{ batchProgress.failed_count }}</div>
-                                    <div class="text-xs text-gray-500 mt-1">Failed</div>
+                                    <div class="text-2xl font-bold text-gray-600">{{ batchProgress.failed_count }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">Skipped/Failed</div>
                                 </div>
                             </div>
                             <div class="text-center text-sm text-green-700">
                                 Success Rate: <span class="font-semibold">{{ successRate }}%</span>
+                            </div>
+                            <div class="text-xs text-gray-600 text-center italic">
+                                Note: Existing certificates are automatically skipped
                             </div>
                         </div>
                     </div>
@@ -561,8 +583,8 @@ onMounted(fetchCertificates);
                             class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#2f837d] text-sm font-semibold text-white hover:bg-[#266a66] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Loader2 v-if="isBatchGenerating" class="h-4 w-4 animate-spin" />
-                            <CheckCircle v-else class="h-4 w-4" />
-                            <span>{{ isBatchGenerating ? 'Generating...' : 'Generate' }}</span>
+                            <RefreshCw v-else class="h-4 w-4" />
+                            <span>{{ isBatchGenerating ? 'Regenerating...' : 'Regenerate' }}</span>
                         </button>
                     </div>
                 </div>

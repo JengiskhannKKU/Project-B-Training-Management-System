@@ -48,11 +48,11 @@ class MeController extends Controller
             'sub_category' => ['nullable', 'string', 'max:255'],
             'faculty' => ['nullable', 'string', 'max:255'],
             'major' => ['nullable', 'string', 'max:255'],
-            'student_id' => ['nullable', 'string', 'max:255'],
+            // SECURITY: student_id removed - only admin can modify
             'degree_level' => ['nullable', 'string', 'max:255'],
             'year_of_study' => ['nullable', 'string', 'max:255'],
             // Personnel
-            'personnel_id' => ['nullable', 'string', 'max:255'],
+            // SECURITY: personnel_id removed - only admin can modify
             'organization' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'job_position' => ['nullable', 'string', 'max:255'],
@@ -60,7 +60,7 @@ class MeController extends Controller
             'personnel_type' => ['nullable', 'string', 'max:255'],
             // External
             'category' => ['nullable', 'string', 'max:255'],
-            
+
             'bio' => ['nullable', 'string'],
         ]);
 

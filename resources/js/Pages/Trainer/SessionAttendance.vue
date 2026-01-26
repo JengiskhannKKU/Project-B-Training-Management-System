@@ -21,6 +21,7 @@ import {
     Award,
     Eye,
     Download,
+    RefreshCw,
 } from "lucide-vue-next";
 import ExportModal from "@/Components/ExportModal.vue";
 import FilterDropdown from "@/Components/FilterDropdown.vue";
@@ -487,7 +488,7 @@ const generateCertificates = async () => {
         const response = await axios.post(`/api/sessions/${props.sessionId}/certificates/generate`);
         const result = response.data.data ?? response.data ?? {};
         generateCertificatesResult.value = result;
-        toast.success(`สร้างใบรับรองใหม่ ${result.created ?? 0} ใบ (ข้าม ${result.skipped ?? 0} ใบที่มีอยู่แล้ว)`);
+        toast.success(`Manually regenerated ${result.created ?? 0} certificates (skipped ${result.skipped ?? 0} existing)`);
         await fetchCertificates();
     } catch (error) {
         console.error('Error generating certificates:', error);
@@ -543,17 +544,17 @@ onMounted(() => {
                     <button v-if="canGenerateCertificates" @click="showGenerateCertificatesModal = true"
                         :disabled="isGeneratingCertificates"
                         class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-60">
-                        <Award :size="18" />
-                        <span v-if="isGeneratingCertificates">{{ $t('Generating...') }}</span>
-                        <span v-else>{{ $t('Generate Certificates') }}</span>
+                        <RefreshCw :size="18" />
+                        <span v-if="isGeneratingCertificates">Regenerating...</span>
+                        <span v-else>Manual Regenerate</span>
                     </button>
                 </div>
             </div>
 
             <div v-if="generateCertificatesResult"
                 class="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700">
-                สร้างใบรับรองใหม่ {{ generateCertificatesResult.created ?? 0 }} ใบ
-                (ข้าม {{ generateCertificatesResult.skipped ?? 0 }} ใบที่มีอยู่แล้ว)
+                🔄 Manual regeneration completed: {{ generateCertificatesResult.created ?? 0 }} certificates created
+                ({{ generateCertificatesResult.skipped ?? 0 }} existing ones skipped)
             </div>
 
             <!-- Completed Session Warning -->
@@ -583,8 +584,12 @@ onMounted(() => {
                     <span v-if="isLoadingCertificates" class="text-sm text-gray-500">{{ $t('Loading...') }}</span>
                 </div>
                 <div v-if="!isSessionCompleted"
-                    class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    {{ $t('Must complete session before generating certificates') }}
+                    class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                    ℹ️ <strong>Note:</strong> Certificates will be automatically generated when this session is marked as "Completed". No manual action needed.
+                </div>
+                <div v-else-if="certificates.length > 0"
+                    class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    ✅ Certificates were automatically generated when session was completed. Use "Manual Regenerate" only if you need to re-issue certificates.
                 </div>
                 <div v-if="certificates.length === 0" class="text-sm text-gray-500">
                     {{ $t('No certificates generated yet.') }}
@@ -1066,10 +1071,11 @@ onMounted(() => {
                 </template>
             </ConfirmationDialog>
 
-            <!-- Generate Certificates Confirmation Dialog -->
-            <ConfirmationDialog :show="showGenerateCertificatesModal" :title="$t('Generate Certificates')"
-                :message="$t('Generate certificates for all eligible trainees in this session?')" :confirmText="$t('Generate')"
-                :cancelText="$t('Cancel')" confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
+            <!-- Manual Certificate Regeneration Confirmation Dialog -->
+            <ConfirmationDialog :show="showGenerateCertificatesModal" title="Manual Certificate Regeneration"
+                message="⚠️ Certificates are normally generated automatically. Only regenerate if automatic generation failed or you need to re-issue certificates. Existing certificates will be skipped. Continue?"
+                confirmText="Regenerate"
+                cancelText="Cancel" confirmButtonClass="bg-purple-600 hover:bg-purple-700" @confirm="generateCertificates"
                 @close="showGenerateCertificatesModal = false" @cancel="showGenerateCertificatesModal = false" />
         </div>
     </TrainerLayout>

@@ -18,25 +18,23 @@ use App\Http\Controllers\Api\SessionDayController;
 use App\Http\Controllers\Api\CategoryController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('auth/register', [AuthController::class, 'register']);
-Route::post('auth/login', [AuthController::class, 'login']);
-
-// Debug endpoints - remove in production
-Route::get('debug/auth', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
-Route::get('debug/admin-check', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
+// Authentication endpoints with rate limiting
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::post('auth/register', [AuthController::class, 'register']);
+    Route::post('auth/login', [AuthController::class, 'login']);
+});
 
 // Public catalog
 Route::get('catalog/courses', [CatalogController::class, 'courses']);
 Route::get('catalog/courses/{course}/sessions', [CatalogController::class, 'sessions']);
 Route::get('catalog/courses/{course}', [CatalogController::class, 'show']);
-Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
+
+// Certificate verification with rate limiting to prevent enumeration attacks
+Route::middleware(['throttle:10,1'])->group(function () {
+    Route::get('verify/{certificateCode}', [CertificateController::class, 'verify']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Debug endpoints
-    Route::get('debug/me', [\App\Http\Controllers\Api\DebugController::class, 'auth']);
-    Route::get('debug/admin', [\App\Http\Controllers\Api\DebugController::class, 'adminCheck']);
-    Route::get('debug/middleware', [\App\Http\Controllers\Api\DebugController::class, 'middlewareInfo']);
-
     Route::get('me', [MeController::class, 'show']);
     Route::put('me/profile', [MeController::class, 'updateProfile']);
     Route::post('me/avatar', [MeController::class, 'uploadAvatar']);
@@ -84,6 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('sessions/{session}/eligible-enrollments', [AttendanceController::class, 'eligibleEnrollments']);
         Route::get('sessions/{session}/certificates', [CertificateController::class, 'trainerSessionCertificates']);
         Route::get('courses/{course}/certificates', [CertificateController::class, 'courseCertificates']);
+
+        // NOTE: Certificates are AUTO-GENERATED when session is marked as "completed"
+        // These routes are for MANUAL REGENERATION only (admin override for error correction)
         Route::post('sessions/{session}/certificates/generate', [CertificateController::class, 'generateForSession']);
         Route::post('courses/{course}/certificates/generate', [CertificateController::class, 'generateForCourse']);
         Route::post('sessions/{session}/attendances/bulk', [AttendanceController::class, 'bulkStore']);

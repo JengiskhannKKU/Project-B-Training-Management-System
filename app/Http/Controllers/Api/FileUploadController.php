@@ -26,7 +26,23 @@ class FileUploadController extends Controller
         ]);
 
         $file = $request->file('image');
-        
+
+        // SECURITY FIX: Validate actual file content, not just MIME type
+        $imageInfo = @getimagesize($file->getRealPath());
+        if ($imageInfo === false) {
+            throw ValidationException::withMessages([
+                'image' => ['The uploaded file is not a valid image.']
+            ]);
+        }
+
+        // Verify the image type is one we support
+        $allowedTypes = [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP];
+        if (!in_array($imageInfo[2], $allowedTypes)) {
+            throw ValidationException::withMessages([
+                'image' => ['The image type is not supported. Only JPEG, PNG, GIF, and WebP are allowed.']
+            ]);
+        }
+
         // Generate unique filename
         $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
         

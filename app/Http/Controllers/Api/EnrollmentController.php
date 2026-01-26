@@ -22,50 +22,62 @@ class EnrollmentController extends Controller
         ]);
 
         $user = $request->user();
-        $session = TrainingSession::withCount([
-            'enrollments as active_enrollments_count' => function ($q) {
-                $q->where('status', '!=', 'cancelled');
-            },
-        ])->findOrFail($data['session_id']);
 
-        if ($session->status !== 'scheduled') {
-            return response()->json(['message' => 'Cannot enroll: Session is closed or not open for registration.'], 422);
-        }
+        try {
+            $enrollment = DB::transaction(function () use ($user, $data) {
+                // SECURITY FIX: Lock session row to prevent race condition
+                $session = TrainingSession::lockForUpdate()->findOrFail($data['session_id']);
 
-        if ($session->active_enrollments_count >= $session->capacity) {
-            return response()->json(['message' => 'Cannot enroll: Session capacity is full.'], 422);
-        }
+                // Check session status
+                if ($session->status !== 'scheduled') {
+                    throw new \Exception('Cannot enroll: Session is closed or not open for registration.');
+                }
 
-        $existingEnrollment = Enrollment::where('user_id', $user->id)
-            ->where('session_id', $session->id)
-            ->first();
+                // Check existing enrollment
+                $existingEnrollment = Enrollment::where('user_id', $user->id)
+                    ->where('session_id', $session->id)
+                    ->first();
 
-        if ($existingEnrollment && $existingEnrollment->status !== 'cancelled') {
-            return response()->json(['message' => 'You are already enrolled in this session.'], 422);
-        }
+                if ($existingEnrollment && $existingEnrollment->status !== 'cancelled') {
+                    throw new \Exception('You are already enrolled in this session.');
+                }
 
-        $enrollment = DB::transaction(function () use ($user, $session, $existingEnrollment) {
-            if ($existingEnrollment) {
-                $existingEnrollment->update([
+                // Check capacity INSIDE transaction with lock
+                $activeEnrollmentsCount = $session->enrollments()
+                    ->where('status', '!=', 'cancelled')
+                    ->count();
+
+                if ($activeEnrollmentsCount >= $session->capacity) {
+                    throw new \Exception('Cannot enroll: Session capacity is full.');
+                }
+
+                // Create or reactivate enrollment
+                if ($existingEnrollment) {
+                    $existingEnrollment->update([
+                        'status' => 'pending',
+                        'enrolled_at' => now(),
+                    ]);
+
+                    return ['enrollment' => $existingEnrollment, 'isReactivation' => true];
+                }
+
+                $newEnrollment = Enrollment::create([
+                    'user_id' => $user->id,
+                    'session_id' => $session->id,
                     'status' => 'pending',
                     'enrolled_at' => now(),
                 ]);
 
-                return $existingEnrollment;
-            }
+                return ['enrollment' => $newEnrollment, 'isReactivation' => false];
+            });
 
-            return Enrollment::create([
-                'user_id' => $user->id,
-                'session_id' => $session->id,
-                'status' => 'pending',
-                'enrolled_at' => now(),
-            ]);
-        });
-
-        return response()->json([
-            'message' => $existingEnrollment ? 'Enrollment reactivated successfully.' : 'Enrollment created successfully.',
-            'data' => $enrollment,
-        ], 201);
+            return response()->json([
+                'message' => $enrollment['isReactivation'] ? 'Enrollment reactivated successfully.' : 'Enrollment created successfully.',
+                'data' => $enrollment['enrollment'],
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     /**

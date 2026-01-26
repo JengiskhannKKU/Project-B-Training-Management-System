@@ -235,6 +235,13 @@ class TrainingSessionController extends Controller
             return $this->forbiddenResponse('Only the session trainer or admin can complete this session.');
         }
 
+        // SECURITY FIX: Prevent marking session complete before end date
+        if (\Carbon\Carbon::now()->lt(\Carbon\Carbon::parse($session->end_date))) {
+            return $this->validationErrorResponse([
+                'status' => ['Session cannot be marked as completed before the end date.'],
+            ]);
+        }
+
         $status = strtolower((string) $session->status);
         if (!in_array($status, ['ongoing', 'scheduled'], true)) { // Adjusted for new statuses, assuming 'ongoing' or 'scheduled' can be completed
              // Or maybe only 'ongoing' can be completed? 'open' mapped to 'ongoing'.
@@ -243,12 +250,15 @@ class TrainingSessionController extends Controller
 
         $session->update(['status' => 'completed']);
 
+        // Dispatch event to auto-generate certificates
+        \App\Events\SessionCompleted::dispatch($session, $user);
+
         $summary = $completionService->evaluateSessionCompletions($session->id);
 
         return $this->successResponse([
             'session' => $session->fresh(),
             'summary' => $summary,
-        ], 'Session marked as completed.');
+        ], 'Session marked as completed. Certificates will be generated automatically.');
     }
 
     /**

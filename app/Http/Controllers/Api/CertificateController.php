@@ -270,6 +270,25 @@ class CertificateController extends Controller
             return $this->forbiddenResponse('You are not allowed to view this certificate.');
         }
 
+        // Check if trainee has completed evaluation (only for certificate owners who are trainees)
+        if ($certificate->user_id === $user->id && $user->isRole('trainee')) {
+            $hasEvaluation = $this->hasCompletedEvaluation($certificate);
+
+            if (!$hasEvaluation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must complete the course evaluation before viewing your certificate.',
+                    'data' => [
+                        'requires_evaluation' => true,
+                        'session_id' => $certificate->session_id,
+                        'evaluation_url' => $certificate->session_id
+                            ? route('trainee.feedback.index')
+                            : null,
+                    ],
+                ], 403);
+            }
+        }
+
         try {
             $certificate = $fileService->generateAndStoreFile($certificate);
         } catch (RuntimeException $exception) {
